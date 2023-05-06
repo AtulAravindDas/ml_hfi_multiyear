@@ -15,8 +15,8 @@ def get_settings(experiment_name):
 
         "exp0": {
 
-            "training_years": (2013,),
-            "validation_years": (2010,),
+            "training_years": (2013, 2010),
+            "validation_years": (0, 0),
             "channels": (2, 3, 4),
             "channel_norms": (255., 255., 255.),
             "n_batches": (50, 10),  # (training_size, validation_size)

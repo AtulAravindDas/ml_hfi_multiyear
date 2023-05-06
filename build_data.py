@@ -1,9 +1,14 @@
 """Build the data.
 
+Classes
+---------
+data_generator
+
 Functions
 ---------
-scheduler(epoch, lr)
-train_model(settings, model)
+make_sample_list(settings,)
+data_generator.get_x_data(self, years, sample_lats, sample_lons)
+data_generator.get_y_data(self, years, sample_lats, sample_lons)
 """
 import rasterio
 import numpy as np
@@ -13,7 +18,22 @@ DATA_DIRECTORY = "data/"
 LANDSAT_TO_HFI_RATIO = 38
 
 
-def get_shuffled_batch(settings,):
+def permute_shuffle_sample_list(settings, sample_years, sample_lats, sample_lons):
+
+    nsamples = np.sum(settings["n_batches"]) * settings["batch_size"]
+    rng = np.random.default_rng(settings["rng_seed"])
+
+    sample_lats = rng.choice(sample_lats, size=nsamples, replace=True)
+    sample_lons = rng.choice(sample_lons, size=nsamples, replace=True)
+
+    # make it so that every batch has the same year throughout for loading files
+    sample_years = np.repeat(np.random.choice(sample_years, size=np.sum(settings["n_batches"]), replace=True),
+                             settings["batch_size"])
+
+    return sample_years, sample_lats, sample_lons
+
+
+def make_sample_list(settings,):
 
     filename = DATA_DIRECTORY + "hfp" + str(2013) + "_merisINT.epsg4326.tif"
 
@@ -30,17 +50,10 @@ def get_shuffled_batch(settings,):
                                      )
 
     sample_lons, sample_lats = output_tiff.xy(np.ndarray.flatten(row_grid), np.ndarray.flatten(col_grid))
-    sample_years = np.ones(np.shape(sample_lons)) * 2013
+    sample_years = settings["training_years"]
     sample_years, sample_lats, sample_lons = np.asarray(sample_years, dtype=int), np.asarray(sample_lats), np.asarray(sample_lons)
 
-    i_locs = np.arange(0, len(sample_lons))
-    rng = np.random.default_rng(settings["rng_seed"])
-    rng.shuffle(i_locs)
-
-    nsamples = np.sum(settings["n_batches"]) * settings["batch_size"]
-    sample_years = sample_years[i_locs[:nsamples]]
-    sample_lats = sample_lats[i_locs[:nsamples]]
-    sample_lons = sample_lons[i_locs[:nsamples]]
+    sample_years, sample_lats, sample_lons = permute_shuffle_sample_list(settings, sample_years, sample_lats, sample_lons)
 
     return sample_years, sample_lats, sample_lons
 
@@ -53,7 +66,7 @@ class data_generator:
 
     def get_x_data(self, years, sample_lats, sample_lons):
 
-        year = years[0]  # all simulations are the same for each batch based on how we've set it up
+        year = years[0]  # all years are the same for each batch
         channels = self.settings["channels"]
         scene_width = self.settings["scene_width"]
 
@@ -79,7 +92,7 @@ class data_generator:
 
     def get_y_data(self, years, sample_lats, sample_lons):
 
-        year = years[0]  # all simulations are the same for each batch based on how we've set it up
+        year = years[0]  # all years are the same for each batch
 
         # read HFI file
         filename = DATA_DIRECTORY + "hfp" + str(year.numpy()) + "_merisINT.epsg4326.tif"
