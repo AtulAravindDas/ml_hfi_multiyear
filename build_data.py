@@ -24,8 +24,8 @@ def get_shuffled_batch(settings,):
     #                                  np.arange(0,np.shape(output_tiff)[0]),
     #                                  indexing="xy"
     #                                  )
-    row_grid, col_grid = np.meshgrid(np.arange(9697, 9787),
-                                     np.arange(28915, 29005),
+    row_grid, col_grid = np.meshgrid(np.arange(settings["training_ibounds"][0], settings["training_ibounds"][1]),
+                                     np.arange(settings["training_ibounds"][2], settings["training_ibounds"][3]),
                                      indexing="xy"
                                      )
 

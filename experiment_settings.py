@@ -21,6 +21,7 @@ def get_settings(experiment_name):
             "channel_norms": (255., 255., 255.),
             "n_batches": (50, 10),  # (training_size, validation_size)
             "scene_width": 3,  # in units of HFI pixels, so 3x3
+            "training_ibounds": (9697, 9787, 28915, 29005),  # (ilat0, ilat1, ilon0, ilon1)
 
             "layers_units": (64, 128, 128, 128, 128),
             "kernel_size": 3,
