@@ -16,7 +16,7 @@ __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
 __version__ = "05 May 2023"
 
 
-BIG_DATA_DIRECTORY = "/Users/eabarnes/big_data/"
+BIG_DATA_DIRECTORY = "/Users/eabarnes/big_data/ml_hfi_multiyear/"
 
 
 def scheduler(epoch, learning_rate):

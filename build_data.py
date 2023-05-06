@@ -6,6 +6,7 @@ data_generator
 
 Functions
 ---------
+permute_shuffle_sample_list(settings, sample_years, sample_lats, sample_lons)
 make_sample_list(settings,)
 data_generator.get_x_data(self, years, sample_lats, sample_lons)
 data_generator.get_y_data(self, years, sample_lats, sample_lons)
@@ -35,7 +36,7 @@ def permute_shuffle_sample_list(settings, sample_years, sample_lats, sample_lons
 
 def make_sample_list(settings,):
 
-    filename = DATA_DIRECTORY + "hfp" + str(2013) + "_merisINT.epsg4326.tif"
+    filename = DATA_DIRECTORY + "hfp" + str(2013) + "_merisINT.epsg4326.tif"  # example file
 
     output_tiff = rasterio.open(filename)
     print(np.shape(output_tiff))
@@ -50,8 +51,7 @@ def make_sample_list(settings,):
                                      )
 
     sample_lons, sample_lats = output_tiff.xy(np.ndarray.flatten(row_grid), np.ndarray.flatten(col_grid))
-    sample_years = settings["training_years"]
-    sample_years, sample_lats, sample_lons = np.asarray(sample_years, dtype=int), np.asarray(sample_lats), np.asarray(sample_lons)
+    sample_years, sample_lats, sample_lons = np.asarray(settings["training_years"], dtype=int), np.asarray(sample_lats), np.asarray(sample_lons)
 
     sample_years, sample_lats, sample_lons = permute_shuffle_sample_list(settings, sample_years, sample_lats, sample_lons)
 
@@ -66,7 +66,9 @@ class data_generator:
 
     def get_x_data(self, years, sample_lats, sample_lons):
 
+        assert np.sum(years - years[0]) == 0
         year = years[0]  # all years are the same for each batch
+
         channels = self.settings["channels"]
         scene_width = self.settings["scene_width"]
 
@@ -92,6 +94,7 @@ class data_generator:
 
     def get_y_data(self, years, sample_lats, sample_lons):
 
+        assert np.sum(years - years[0]) == 0
         year = years[0]  # all years are the same for each batch
 
         # read HFI file
