@@ -19,7 +19,7 @@ def get_settings(experiment_name):
             "validation_years": (0, 0),
             "channels": (2, 3, 4),
             "channel_norms": (255., 255., 255.),
-            "n_batches": (100, 20),  # (training_size, validation_size)
+            "n_batches": (90, 10),  # (training_size, validation_size)
             "scene_width": 3,  # in units of HFI pixels, so 3x3
             "training_ibounds": (9697, 9787, 28915, 29005),  # (ilat0, ilat1, ilon0, ilon1)
 
