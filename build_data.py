@@ -36,7 +36,7 @@ def permute_shuffle_sample_list(settings, sample_years, sample_lats, sample_lons
 
 def make_sample_list(settings,):
 
-    filename = DATA_DIRECTORY + "hfp" + str(2013) + "_merisINT.epsg4326.tif"  # example file
+    filename = DATA_DIRECTORY + "hfi" + str(2013) + "_merisINT.epsg4326.tif"  # example file
 
     output_tiff = rasterio.open(filename)
     print(np.shape(output_tiff))
