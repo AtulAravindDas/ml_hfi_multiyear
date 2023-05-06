@@ -98,7 +98,7 @@ class data_generator:
         year = years[0]  # all years are the same for each batch
 
         # read HFI file
-        filename = DATA_DIRECTORY + "hfp" + str(year.numpy()) + "_merisINT.epsg4326.tif"
+        filename = DATA_DIRECTORY + "hfi" + str(year.numpy()) + "_merisINT.epsg4326.tif"
 
         batch_y = np.zeros((len(years), 1))
         with rasterio.open(filename) as output_tiff:

@@ -20,7 +20,7 @@ BIG_DATA_DIRECTORY = "/Users/eabarnes/big_data/ml_hfi_multiyear/"
 
 
 def scheduler(epoch, learning_rate):
-    if epoch < 100.:
+    if epoch < 1.:
         return learning_rate
     else:
         return learning_rate * tf.math.exp(-0.1)
@@ -37,7 +37,7 @@ def train_model(settings, model, tfds_train, tfds_val):
 
     # checkpoint callback
     checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-        filepath=BIG_DATA_DIRECTORY + 'saved_model_checkpoints/model_' + settings["exp_name"] + '.{epoch:02d}.h5',
+        filepath=BIG_DATA_DIRECTORY + 'saved_model_checkpoints/' + settings["exp_name"] + '/model_' + settings["exp_name"] + '.{epoch:02d}.h5',
         save_weights_only=False,
         monitor='val_mean_squared_error', mode='min',
         save_freq='epoch', save_best_only=False, )
