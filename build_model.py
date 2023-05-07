@@ -44,7 +44,7 @@ def build_model(settings, input_shape):
                 strides=settings["max_pool_stride"], padding='valid',
                 data_format='channels_last')(x)
 
-    # add dropout
+    # dropout and flatten
     x = tf.keras.layers.Dropout(rate=settings["dropout"])(x)
     x = tf.keras.layers.Flatten()(x)
 

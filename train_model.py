@@ -10,13 +10,13 @@ import time
 import numpy as np
 import silence_tensorflow.auto
 import tensorflow as tf
-import build_model
+import random
 
 __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
 __version__ = "05 May 2023"
 
 
-BIG_DATA_DIRECTORY = "/Users/eabarnes/big_data/ml_hfi_multiyear/"
+SAVE_MODEL_DIRECTORY = "saved_models/"
 
 
 def scheduler(epoch, learning_rate):
@@ -28,6 +28,13 @@ def scheduler(epoch, learning_rate):
 
 def train_model(settings, model, tfds_train, tfds_val):
 
+    # SET RANDOM SEEDS AGAIN FOR MODEL TRAINING
+    np.random.seed(settings["rng_seed"])
+    random.seed(settings["rng_seed"])
+    tf.random.set_seed(settings["rng_seed"])
+
+    # DEFINE ALL CALLBACKS
+
     # early stopping
     earlystopping_callback = tf.keras.callbacks.EarlyStopping(
         monitor='val_loss', patience=settings["patience"], verbose=1, mode='auto', restore_best_weights=True)
@@ -37,12 +44,13 @@ def train_model(settings, model, tfds_train, tfds_val):
 
     # checkpoint callback
     checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-        filepath=BIG_DATA_DIRECTORY + 'saved_model_checkpoints/' + settings["exp_name"] + '/model_' + settings["exp_name"] + '.{epoch:02d}.h5',
-        save_weights_only=False,
+        filepath=SAVE_MODEL_DIRECTORY + 'model_' + settings["exp_name"] + '.{epoch:02d}.h5',
         monitor='val_mean_squared_error', mode='min',
-        save_freq='epoch', save_best_only=False, )
+        save_freq='epoch',
+        save_weights_only=False,
+        save_best_only=False, )
 
-    # DEFINE ALL CALLBACKS
+    # put the callbacks together
     if settings["early_stopping"]:
         callbacks = [earlystopping_callback, learning_rate_callback, checkpoint_callback],
     else:
@@ -85,6 +93,8 @@ def train_model(settings, model, tfds_train, tfds_val):
         "best_epoch": best_epoch,
         "loss_train": history.history["loss"][best_epoch],
         "loss_valid": history.history["val_loss"][best_epoch],
+        "mae_train": history.history["mae"][best_epoch],
+        "mae_valid": history.history["val_mae"][best_epoch],
     }
 
     return model, fit_summary, history, settings
