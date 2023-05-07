@@ -13,6 +13,9 @@ __date__ = "05 May 2023"
 
 def build_model(settings, input_shape):
 
+    ACTIVATION = "relu"
+    FINAL_ACTIVATION = "sigmoid"
+
     input = tf.keras.Input(shape=input_shape)
 
     # add data augmentation layers
@@ -27,7 +30,7 @@ def build_model(settings, input_shape):
     for layer, nodes in enumerate(settings["layers_units"]):
 
         x = tf.keras.layers.Conv2D(
-            nodes, activation=settings["activation"],
+            nodes, activation=ACTIVATION,
             kernel_size=settings["kernel_size"],
             kernel_initializer=tf.keras.initializers.RandomNormal(seed=settings["rng_seed"] + layer),
             bias_initializer=tf.keras.initializers.RandomNormal(seed=settings["rng_seed"] + layer * 2),
@@ -49,12 +52,12 @@ def build_model(settings, input_shape):
     x = tf.keras.layers.Dense(units=settings["dense_units"],
                               kernel_initializer=tf.keras.initializers.RandomNormal(seed=settings["rng_seed"] + 100),
                               bias_initializer=tf.keras.initializers.Zeros(),
-                              activation=settings["activation"],)(x)
+                              activation=ACTIVATION,)(x)
 
     # Final layer here
     x = tf.keras.layers.Dense(1,
                               bias_initializer=tf.keras.initializers.Zeros(),
-                              activation=settings["activation_output"])(x)
+                              activation=FINAL_ACTIVATION)(x)
 
     model = tf.keras.models.Model(inputs=input, outputs=x)
 

@@ -42,6 +42,12 @@ def train_model(settings, model, tfds_train, tfds_val):
         monitor='val_mean_squared_error', mode='min',
         save_freq='epoch', save_best_only=False, )
 
+    # DEFINE ALL CALLBACKS
+    if settings["early_stopping"]:
+        callbacks = [earlystopping_callback, learning_rate_callback, checkpoint_callback],
+    else:
+        callbacks = [learning_rate_callback, checkpoint_callback],
+
     # optimizer
     optimizer = tf.keras.optimizers.Adam(settings["learning_rate"])
 
@@ -49,21 +55,25 @@ def train_model(settings, model, tfds_train, tfds_val):
     # WE WILL WANT TO MODIFY THIS TO INCLUDE THE KLUGE TO ZERO ******
     loss = tf.keras.losses.MeanSquaredError()
 
-    # compile the model
+    # SET PRE-FETCH ON DATA
+    tfds_train = tfds_train.prefetch(tf.data.AUTOTUNE)
+    tfds_val = tfds_val.prefetch(tf.data.AUTOTUNE)
+
+    # COMPILE THE MODEL
     model.compile(
         loss=loss,
         optimizer=optimizer,
         metrics=["mae", ]
     )
 
-    # train the model
+    # TRAIN THE MODEL
     start_time = time.time()
     history = model.fit(
         tfds_train,
         validation_data=tfds_val,
         epochs=settings["max_epochs"],
-        callbacks=[earlystopping_callback, learning_rate_callback, checkpoint_callback],
-        batch_size=settings["batch_size"],
+        callbacks=callbacks,
+        # batch_size=settings["batch_size"],  # this is already determined by tf_dataset
         verbose=1,
     )
     stop_time = time.time()
