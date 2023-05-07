@@ -12,7 +12,7 @@ for year in (2000, 2005, 2010, 2013):
 
     print('year = ' + str(year))
 
-    fileName = 'hfp' + str(year) + '_merisINT.tif'
+    fileName = 'hfi' + str(year) + '_merisINT.tif'
 
     with rasterio.open(data_directory + fileName) as src:
         transform, width, height = calculate_default_transform(
