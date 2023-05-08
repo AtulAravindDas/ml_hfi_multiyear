@@ -73,20 +73,20 @@ def make_sample_list(settings):
     # GET THE LATITUDE AND LONGITUDE LOCATION LISTS
     filename = DATA_DIRECTORY + "hfi2010_merisINT.epsg4326.tif"  # example file to get bounds and example hfi frequencies
 
-    ilat_grid, ilon_grid = np.meshgrid(np.arange(settings["training_ibounds"][0], settings["training_ibounds"][1]),
-                                       np.arange(settings["training_ibounds"][2], settings["training_ibounds"][3]),
-                                       indexing="ij", )
-    print("output region shape = " + str(ilon_grid.shape))
-
     with rasterio.open(filename) as output_tiff:
+        ilat0, ilon0 = output_tiff.index(settings["latlon_bounds"][2],
+                                         settings["latlon_bounds"][0])
+        ilat1, ilon1 = output_tiff.index(settings["latlon_bounds"][3],
+                                         settings["latlon_bounds"][1])
+
+        ilat_grid, ilon_grid = np.meshgrid(np.arange(ilat0, ilat1 + 1), np.arange(ilon0, ilon1 + 1), indexing="ij")
+        print("output region shape = " + str(ilon_grid.shape))
+
         sample_lons, sample_lats = output_tiff.xy(np.ndarray.flatten(ilat_grid), np.ndarray.flatten(ilon_grid))
         sample_lons, sample_lats = np.asarray(sample_lons), np.asarray(sample_lats)
 
         # load HFI data
-        window = Window(settings["training_ibounds"][2],
-                        settings["training_ibounds"][0],
-                        settings["training_ibounds"][3] - settings["training_ibounds"][2],
-                        settings["training_ibounds"][1] - settings["training_ibounds"][0])
+        window = Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1))
         hfi = output_tiff.read(1, window=window)
         hfi = np.ndarray.flatten(hfi)
 
@@ -148,10 +148,10 @@ class data_generator:
                 for isample in np.arange(0, len(years)):
                     ilat, ilon = input_tiff.index(sample_lons[isample], sample_lats[isample])
 
-                    ilat0, ilat1 = ilat[0] - LANDSAT_TO_HFI_RATIO * ((scene_width - 1) // 2 + 1), ilat[0] + LANDSAT_TO_HFI_RATIO * (scene_width - 1) // 2
-                    ilon0, ilon1 = ilon[0] - LANDSAT_TO_HFI_RATIO * (scene_width - 1) // 2, ilon[0] + LANDSAT_TO_HFI_RATIO * ((scene_width - 1) // 2 + 1)
+                    ilat0, ilat1 = ilat[0] - LANDSAT_TO_HFI_RATIO * 2 + 1, ilat[0] + LANDSAT_TO_HFI_RATIO
+                    ilon0, ilon1 = ilon[0] - LANDSAT_TO_HFI_RATIO, ilon[0] + LANDSAT_TO_HFI_RATIO * 2 - 1
 
-                    window = Window(ilon0, ilat0, ilon1 - ilon0, ilat1 - ilat0)
+                    window = Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1))
                     batch_input[isample, :, :, :] = np.transpose(input_mask.read(1, window=window) * input_tiff.read(channels, window=window) / 255.,
                                                                  axes=(1, 2, 0))
 
