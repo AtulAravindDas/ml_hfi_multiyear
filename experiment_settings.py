@@ -15,10 +15,10 @@ def get_settings(experiment_name):
 
         "exp0": {
 
-            "training_years": (2013, 2005),  # (2000, 2005, 2010, 2013)
+            "training_years": (2005, 2013,),  # (2000, 2005, 2010, 2013)
             "testing_years": (2010, ),
             "channels": (1, 2, 3, 4, 5, 6),  # indexing starts at 1
-            "nbatches": (2, 1),  # (training_batches, validation_batches)
+            "nbatches": (200, 25),  # (training_batches, validation_batches)
             "scene_width": 3,  # in units of HFI pixels, so 3x3
             "training_ibounds": (9697, 9787, 28915, 29005),  # (ilat0, ilat1, ilon0, ilon1) --> max bounds: (0, 15683, 0, 36390)
             "rng_seed": 33,
@@ -33,8 +33,10 @@ def get_settings(experiment_name):
             "dropout": 0.25,
             "patience": 3,
             "batch_size": 32,
-            "max_epochs": 2,
+            "max_epochs": 1_000,
             "early_stopping": True,
+
+            "save_best_only": True,
         },
 
     }
