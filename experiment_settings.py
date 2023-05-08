@@ -19,8 +19,8 @@ def get_settings(experiment_name):
             "testing_years": (2010, ),
             "channels": (1, 2, 3, 4, 5, 6),  # indexing starts at 1
             "nbatches": (200, 25),  # (training_batches, validation_batches)
-            "scene_width": 3,  # in units of HFI pixels, so 3x3
-            "training_ibounds": (9697, 9787, 28915, 29005),  # (ilat0, ilat1, ilon0, ilon1) --> max bounds: (0, 15683, 0, 36390)
+            "scene_width": 3,  # HAS NO EFFECT; in units of HFI pixels, so 3x3
+            "latlon_bounds": (-6.04, -6.92, 106.05, 106.93),  # (lat0, lat1, lon0, lon1)
             "rng_seed": 33,
 
             "layers_units": (64, 128, 128, 128, 128),
@@ -36,7 +36,7 @@ def get_settings(experiment_name):
             "max_epochs": 1_000,
             "early_stopping": True,
 
-            "pickup_where_leftoff": True,
+            "pickup_where_leftoff": False,
             "save_best_only": True,
         },
 
