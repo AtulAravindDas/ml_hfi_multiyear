@@ -12,10 +12,11 @@ make_sample_list(settings,)
 data_generator.get_input_data(self, years, sample_lats, sample_lons)
 data_generator.get_output_data(self, years, sample_lats, sample_lons)
 """
-import rasterio
 import numpy as np
 import tensorflow as tf
 from sklearn.utils.class_weight import compute_sample_weight
+import rasterio
+from rasterio.windows import Window
 
 DATA_DIRECTORY = "data/"
 LANDSAT_TO_HFI_RATIO = 38
@@ -72,21 +73,26 @@ def make_sample_list(settings):
     # GET THE LATITUDE AND LONGITUDE LOCATION LISTS
     filename = DATA_DIRECTORY + "hfi2010_merisINT.epsg4326.tif"  # example file to get bounds and example hfi frequencies
 
-    row_grid, col_grid = np.meshgrid(np.arange(settings["training_ibounds"][0], settings["training_ibounds"][1]),
-                                     np.arange(settings["training_ibounds"][2], settings["training_ibounds"][3]),
-                                     indexing="xy"
-                                     )
-    print("output region shape = " + str(row_grid.shape))
+    ilat_grid, ilon_grid = np.meshgrid(np.arange(settings["training_ibounds"][0], settings["training_ibounds"][1]),
+                                       np.arange(settings["training_ibounds"][2], settings["training_ibounds"][3]),
+                                       indexing="ij", )
+    print("output region shape = " + str(ilon_grid.shape))
 
-    output_tiff = rasterio.open(filename)
-    sample_lons, sample_lats = output_tiff.xy(np.ndarray.flatten(row_grid), np.ndarray.flatten(col_grid))
-    sample_lats, sample_lons = np.asarray(sample_lats), np.asarray(sample_lons)
+    with rasterio.open(filename) as output_tiff:
+        sample_lons, sample_lats = output_tiff.xy(np.ndarray.flatten(ilat_grid), np.ndarray.flatten(ilon_grid))
+        sample_lons, sample_lats = np.asarray(sample_lons), np.asarray(sample_lats)
 
-    # remove water locations for training (as determined by the 2010 map)
-    hfi = output_tiff.read(1)[settings["training_ibounds"][0]:settings["training_ibounds"][1], settings["training_ibounds"][2]:settings["training_ibounds"][3]]
-    hfi = np.ndarray.flatten(hfi)
-    iland = np.where(hfi != 255)[0]
-    hfi, sample_lats, sample_lons = hfi[iland], sample_lats[iland], sample_lons[iland]
+        # load HFI data
+        window = Window(settings["training_ibounds"][2],
+                        settings["training_ibounds"][0],
+                        settings["training_ibounds"][3] - settings["training_ibounds"][2],
+                        settings["training_ibounds"][1] - settings["training_ibounds"][0])
+        hfi = output_tiff.read(1, window=window)
+        hfi = np.ndarray.flatten(hfi)
+
+        # remove water locations for training (as determined by the 2010 map)
+        iland = np.where(hfi != 255)[0]
+        hfi, sample_lats, sample_lons = hfi[iland], sample_lats[iland], sample_lons[iland]
 
     # subsample by half-decile (since original HFI data is 0-50) to account for class imbalance
     sample_weights = compute_sample_weight(class_weight="balanced", y=np.round(hfi / 5) * 5)
@@ -140,12 +146,14 @@ class data_generator:
         with rasterio.open(filename) as input_tiff:
             with rasterio.open(filename_mask) as input_mask:
                 for isample in np.arange(0, len(years)):
-                    row, col = input_tiff.index(sample_lons[isample], sample_lats[isample])
+                    ilat, ilon = input_tiff.index(sample_lons[isample], sample_lats[isample])
 
-                    row0, row1 = row[0] - LANDSAT_TO_HFI_RATIO * ((scene_width - 1) // 2 + 1), row[0] + LANDSAT_TO_HFI_RATIO * (scene_width - 1) // 2
-                    col0, col1 = col[0] - LANDSAT_TO_HFI_RATIO * (scene_width - 1) // 2, col[0] + LANDSAT_TO_HFI_RATIO * ((scene_width - 1) // 2 + 1)
+                    ilat0, ilat1 = ilat[0] - LANDSAT_TO_HFI_RATIO * ((scene_width - 1) // 2 + 1), ilat[0] + LANDSAT_TO_HFI_RATIO * (scene_width - 1) // 2
+                    ilon0, ilon1 = ilon[0] - LANDSAT_TO_HFI_RATIO * (scene_width - 1) // 2, ilon[0] + LANDSAT_TO_HFI_RATIO * ((scene_width - 1) // 2 + 1)
 
-                    batch_input[isample, :, :, :] = np.transpose(input_mask.read((1))[row0:row1, col0:col1] * input_tiff.read(channels)[:, row0:row1, col0:col1] / 255., axes=(1, 2, 0))
+                    window = Window(ilon0, ilat0, ilon1 - ilon0, ilat1 - ilat0)
+                    batch_input[isample, :, :, :] = np.transpose(input_mask.read(1, window=window) * input_tiff.read(channels, window=window) / 255.,
+                                                                 axes=(1, 2, 0))
 
         # convert to tensor
         dat = tf.convert_to_tensor(batch_input)
@@ -162,11 +170,13 @@ class data_generator:
 
         batch_output = np.zeros((len(years), 1))
         with rasterio.open(filename) as output_tiff:
-            output_mask = output_tiff.read_masks(1) // 255.  # convert to 0/1, with 0 = no data
-
             for isample in np.arange(0, len(years)):
-                row, col = output_tiff.index(sample_lons[isample], sample_lats[isample])
-                batch_output[isample] = output_mask[row, col] * output_tiff.read(1)[row, col] / 50.
+
+                ilat, ilon = output_tiff.index(sample_lons[isample], sample_lats[isample])
+                window = Window(ilon[0], ilat[0], 1, 1)
+
+                output_mask = output_tiff.read_masks(1, window=window) // 255.  # convert to 0/1, with 0 = no data
+                batch_output[isample] = output_mask * output_tiff.read(1, window=window) / 50.
 
         # convert to tensor
         dat = tf.convert_to_tensor(batch_output)

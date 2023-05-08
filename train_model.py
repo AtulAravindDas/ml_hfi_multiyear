@@ -20,7 +20,7 @@ SAVE_MODEL_DIRECTORY = "saved_models/"
 
 
 def scheduler(epoch, learning_rate):
-    if epoch < 1.:
+    if epoch < 10.:
         return learning_rate
     else:
         return learning_rate * tf.math.exp(-0.1)
@@ -43,12 +43,16 @@ def train_model(settings, model, tfds_train, tfds_val):
     learning_rate_callback = tf.keras.callbacks.LearningRateScheduler(scheduler, verbose=0)
 
     # checkpoint callback
+    if settings["save_best_only"]:
+        filepath = SAVE_MODEL_DIRECTORY + 'model_' + settings["exp_name"] + '.h5',
+    else:
+        filepath = SAVE_MODEL_DIRECTORY + 'model_' + settings["exp_name"] + '.{epoch:02d}.h5',
     checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-        filepath=SAVE_MODEL_DIRECTORY + 'model_' + settings["exp_name"] + '.{epoch:02d}.h5',
-        monitor='val_mean_squared_error', mode='min',
+        filepath=filepath,
+        monitor='val_loss', mode='min',
         save_freq='epoch',
         save_weights_only=False,
-        save_best_only=False, )
+        save_best_only=settings["save_best_only"], )
 
     # put the callbacks together
     if settings["early_stopping"]:
