@@ -61,6 +61,6 @@ def build_model(settings, input_shape):
 
     model = tf.keras.models.Model(inputs=input, outputs=x)
 
-    model.summary()
+    # model.summary()
 
     return model

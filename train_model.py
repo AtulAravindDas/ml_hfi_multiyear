@@ -5,7 +5,7 @@ Functions
 scheduler(epoch, lr)
 train_model(settings, model)
 """
-
+import os
 import time
 import numpy as np
 import silence_tensorflow.auto
@@ -43,16 +43,21 @@ def train_model(settings, model, tfds_train, tfds_val):
     learning_rate_callback = tf.keras.callbacks.LearningRateScheduler(scheduler, verbose=0)
 
     # checkpoint callback
+    checkpoint_dir = SAVE_MODEL_DIRECTORY + settings["exp_name"] + '/'
+    if not os.path.isdir(checkpoint_dir):
+        os.makedirs(checkpoint_dir)
+
     if settings["save_best_only"]:
-        filepath = SAVE_MODEL_DIRECTORY + 'model_' + settings["exp_name"] + '.h5',
+        checkpoint_path = checkpoint_dir + 'model_' + settings["exp_name"] + '.ckpt'
     else:
-        filepath = SAVE_MODEL_DIRECTORY + 'model_' + settings["exp_name"] + '.{epoch:02d}.h5',
+        checkpoint_path = checkpoint_dir + 'model_' + settings["exp_name"] + '.{epoch:04d}.ckpt'
+
     checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-        filepath=filepath,
+        filepath=checkpoint_path,
         monitor='val_loss', mode='min',
         save_freq='epoch',
-        save_weights_only=False,
-        save_best_only=settings["save_best_only"], )
+        save_weights_only=True,
+        save_best_only=settings["save_best_only"])
 
     # put the callbacks together
     if settings["early_stopping"]:
@@ -77,6 +82,12 @@ def train_model(settings, model, tfds_train, tfds_val):
         optimizer=optimizer,
         metrics=["mae", ]
     )
+
+    # PICK-UP TRAINING WHERE LEFT OFF,IF DESIRED
+    if settings["pickup_where_leftoff"] and os.path.isfile(checkpoint_dir + 'checkpoint'):
+        print("loading pre-saved weights")
+        latest_model = tf.train.latest_checkpoint(checkpoint_dir)
+        model.load_weights(latest_model)
 
     # TRAIN THE MODEL
     start_time = time.time()

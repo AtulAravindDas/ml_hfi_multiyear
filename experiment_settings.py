@@ -36,6 +36,7 @@ def get_settings(experiment_name):
             "max_epochs": 1_000,
             "early_stopping": True,
 
+            "pickup_where_leftoff": True,
             "save_best_only": True,
         },
 
