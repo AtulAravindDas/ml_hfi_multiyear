@@ -18,6 +18,7 @@ The following python environment was used to implement this code.
 - pip install silence-tensorflow palettable rasterio rioxarray
 - conda install -c conda-forge dask netCDF4
 - conda install -c conda-forge cartopy
+- conda install palettable seaborn
 ```
 
 ## Credits

@@ -7,7 +7,7 @@ get_settings(experiment_name)
 import numpy as np
 
 __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
-__date__ = "05 May 2023"
+__date__ = "08 May 2023"
 
 
 def get_settings(experiment_name):
@@ -30,7 +30,7 @@ def get_settings(experiment_name):
             "aug_randomflip": True,
 
             "learning_rate": 0.001,
-            "dropout": 0.25,
+            "dropout": 0.5,
             "patience": 3,
             "batch_size": 32,
             "max_epochs": 1_000,
