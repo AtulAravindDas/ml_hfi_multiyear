@@ -7,7 +7,7 @@ get_settings(experiment_name)
 import numpy as np
 
 __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
-__date__ = "08 May 2023"
+__date__ = "09 May 2023"
 
 
 def get_settings(experiment_name):
