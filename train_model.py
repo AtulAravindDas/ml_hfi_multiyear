@@ -20,7 +20,7 @@ SAVE_MODEL_DIRECTORY = "saved_models/"
 
 
 def scheduler(epoch, learning_rate):
-    if epoch < 5.:
+    if epoch < 1.:
         return learning_rate
     else:
         return learning_rate * tf.math.exp(-0.1)

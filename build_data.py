@@ -21,7 +21,6 @@ from rasterio.windows import Window
 
 DATA_DIRECTORY = "data/"
 LANDSAT_DIRECTORY = "data/landsat_export_1x1/"
-LANDSAT_TO_HFI_RATIO = 38
 
 
 def build_tf_dataset(settings, sample_years, sample_lats, sample_lons, batch_size, shuffle=True):
@@ -77,70 +76,75 @@ def permute_shuffle_sample_list(settings,
 def make_sample_list(settings, evaluate_all=False):
 
     # GET THE LATITUDE AND LONGITUDE LOCATION LISTS
-    filename = DATA_DIRECTORY + "hfi2010_merisINT.epsg4326.tif"  # example file to get bounds and example hfi frequencies
+    filename = DATA_DIRECTORY + "hii_2019-01-01_uint8.tif"
+    filename_mask = DATA_DIRECTORY + "hii_coastal_buffer_mask.tif"
 
     with rasterio.open(filename) as output_tiff:
-        ilat0, ilon0 = output_tiff.index(settings["latlon_bounds"][2],
-                                         settings["latlon_bounds"][0])
-        ilat1, ilon1 = output_tiff.index(settings["latlon_bounds"][3],
-                                         settings["latlon_bounds"][1])
+        with rasterio.open(filename_mask) as buffer_mask:
+            ilat0, ilon0 = buffer_mask.index(settings["latlon_bounds"][2],
+                                             settings["latlon_bounds"][0])
+            ilat1, ilon1 = buffer_mask.index(settings["latlon_bounds"][3],
+                                             settings["latlon_bounds"][1])
 
-        ilat_grid, ilon_grid = np.meshgrid(np.arange(ilat0, ilat1 + 1), np.arange(ilon0, ilon1 + 1), indexing="ij")
-        print("output region shape = " + str(ilon_grid.shape))
+            ilat_grid, ilon_grid = np.meshgrid(np.arange(ilat0, ilat1 + 1), np.arange(ilon0, ilon1 + 1), indexing="ij")
+            print("output region shape = " + str(ilon_grid.shape))
 
-        sample_lons, sample_lats = output_tiff.xy(np.ndarray.flatten(ilat_grid), np.ndarray.flatten(ilon_grid))
-        sample_lons, sample_lats = np.asarray(sample_lons), np.asarray(sample_lats)
+            sample_lons, sample_lats = buffer_mask.xy(np.ndarray.flatten(ilat_grid), np.ndarray.flatten(ilon_grid))
+            sample_lons, sample_lats = np.asarray(sample_lons), np.asarray(sample_lats)
 
-        # load HFI data
-        window = Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1))
-        hfi = output_tiff.read(1, window=window)
-        hfi = np.ndarray.flatten(hfi)
+            # load HFI data
+            window = Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1))
+            hfi_mask = buffer_mask.read(1, window=window)
+            hfi = output_tiff.read(1, window=window)
 
-        # remove water locations for training (as determined by the 2010 map)
-        hfi = np.where(hfi == 255, 0., hfi)
-        iland = np.where(hfi != 255)[0]
-        hfi, sample_lats, sample_lons = hfi[iland], sample_lats[iland], sample_lons[iland]
+            hfi = np.ndarray.flatten(hfi)
+            hfi_mask = np.ndarray.flatten(hfi_mask)
 
-    if evaluate_all:
-        sample_lons, sample_lats = output_tiff.xy(np.ndarray.flatten(ilat_grid, order="C"), np.ndarray.flatten(ilon_grid, order="C"))
-        sample_lons, sample_lats = np.asarray(sample_lons), np.asarray(sample_lats)
-        tagyear_test = np.asarray(np.ones(shape=sample_lats.shape) * settings["testing_year"], dtype=int)
+            # remove oceanic locations for training
+            hfi = np.where(hfi == 255., 0., hfi)
+            iland = np.where(hfi_mask == 1)[0]
+            hfi, sample_lats, sample_lons = hfi[iland], sample_lats[iland], sample_lons[iland]
 
-        # PRINT SIZES
-        ntest = tagyear_test.shape
-        print(f"{ntest = }")
+        if evaluate_all:
+            sample_lons, sample_lats = output_tiff.xy(np.ndarray.flatten(ilat_grid, order="C"), np.ndarray.flatten(ilon_grid, order="C"))
+            sample_lons, sample_lats = np.asarray(sample_lons), np.asarray(sample_lats)
+            tagyear_test = np.asarray(np.ones(shape=sample_lats.shape) * settings["testing_year"], dtype=int)
 
-        return tagyear_test, sample_lats, sample_lons
+            # PRINT SIZES
+            ntest = tagyear_test.shape
+            print(f"{ntest = }")
 
-    else:
-        # subsample by half-decile (since original HFI data is 0-50) to account for class imbalance
-        sample_weights = compute_sample_weight(class_weight="balanced", y=np.round(hfi / 5) * 5)
+            return tagyear_test, sample_lats, sample_lons
 
-        # SHUFFLE TOGETHER and BATCH BY EQUAL YEAR
-        # <TO DO> will need to batch by equal tile at a later date
-        sample_years = np.asarray(settings["training_years"], dtype=int)
-        sample_years, sample_lats, sample_lons = permute_shuffle_sample_list(settings,
-                                                                             sample_years,
-                                                                             sample_lats,
-                                                                             sample_lons,
-                                                                             sample_weights)
-        # CHECK IF UNIQUE (this should always be true)
-        __, counts = np.unique([sample_years, sample_lats, sample_lons], axis=1, return_counts=True)
-        assert np.sum(counts > 1) == 0.
+        else:
+            # subsample by half-decile (since original HFI data is 0-50) to account for class imbalance
+            sample_weights = compute_sample_weight(class_weight="balanced", y=np.round(hfi / 5) * 5)
 
-        # SPLIT INTO TRAINING AND VALIDATION
-        ntrain = settings["nbatches"][0] * settings["batch_size"]
-        tagyear_train, taglat_train, taglon_train = sample_years[:ntrain], sample_lats[:ntrain], sample_lons[:ntrain]
-        assert len(tagyear_train) == ntrain
+            # SHUFFLE TOGETHER and BATCH BY EQUAL YEAR
+            # <TO DO> will need to batch by equal tile at a later date
+            sample_years = np.asarray(settings["training_years"], dtype=int)
+            sample_years, sample_lats, sample_lons = permute_shuffle_sample_list(settings,
+                                                                                 sample_years,
+                                                                                 sample_lats,
+                                                                                 sample_lons,
+                                                                                 sample_weights)
+            # CHECK IF UNIQUE (this should always be true)
+            __, counts = np.unique([sample_years, sample_lats, sample_lons], axis=1, return_counts=True)
+            assert np.sum(counts > 1) == 0.
 
-        nval = settings["nbatches"][1] * settings["batch_size"]
-        tagyear_val, taglat_val, taglon_val = sample_years[ntrain:ntrain + nval], sample_lats[ntrain:ntrain + nval], sample_lons[ntrain:ntrain + nval]
-        assert len(tagyear_val) == nval
+            # SPLIT INTO TRAINING AND VALIDATION
+            ntrain = settings["nbatches"][0] * settings["batch_size"]
+            tagyear_train, taglat_train, taglon_train = sample_years[:ntrain], sample_lats[:ntrain], sample_lons[:ntrain]
+            assert len(tagyear_train) == ntrain
 
-        # PRINT SIZES
-        print(f"{ntrain = }, {nval = }")
+            nval = settings["nbatches"][1] * settings["batch_size"]
+            tagyear_val, taglat_val, taglon_val = sample_years[ntrain:ntrain + nval], sample_lats[ntrain:ntrain + nval], sample_lons[ntrain:ntrain + nval]
+            assert len(tagyear_val) == nval
 
-        return tagyear_train, taglat_train, taglon_train, tagyear_val, taglat_val, taglon_val
+            # PRINT SIZES
+            print(f"{ntrain = }, {nval = }")
+
+            return tagyear_train, taglat_train, taglon_train, tagyear_val, taglat_val, taglon_val
 
 
 class data_generator:
@@ -161,14 +165,14 @@ class data_generator:
         filename = LANDSAT_DIRECTORY + str(year.numpy()) + "_" + self.settings["tilename"] + ".tif"
         filename_mask = LANDSAT_DIRECTORY + str(year.numpy()) + "_" + self.settings["tilename"] + "_mask.tif"
 
-        batch_input = np.zeros((len(years), scene_width * LANDSAT_TO_HFI_RATIO, scene_width * LANDSAT_TO_HFI_RATIO, len(channels)))
+        batch_input = np.zeros((len(years), scene_width, scene_width, len(channels)))
         with rasterio.open(filename) as input_tiff:
             with rasterio.open(filename_mask) as input_mask:
                 for isample in np.arange(0, len(years)):
                     ilat, ilon = input_tiff.index(sample_lons[isample], sample_lats[isample])
 
-                    ilat0, ilat1 = ilat[0] - LANDSAT_TO_HFI_RATIO * 2 + 1, ilat[0] + LANDSAT_TO_HFI_RATIO
-                    ilon0, ilon1 = ilon[0] - LANDSAT_TO_HFI_RATIO, ilon[0] + LANDSAT_TO_HFI_RATIO * 2 - 1
+                    ilat0, ilat1 = ilat[0] - scene_width / 3 * 2 + 1, ilat[0] + scene_width / 3
+                    ilon0, ilon1 = ilon[0] - scene_width / 3, ilon[0] + scene_width / 3 * 2 - 1
 
                     window = Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1))
                     batch_input[isample, :, :, :] = np.transpose(input_mask.read(1, window=window) * input_tiff.read(channels, window=window) / 255.,
@@ -185,10 +189,10 @@ class data_generator:
         year = years[0]  # all years are the same for each batch
 
         # read HFI file
-        filename = DATA_DIRECTORY + "hfi" + str(year.numpy()) + "_merisINT.epsg4326.tif"
+        filename = DATA_DIRECTORY + "hii_" + str(year.numpy()) + "-01-01_uint8.tif"
         if not os.path.isfile("filename"):
-            # print("** Loading 2010 HFI values for labels. This is not compatible with training! **")
-            filename = DATA_DIRECTORY + "hfi" + str(2010) + "_merisINT.epsg4326.tif"
+            # print("** Loading 2019 HFI values for labels. This is not compatible with training! **")
+            filename = DATA_DIRECTORY + "hii_2019-01-01_uint8.tif"
 
         batch_output = np.zeros((len(years), 1))
         with rasterio.open(filename) as output_tiff:
@@ -198,7 +202,7 @@ class data_generator:
                 window = Window(ilon[0], ilat[0], 1, 1)
 
                 output_mask = output_tiff.read_masks(1, window=window) // 255.  # convert to 0/1, with 0 = no data
-                batch_output[isample] = output_mask * output_tiff.read(1, window=window) / 50.
+                batch_output[isample] = output_mask * output_tiff.read(1, window=window) / 100.
 
                 # this is where we can force the network to predict zeros
                 if batch_output[isample] == 0.:

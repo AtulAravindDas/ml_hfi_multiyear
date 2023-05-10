@@ -15,13 +15,13 @@ def get_settings(experiment_name):
 
         "exp0": {
 
-            "training_years": (2000, 2005, 2010,),  # (2000, 2005, 2010, 2013)
-            "testing_year": 2013,
+            "training_years": (2015, 2016, 2017, 2018),  # (2000, 2005, 2010, 2013)
+            "testing_year": 2020,
             "tilename": "06S_106E",
             "latlon_bounds": (-6.04, -6.92, 106.05, 106.93),  # (lat0, lat1, lon0, lon1)
             "channels": (1, 2, 3, 4, 5, 6),  # indexing starts at 1
             "nbatches": (200, 25),  # (training_batches, validation_batches)
-            "scene_width": 3,  # HAS NO EFFECT; in units of HFI pixels, so 3x3
+            "scene_width": 114,  # in units of landsat pixels
             "rng_seed": 33,
 
             "layers_units": (64, 128, 128, 128, 128),
