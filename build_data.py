@@ -7,7 +7,6 @@ data_generator
 Functions
 ---------
 build_tf_dataset(settings, sample_years, sample_lats, sample_lons, batch_size)
-permute_shuffle_sample_list(settings, sample_years, sample_lats, sample_lons)
 make_sample_list(settings,)
 data_generator.get_input_data(self, years, sample_lats, sample_lons)
 data_generator.get_output_data(self, years, sample_lats, sample_lons)
@@ -18,9 +17,13 @@ import tensorflow as tf
 from sklearn.utils.class_weight import compute_sample_weight
 import rasterio
 from rasterio.windows import Window
+from rasterio.transform import Affine
+import methods
+from methods import permute_shuffle_sample_list
 
 DATA_DIRECTORY = "data/"
 LANDSAT_DIRECTORY = "data/landsat_export_1x1/"
+PREDICTIONS_DIRECTORY = "predictions/"
 
 
 def build_tf_dataset(settings, sample_years, sample_lats, sample_lons, batch_size, shuffle=True):
@@ -36,6 +39,7 @@ def build_tf_dataset(settings, sample_years, sample_lats, sample_lons, batch_siz
     if shuffle:
         input_tfds = input_tfds.batch(batch_size).shuffle(buffer_size=int(len(sample_years) / batch_size), reshuffle_each_iteration=True, seed=settings["rng_seed"])
         output_tfds = output_tfds.batch(batch_size).shuffle(buffer_size=int(len(sample_years) / batch_size), reshuffle_each_iteration=True, seed=settings["rng_seed"])
+
     else:
         input_tfds = input_tfds.batch(batch_size)
         output_tfds = output_tfds.batch(batch_size)
@@ -51,32 +55,10 @@ def build_tf_dataset(settings, sample_years, sample_lats, sample_lons, batch_siz
     return tfds_all
 
 
-def permute_shuffle_sample_list(settings,
-                                sample_years, sample_lats, sample_lons,
-                                sample_weights=None):
-
-    if sample_weights is None:
-        sample_weights = np.ones(sample_years.shape)
-    sample_weights = sample_weights / np.sum(sample_weights)
-
-    nsamples = np.sum(settings["nbatches"]) * settings["batch_size"]
-    rng = np.random.default_rng(settings["rng_seed"])
-
-    iloc = rng.choice(np.arange(0, sample_lats.shape[0]), size=nsamples, replace=False, p=sample_weights)
-    sample_lats = sample_lats[iloc]
-    sample_lons = sample_lons[iloc]
-
-    # make it so that every batch has the same year throughout for loading files
-    sample_years = np.repeat(np.random.choice(sample_years, size=np.sum(settings["nbatches"]), replace=True),
-                             settings["batch_size"])
-
-    return sample_years, sample_lats, sample_lons
-
-
 def make_sample_list(settings, evaluate_all=False):
 
     # GET THE LATITUDE AND LONGITUDE LOCATION LISTS
-    filename = DATA_DIRECTORY + "hii_2019-01-01_uint8.tif"
+    filename = DATA_DIRECTORY + "hii_2020-01-01_uint8.tif"
     filename_mask = DATA_DIRECTORY + "hii_coastal_buffer_mask.tif"
 
     with rasterio.open(filename) as output_tiff:
@@ -117,20 +99,23 @@ def make_sample_list(settings, evaluate_all=False):
             return tagyear_test, sample_lats, sample_lons
 
         else:
-            # subsample by half-decile (since original HFI data is 0-50) to account for class imbalance
-            sample_weights = compute_sample_weight(class_weight="balanced", y=np.round(hfi / 5) * 5)
+            # subsample by decile to account for class imbalance
+            if settings["subsample"]:
+                sampling_weights = compute_sample_weight(class_weight="balanced", y=np.round(hfi / 10) * 10)
+            else:
+                sampling_weights = np.ones(np.shape(hfi))
 
             # SHUFFLE TOGETHER and BATCH BY EQUAL YEAR
             # <TO DO> will need to batch by equal tile at a later date
             sample_years = np.asarray(settings["training_years"], dtype=int)
-            sample_years, sample_lats, sample_lons = permute_shuffle_sample_list(settings,
-                                                                                 sample_years,
-                                                                                 sample_lats,
-                                                                                 sample_lons,
-                                                                                 sample_weights)
+            (sample_years,
+             sample_lats,
+             sample_lons,
+             ) = permute_shuffle_sample_list(settings, sample_years, sample_lats, sample_lons, sampling_weights)
+
             # CHECK IF UNIQUE (this should always be true)
-            __, counts = np.unique([sample_years, sample_lats, sample_lons], axis=1, return_counts=True)
-            assert np.sum(counts > 1) == 0.
+            # __, counts = np.unique([sample_years, sample_lats, sample_lons], axis=1, return_counts=True)
+            # assert np.sum(counts > 1) == 0.
 
             # SPLIT INTO TRAINING AND VALIDATION
             ntrain = settings["nbatches"][0] * settings["batch_size"]
@@ -147,6 +132,58 @@ def make_sample_list(settings, evaluate_all=False):
             return tagyear_train, taglat_train, taglon_train, tagyear_val, taglat_val, taglon_val
 
 
+def save_predictions_tif(settings, hfi_predict, predictions_filename):
+
+    # GET TIFF META DATA
+    labels_filename = DATA_DIRECTORY + "hii_" + str(settings["testing_year"]) + "-01-01_uint8.tif"
+    filename_mask = DATA_DIRECTORY + "hii_coastal_buffer_mask.tif"
+
+    with rasterio.open(filename_mask) as buffer_mask:
+        ilat0, ilon0 = buffer_mask.index(settings["latlon_bounds"][2], settings["latlon_bounds"][0])
+        ilat1, ilon1 = buffer_mask.index(settings["latlon_bounds"][3], settings["latlon_bounds"][1])
+        lon0, lat0 = buffer_mask.xy(ilat0, ilon0)
+        lon1, lat1 = buffer_mask.xy(ilat1, ilon1)
+
+        window = Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1))
+        hfi_mask = buffer_mask.read(1, window=window)
+
+    if os.path.isfile(labels_filename):
+        with rasterio.open(labels_filename) as labels_tiff:
+            ilat0, ilon0 = labels_tiff.index(settings["latlon_bounds"][2], settings["latlon_bounds"][0])
+            ilat1, ilon1 = labels_tiff.index(settings["latlon_bounds"][3], settings["latlon_bounds"][1])
+            window = Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1))
+            hfi_labels = labels_tiff.read(1, window=window)
+    else:
+        hfi_labels = np.zeros(np.shape(hfi_predict)) * np.nan
+
+    # SAVE THE TIFF
+    width = ilon1 - ilon0 + 1
+    height = ilat1 - ilat0 + 1
+    res_lat = ((lat1 - lat0)) / (height - 1)
+    res_lon = ((lon1 - lon0)) / (width - 1)
+
+    hfi_labels = np.reshape(hfi_labels, (height, width), order="C")
+    hfi_predict = np.reshape(hfi_predict, (height, width), order="C")
+    hfi_predict = np.asarray(np.round(hfi_predict * 100), dtype="uint8")
+    hfi_predict = np.where(hfi_mask == 1, hfi_predict, 255)  # remove ocean and turn to nan
+
+    meta_data = {}
+    meta_data["nodata"] = 255
+    meta_data["width"] = width
+    meta_data["height"] = height
+    meta_data["driver"] = 'GTiff'
+    meta_data["count"] = 1
+    meta_data["crs"] = rasterio.CRS.from_epsg(4326)
+    meta_data["dtype"] = hfi_predict.dtype
+    meta_data["transform"] = Affine.translation(lon0, lat0) * Affine.scale(res_lon, res_lat)
+
+    with rasterio.open(PREDICTIONS_DIRECTORY + predictions_filename + ".tif", "w", **meta_data) as dst:
+        dst.write(hfi_predict, 1)
+        dst.set_band_description(1, 'mlHFI prediction')
+
+    return hfi_predict, hfi_labels, lat0, lat1, lon0, lon1
+
+
 class data_generator:
 
     # init method or constructor
@@ -156,27 +193,30 @@ class data_generator:
     def get_input_data(self, years, sample_lats, sample_lons):
 
         assert np.sum(years - years[0]) == 0
-        year = years[0]  # all years are the same for each batch
 
         channels = self.settings["channels"]
         scene_width = self.settings["scene_width"]
+        rng = np.random.default_rng()
 
         # read landsat file
-        filename = LANDSAT_DIRECTORY + str(year.numpy()) + "_" + self.settings["tilename"] + ".tif"
-        filename_mask = LANDSAT_DIRECTORY + str(year.numpy()) + "_" + self.settings["tilename"] + "_mask.tif"
-
         batch_input = np.zeros((len(years), scene_width, scene_width, len(channels)))
+
+        filename = LANDSAT_DIRECTORY + "landsat_" + self.settings["tilename"] + "_" + str(years[0].numpy()) + ".tif"
+
         with rasterio.open(filename) as input_tiff:
-            with rasterio.open(filename_mask) as input_mask:
-                for isample in np.arange(0, len(years)):
-                    ilat, ilon = input_tiff.index(sample_lons[isample], sample_lats[isample])
 
-                    ilat0, ilat1 = ilat[0] - scene_width / 3 * 2 + 1, ilat[0] + scene_width / 3
-                    ilon0, ilon1 = ilon[0] - scene_width / 3, ilon[0] + scene_width / 3 * 2 - 1
+            for isample in np.arange(0, len(years)):
+                ilat, ilon = input_tiff.index(sample_lons[isample], sample_lats[isample])
 
-                    window = Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1))
-                    batch_input[isample, :, :, :] = np.transpose(input_mask.read(1, window=window) * input_tiff.read(channels, window=window) / 255.,
-                                                                 axes=(1, 2, 0))
+                ilat0, ilat1 = ilat[0] - scene_width / 3 * 2 + 1, ilat[0] + scene_width / 3
+                ilon0, ilon1 = ilon[0] - scene_width / 3, ilon[0] + scene_width / 3 * 2 - 1
+
+                window = Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1))
+                input_scene = np.transpose(input_tiff.read(channels, window=window), axes=(1, 2, 0))
+
+                # add noise to de-noise
+                random_noise = rng.integers(-self.settings["input_noise"], self.settings["input_noise"] + 1, size=1)
+                batch_input[isample, :, :, :] = (input_scene + random_noise) / 255.
 
         # convert to tensor
         dat = tf.convert_to_tensor(batch_input)
@@ -186,15 +226,15 @@ class data_generator:
     def get_output_data(self, years, sample_lats, sample_lons):
 
         assert np.sum(years - years[0]) == 0
-        year = years[0]  # all years are the same for each batch
-
-        # read HFI file
-        filename = DATA_DIRECTORY + "hii_" + str(year.numpy()) + "-01-01_uint8.tif"
-        if not os.path.isfile("filename"):
-            # print("** Loading 2019 HFI values for labels. This is not compatible with training! **")
-            filename = DATA_DIRECTORY + "hii_2019-01-01_uint8.tif"
 
         batch_output = np.zeros((len(years), 1))
+
+        # Get HFI file
+        filename = DATA_DIRECTORY + "hii_" + str(years[0].numpy()) + "-01-01_uint8.tif"
+        if not os.path.isfile("filename"):
+            # print("** Loading 2020 HFI values for labels. This is not compatible with training! **")
+            filename = DATA_DIRECTORY + "hii_2020-01-01_uint8.tif"
+
         with rasterio.open(filename) as output_tiff:
             for isample in np.arange(0, len(years)):
 
