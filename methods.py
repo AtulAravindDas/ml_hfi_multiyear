@@ -86,6 +86,6 @@ def get_input_filename(years, lats, lons):
         file_year = years[isample]
         file_lat = int(np.ceil(lats[isample]))
         file_lon = int(np.floor(lons[isample]))
-        filenames.append(f"landsat_{file_lat}lat_{file_lon}lon_{file_year}.tif")
+        filenames.append(f"landsat_{file_lat}lat_{file_lon}lon_{file_year}")
 
     return filenames
