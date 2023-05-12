@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import rasterio
 from rasterio.windows import Window
