@@ -55,7 +55,7 @@ def build_tf_dataset(settings, tags, batch_size, shuffle=True):
     return tfds_all
 
 
-def make_sample_list(settings, evaluate_all=False):
+def get_sample_tags(settings, evaluate_all=False):
 
     # GET THE LATITUDE AND LONGITUDE LOCATION LISTS
     filename = DATA_DIRECTORY + "hii_2020-01-01_uint8.tif"
@@ -90,8 +90,9 @@ def make_sample_list(settings, evaluate_all=False):
         if evaluate_all:
             sample_lons, sample_lats = output_tiff.xy(np.ndarray.flatten(ilat_grid, order="C"), np.ndarray.flatten(ilon_grid, order="C"))
             sample_lons, sample_lats = np.asarray(sample_lons), np.asarray(sample_lats)
-            tagyear_test = np.asarray(np.ones(shape=sample_lats.shape) * settings["testing_year"], dtype=int)
+            tagyear_test = np.asarray(np.ones(shape=sample_lats.shape) * settings["testing_years"][0], dtype=int)
             tagfile_test = methods.get_input_filename(tagyear_test, sample_lats, sample_lons)
+
             # PRINT SIZES
             ntest = tagyear_test.shape
             print(f"{ntest = }")
@@ -151,7 +152,7 @@ def make_sample_list(settings, evaluate_all=False):
 def save_predictions_tif(settings, hfi_predict, predictions_filename):
 
     # GET TIFF META DATA
-    labels_filename = DATA_DIRECTORY + "hii_" + str(settings["testing_year"]) + "-01-01_uint8.tif"
+    labels_filename = DATA_DIRECTORY + "hii_" + str(settings["testing_years"][0]) + "-01-01_uint8.tif"
     filename_mask = DATA_DIRECTORY + "hii_coastal_buffer_mask.tif"
 
     with rasterio.open(filename_mask) as buffer_mask:
@@ -278,9 +279,11 @@ def read_output_data(self, tiff, sample_lon, sample_lat):
     output_mask = tiff.read_masks(1, window=window) // 255.  # convert to 0/1, with 0 = no data
     sample_output = output_mask * tiff.read(1, window=window)
 
-    # this is where we can force the network to predict zeros
+    # this is where we can force the network to predict zeros or ones
     if self.settings["training"]:
         if sample_output == 0.:
             sample_output = self.settings["kluge_value_for_zero"]
+        elif sample_output >= 99:
+            sample_output = self.settings["kluge_value_for_one"]
 
     return sample_output

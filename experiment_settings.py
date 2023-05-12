@@ -19,7 +19,7 @@ def get_settings(experiment_name):
             "training_years": (2015, 2016, 2017, 2018),  # (2000, 2005, 2010, 2013)
             "testing_years": (2020, ),
 
-            "latlon_bounds": (34.92, 34.04, 71.05, 71.93),  # (lat0, lat1, lon0, lon1)
+            "latlon_bounds": (34.92, 34.04, 71.05, 71.93),  # (lat_north, lat_south, lon_west, lon_east)
 
             "channels": (1, 2, 3, 4, 5, 6),  # indexing starts at 1, channel 7 = WATER_MASK
             "nbatches": (200, 50),  # (training_batches, validation_batches)
@@ -31,7 +31,8 @@ def get_settings(experiment_name):
             "max_pool_stride": (2, 2),  # (pool size, stride length)
             "dense_units": 32,
 
-            "kluge_value_for_zero": 0.0,  # -0.2,
+            "kluge_value_for_zero": -.2,  # -0.2,
+            "kluge_value_for_one": 1.2,  # -0.2,
             "aug_randomflip": True,
             "input_noise": 10,  # in units of rgb values
             "sample_weights_alpha": 10.0,
