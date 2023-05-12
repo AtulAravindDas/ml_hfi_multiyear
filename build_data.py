@@ -26,29 +26,29 @@ LANDSAT_DIRECTORY = "data/landsat_export_1x1/"
 PREDICTIONS_DIRECTORY = "predictions/"
 
 
-def build_tf_dataset(settings, sample_years, sample_lats, sample_lons, batch_size, shuffle=True):
+def build_tf_dataset(settings, tags, batch_size, shuffle=True):
 
     # make data generator
     data_gen = data_generator(settings)
 
     # create tf datasets
-    input_tfds = tf.data.Dataset.from_tensor_slices((sample_years, sample_lats, sample_lons))
-    output_tfds = tf.data.Dataset.from_tensor_slices((sample_years, sample_lats, sample_lons))
+    input_tfds = tf.data.Dataset.from_tensor_slices(tags)
+    output_tfds = tf.data.Dataset.from_tensor_slices(tags)
 
     # batch the data together so the iterator loops through batches instead of samples
     if shuffle:
-        input_tfds = input_tfds.batch(batch_size).shuffle(buffer_size=int(len(sample_years) / batch_size), reshuffle_each_iteration=True, seed=settings["rng_seed"])
-        output_tfds = output_tfds.batch(batch_size).shuffle(buffer_size=int(len(sample_years) / batch_size), reshuffle_each_iteration=True, seed=settings["rng_seed"])
+        input_tfds = input_tfds.batch(batch_size).shuffle(buffer_size=int(len(tags[0]) / batch_size), reshuffle_each_iteration=True, seed=settings["rng_seed"])
+        output_tfds = output_tfds.batch(batch_size).shuffle(buffer_size=int(len(tags[0]) / batch_size), reshuffle_each_iteration=True, seed=settings["rng_seed"])
 
     else:
         input_tfds = input_tfds.batch(batch_size)
         output_tfds = output_tfds.batch(batch_size)
 
     # use the mapping function to map sample tags to the data generator functions
-    input_tfds = input_tfds.map(lambda sample_years, sample_lats, sample_lons:
-                                tf.py_function(data_gen.get_input_data, [sample_years, sample_lats, sample_lons], Tout=tf.float64))
-    output_tfds = output_tfds.map(lambda sample_years, sample_lats, sample_lons:
-                                  tf.py_function(data_gen.get_output_data, [sample_years, sample_lats, sample_lons], Tout=tf.float64))
+    input_tfds = input_tfds.map(lambda sample_years, sample_lats, sample_lons, sample_files:
+                                tf.py_function(data_gen.get_input_data, [sample_years, sample_lats, sample_lons, sample_files], Tout=tf.float64))
+    output_tfds = output_tfds.map(lambda sample_years, sample_lats, sample_lons, sample_files:
+                                  tf.py_function(data_gen.get_output_data, [sample_years, sample_lats, sample_lons, sample_files], Tout=tf.float64))
 
     tfds_all = tf.data.Dataset.zip((input_tfds, output_tfds))
 
@@ -91,15 +91,17 @@ def make_sample_list(settings, evaluate_all=False):
             sample_lons, sample_lats = output_tiff.xy(np.ndarray.flatten(ilat_grid, order="C"), np.ndarray.flatten(ilon_grid, order="C"))
             sample_lons, sample_lats = np.asarray(sample_lons), np.asarray(sample_lats)
             tagyear_test = np.asarray(np.ones(shape=sample_lats.shape) * settings["testing_year"], dtype=int)
-
+            tagfile_test = methods.get_input_filename(tagyear_test, sample_lats, sample_lons)
             # PRINT SIZES
             ntest = tagyear_test.shape
             print(f"{ntest = }")
 
-            return tagyear_test, sample_lats, sample_lons
+            # Put into a nice package
+            tags = (tagyear_test, sample_lats, sample_lons, tagfile_test)
+            return tags
 
         else:
-            # subsample by decile to account for class imbalance
+            # subsample by decile to additionally account for class imbalance
             if settings["subsample"]:
                 sampling_weights = compute_sample_weight(class_weight="balanced", y=np.round(hfi / 10) * 10)
             else:
@@ -109,7 +111,11 @@ def make_sample_list(settings, evaluate_all=False):
 
             # SHUFFLE TOGETHER and BATCH BY EQUAL YEAR
             # <TO DO> will need to batch by equal tile at a later date
-            sample_years = np.asarray(settings["training_years"], dtype=int)
+            if settings["training"]:
+                years = settings["training_years"]
+            else:
+                years = settings["testing_years"]
+            sample_years = np.asarray(years, dtype=int)
             (sample_years,
              sample_lats,
              sample_lons,
@@ -128,10 +134,18 @@ def make_sample_list(settings, evaluate_all=False):
             tagyear_val, taglat_val, taglon_val = sample_years[ntrain:ntrain + nval], sample_lats[ntrain:ntrain + nval], sample_lons[ntrain:ntrain + nval]
             assert len(tagyear_val) == nval
 
+            # GET FILENAMES
+            tagfile_train = methods.get_input_filename(tagyear_train, taglat_train, taglon_train)
+            tagfile_val = methods.get_input_filename(tagyear_val, taglat_val, taglon_val)
+
+            # Put into nice packages
+            tags_train = (tagyear_train, taglat_train, taglon_train, tagfile_train)
+            tags_val = (tagyear_val, taglat_val, taglon_val, tagfile_val)
+
             # PRINT SIZES
             print(f"{ntrain = }, {nval = }")
 
-            return tagyear_train, taglat_train, taglon_train, tagyear_val, taglat_val, taglon_val, denseweight_dist
+            return tags_train, tags_val, denseweight_dist
 
 
 def save_predictions_tif(settings, hfi_predict, predictions_filename):
@@ -192,19 +206,19 @@ class data_generator:
     def __init__(self, settings):
         self.settings = settings
 
-    def get_input_data(self, years, sample_lats, sample_lons):
-
-        assert np.sum(years - years[0]) == 0
+    def get_input_data(self, years, sample_lats, sample_lons, sample_files):
 
         channels = self.settings["channels"]
         scene_width = self.settings["scene_width"]
 
         # read landsat file
+        assert all(x == sample_files[0].numpy().decode('utf8') for x in sample_files)
+        filename = LANDSAT_DIRECTORY + sample_files[0].numpy().decode('utf8')
+
         batch_input = np.zeros((len(years), scene_width, scene_width, len(channels)))
 
-        filename = LANDSAT_DIRECTORY + "landsat_" + self.settings["tilename"] + "_" + str(years[0].numpy()) + ".tif"
         if not os.path.isfile(filename):
-            return tf.convert_to_tensor(batch_input * np.nan)
+            raise ValueError("No such input Landsat file: " + filename)
 
         with rasterio.open(filename) as input_tiff:
             for isample in np.arange(0, len(years)):
@@ -216,14 +230,14 @@ class data_generator:
 
         return dat
 
-    def get_output_data(self, years, sample_lats, sample_lons):
+    def get_output_data(self, years, sample_lats, sample_lons, sample_files):
 
-        assert np.sum(years - years[0]) == 0
+        # Get HFI file
+        assert all(x == years[0] for x in years)
+        filename = DATA_DIRECTORY + "hii_" + str(years[0].numpy()) + "-01-01_uint8.tif"
 
         batch_output = np.zeros((len(years), 1))
 
-        # Get HFI file
-        filename = DATA_DIRECTORY + "hii_" + str(years[0].numpy()) + "-01-01_uint8.tif"
         if not os.path.isfile(filename):
             return tf.convert_to_tensor(batch_output * np.nan)
 

@@ -17,10 +17,10 @@ def get_settings(experiment_name):
 
             "training": True,
             "training_years": (2015, 2016, 2017, 2018),  # (2000, 2005, 2010, 2013)
-            "testing_year": 2020,
-            "tilename": "-6lat_106lon",
-            "latlon_bounds": (-6.04, -6.92, 106.05, 106.93),  # (lat0, lat1, lon0, lon1)
-            # "latlon_bounds": (-6.1, -6.34, 106.6, 106.93),  # (lat0, lat1, lon0, lon1)
+            "testing_years": (2020, ),
+
+            "latlon_bounds": (34.92, 34.04, 71.05, 71.93),  # (lat0, lat1, lon0, lon1)
+
             "channels": (1, 2, 3, 4, 5, 6),  # indexing starts at 1, channel 7 = WATER_MASK
             "nbatches": (200, 50),  # (training_batches, validation_batches)
             "scene_width": 114,  # in units of landsat pixels
@@ -31,7 +31,7 @@ def get_settings(experiment_name):
             "max_pool_stride": (2, 2),  # (pool size, stride length)
             "dense_units": 32,
 
-            "kluge_value_for_zero": -0.2,
+            "kluge_value_for_zero": 0.0,  # -0.2,
             "aug_randomflip": True,
             "input_noise": 10,  # in units of rgb values
             "sample_weights_alpha": 10.0,

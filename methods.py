@@ -77,3 +77,15 @@ def permute_shuffle_sample_list(settings,
                              settings["batch_size"])
 
     return sample_years, sample_lats, sample_lons
+
+
+def get_input_filename(years, lats, lons):
+
+    filenames = []
+    for isample in range(len(years)):
+        file_year = years[isample]
+        file_lat = int(np.ceil(lats[isample]))
+        file_lon = int(np.floor(lons[isample]))
+        filenames.append(f"landsat_{file_lat}lat_{file_lon}lon_{file_year}.tif")
+
+    return filenames
