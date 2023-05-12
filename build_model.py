@@ -17,14 +17,15 @@ def build_model(settings, input_shape):
     FINAL_ACTIVATION = "sigmoid"
 
     input = tf.keras.Input(shape=input_shape)
+    scaled_input = tf.keras.layers.Rescaling(scale=1.0 / 255)(input)
 
     # add data augmentation layers
     # x = input
     if settings["aug_randomflip"]:
         x = tf.keras.layers.RandomFlip("horizontal_and_vertical",
-                                       seed=settings["rng_seed"])(input)
+                                       seed=settings["rng_seed"])(scaled_input)
     else:
-        x = input
+        x = scaled_input
 
     # Add all the Dense Layers
     for layer, nodes in enumerate(settings["layers_units"]):
@@ -42,7 +43,8 @@ def build_model(settings, input_shape):
 
             x = tf.keras.layers.MaxPooling2D(
                 pool_size=(settings["max_pool_stride"][0], settings["max_pool_stride"][0]),
-                strides=settings["max_pool_stride"], padding='valid',
+                strides=settings["max_pool_stride"],
+                padding='valid',
                 data_format='channels_last')(x)
 
     # # dropout layer
@@ -52,7 +54,7 @@ def build_model(settings, input_shape):
     x = tf.keras.layers.Flatten()(x)
 
     # # add skip connection
-    input_flat = tf.keras.layers.Flatten()(input[:, :, :, 2])
+    input_flat = tf.keras.layers.Flatten()(scaled_input[:, :, :, 2])
     x = tf.keras.layers.Concatenate(axis=1)([x, input_flat])
 
     # dropout layer
@@ -68,6 +70,7 @@ def build_model(settings, input_shape):
     x = tf.keras.layers.Dense(1,
                               bias_initializer=tf.keras.initializers.Zeros(),
                               activation=FINAL_ACTIVATION)(x)
+    x = tf.keras.layers.Rescaling(scale=100., offset=0.0)(x)
 
     model = tf.keras.models.Model(inputs=input, outputs=x)
 
