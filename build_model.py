@@ -8,7 +8,7 @@ import numpy as np
 import tensorflow as tf
 
 __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
-__date__ = "05 May 2023"
+__date__ = "10 May 2023"
 
 
 def build_model(settings, input_shape):
@@ -39,14 +39,24 @@ def build_model(settings, input_shape):
         )(x)
 
         if layer < len(settings["layers_units"]) - 1:
+
             x = tf.keras.layers.MaxPooling2D(
                 pool_size=(settings["max_pool_stride"][0], settings["max_pool_stride"][0]),
                 strides=settings["max_pool_stride"], padding='valid',
                 data_format='channels_last')(x)
 
-    # dropout and flatten
-    x = tf.keras.layers.Dropout(rate=settings["dropout"])(x)
+    # # dropout layer
+    # x = tf.keras.layers.Dropout(rate=settings["dropout"])(x)
+
+    # flatten layer
     x = tf.keras.layers.Flatten()(x)
+
+    # # add skip connection
+    input_flat = tf.keras.layers.Flatten()(input[:, :, :, 2])
+    x = tf.keras.layers.Concatenate(axis=1)([x, input_flat])
+
+    # dropout layer
+    x = tf.keras.layers.Dropout(rate=settings["dropout"])(x)
 
     # Final dense layer before the classification layers.
     x = tf.keras.layers.Dense(units=settings["dense_units"],

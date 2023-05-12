@@ -20,7 +20,7 @@ SAVE_MODEL_DIRECTORY = "saved_models/"
 
 
 def scheduler(epoch, learning_rate):
-    if epoch < 5.:
+    if epoch < 10.:
         return learning_rate
     else:
         return learning_rate * tf.math.exp(-0.1)
@@ -96,7 +96,7 @@ def train_model(settings, model, tfds_train, tfds_val):
         validation_data=tfds_val,
         epochs=settings["max_epochs"],
         callbacks=callbacks,
-        # batch_size=settings["batch_size"],  # this is already determined by tf_dataset
+        # batch_size=settings["batch_size"],
         verbose=1,
     )
     stop_time = time.time()
