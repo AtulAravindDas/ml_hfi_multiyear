@@ -11,6 +11,7 @@ import numpy as np
 import silence_tensorflow.auto
 import tensorflow as tf
 import random
+import methods
 
 __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
 __version__ = "05 May 2023"
@@ -26,7 +27,7 @@ def scheduler(epoch, learning_rate):
         return learning_rate * tf.math.exp(-0.1)
 
 
-def train_model(settings, model, tfds_train, tfds_val):
+def train_model(settings, model, tfds_train, tfds_val, denseweight_dist):
 
     # SET RANDOM SEEDS AGAIN FOR MODEL TRAINING
     np.random.seed(settings["rng_seed"])
@@ -69,8 +70,8 @@ def train_model(settings, model, tfds_train, tfds_val):
     optimizer = tf.keras.optimizers.Adam(settings["learning_rate"])
 
     # loss function
-    # WE WILL WANT TO MODIFY THIS TO INCLUDE THE KLUGE TO ZERO ******
-    loss = tf.keras.losses.MeanSquaredError()
+    # loss = tf.keras.losses.MeanSquaredError()
+    loss = methods.DenseWeight_Loss(tf.constant(denseweight_dist, dtype="float32"))
 
     # SET PRE-FETCH ON DATA
     tfds_train = tfds_train.prefetch(tf.data.AUTOTUNE)

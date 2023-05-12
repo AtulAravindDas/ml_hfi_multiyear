@@ -8,31 +8,52 @@ permute_shuffle_sample_list(settings, sample_years, sample_lats, sample_lons)
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy
+import tensorflow as tf
 
 __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
 __date__ = "11 May 2023"
 
 
-def get_sample_weights(settings, data):
+def get_denseweight_dist(settings, data):
+    # see Steininger et al. (2021)
+    # https://link.springer.com/article/10.1007/s10994-021-06023-5
 
+    epsilon = 0.001
     alpha = settings["sample_weights_alpha"]
-    epsilon = .0001
+    x_values = np.arange(0, 101, 1)
 
-    hist = np.histogram(data, bins=100)
+    hist = np.histogram(data, bins=x_values)
     hist_dist = scipy.stats.rv_histogram(hist, density=True)
+    hist_dist = hist_dist.pdf(x_values)
 
-    weights = np.maximum(1 - alpha * hist_dist.pdf(data), epsilon)
-    weights = weights / np.mean(weights)
+    denseweight_dist = np.maximum(1. - alpha * hist_dist, epsilon)
+    denseweight_dist = denseweight_dist / np.mean(denseweight_dist)
 
-    # plt.figure()
-    # x_values = np.arange(0, 1.01, .01)
-    # plot_weights = np.maximum(1 - alpha * hist_dist.pdf(x_values), epsilon)
-    # plot_weights = plot_weights / np.mean(plot_weights)
-    # n, bins, __ = plt.hist(data, np.arange(0, 1.01, .01), density=True)
-    # plt.plot(x_values, plot_weights)
-    # plt.ylim(0, None)
+    return denseweight_dist
 
-    return weights
+
+def dw_calculator(denseweight_dist, data):
+
+    # scaled_data = tf.cast(tf.math.round(100. * data), dtype=tf.int32)
+    scaled_data = tf.cast(tf.math.round(data), dtype=tf.int32)
+    return tf.gather(denseweight_dist, scaled_data)
+
+
+class DenseWeight_Loss(tf.keras.losses.Loss):
+    def __init__(self, denseweight_dist):
+        super().__init__()
+        self.denseweight_dist = denseweight_dist
+
+    def call(self, y_true, y_pred):
+
+        loss = tf.math.squared_difference(y_true, y_pred)
+
+        weights = dw_calculator(self.denseweight_dist, y_true)
+        loss = tf.multiply(loss, weights)
+
+        loss = tf.reduce_mean(loss)
+
+        return tf.sqrt(loss)
 
 
 def permute_shuffle_sample_list(settings,

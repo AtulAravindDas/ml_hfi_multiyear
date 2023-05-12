@@ -105,6 +105,8 @@ def make_sample_list(settings, evaluate_all=False):
             else:
                 sampling_weights = np.ones(np.shape(hfi))
 
+            denseweight_dist = methods.get_denseweight_dist(settings, hfi)
+
             # SHUFFLE TOGETHER and BATCH BY EQUAL YEAR
             # <TO DO> will need to batch by equal tile at a later date
             sample_years = np.asarray(settings["training_years"], dtype=int)
@@ -129,7 +131,7 @@ def make_sample_list(settings, evaluate_all=False):
             # PRINT SIZES
             print(f"{ntrain = }, {nval = }")
 
-            return tagyear_train, taglat_train, taglon_train, tagyear_val, taglat_val, taglon_val
+            return tagyear_train, taglat_train, taglon_train, tagyear_val, taglat_val, taglon_val, denseweight_dist
 
 
 def save_predictions_tif(settings, hfi_predict, predictions_filename):
@@ -164,7 +166,7 @@ def save_predictions_tif(settings, hfi_predict, predictions_filename):
 
     hfi_labels = np.reshape(hfi_labels, (height, width), order="C")
     hfi_predict = np.reshape(hfi_predict, (height, width), order="C")
-    hfi_predict = np.asarray(np.round(hfi_predict * 100), dtype="uint8")
+    hfi_predict = np.asarray(np.round(hfi_predict), dtype="uint8")
     hfi_predict = np.where(hfi_mask == 1, hfi_predict, 255)  # remove ocean and turn to nan
 
     meta_data = {}
@@ -208,15 +210,26 @@ class data_generator:
             for isample in np.arange(0, len(years)):
                 ilat, ilon = input_tiff.index(sample_lons[isample], sample_lats[isample])
 
-                ilat0, ilat1 = ilat[0] - scene_width / 3 * 2 + 1, ilat[0] + scene_width / 3
-                ilon0, ilon1 = ilon[0] - scene_width / 3, ilon[0] + scene_width / 3 * 2 - 1
+                # WRONG
+                # ilat0, ilat1 = ilat[0] - scene_width / 3 * 2 + 1, ilat[0] + scene_width / 3
+                # ilon0, ilon1 = ilon[0] - scene_width / 3, ilon[0] + scene_width / 3 * 2 - 1
+
+                # CORRECT - MAYBE
+                # ilat0, ilat1 = ilat[0] - scene_width / 3, ilat[0] + scene_width / 3 * 2 - 1
+                # ilon0, ilon1 = ilon[0] - scene_width / 3, ilon[0] + scene_width / 3 * 2 - 1
+
+                ilat0, ilat1 = ilat[0] - scene_width / 3 * 2, ilat[0] + scene_width / 3 - 1
+                ilon0, ilon1 = ilon[0] - scene_width / 3 * 2, ilon[0] + scene_width / 3 - 1
 
                 window = Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1))
                 input_scene = np.transpose(input_tiff.read(channels, window=window), axes=(1, 2, 0))
 
                 # add noise to de-noise
-                random_noise = rng.integers(-self.settings["input_noise"], self.settings["input_noise"] + 1, size=1)
-                batch_input[isample, :, :, :] = (input_scene + random_noise) / 255.
+                if self.settings["training"]:
+                    random_noise = rng.integers(-self.settings["input_noise"], self.settings["input_noise"] + 1, size=1)
+                    batch_input[isample, :, :, :] = (input_scene + random_noise)
+                else:
+                    batch_input[isample, :, :, :] = input_scene
 
         # convert to tensor
         dat = tf.convert_to_tensor(batch_input)
@@ -242,13 +255,32 @@ class data_generator:
                 window = Window(ilon[0], ilat[0], 1, 1)
 
                 output_mask = output_tiff.read_masks(1, window=window) // 255.  # convert to 0/1, with 0 = no data
-                batch_output[isample] = output_mask * output_tiff.read(1, window=window) / 100.
+                batch_output[isample] = output_mask * output_tiff.read(1, window=window)
 
                 # this is where we can force the network to predict zeros
-                if batch_output[isample] == 0.:
-                    batch_output[isample] = self.settings["kluge_value_for_zero"]
+                if self.settings["training"]:
+                    if batch_output[isample] == 0.:
+                        batch_output[isample] = self.settings["kluge_value_for_zero"]
+
+                # batch_output[isample] = read_output_data(self, output_tiff, sample_lons[isample], sample_lats[isample])
 
         # convert to tensor
         dat = tf.convert_to_tensor(batch_output)
 
         return dat
+
+
+def read_output_data(self, tiff, sample_lon, sample_lat):
+
+    ilat, ilon = tiff.index(sample_lon, sample_lat)
+    window = Window(ilon[0], ilat[0], 1, 1)
+
+    output_mask = tiff.read_masks(1, window=window) // 255.  # convert to 0/1, with 0 = no data
+    sample_output = output_mask * tiff.read(1, window=window)
+
+    # this is where we can force the network to predict zeros
+    if self.settings["training"]:
+        if sample_output == 0.:
+            sample_output = self.settings["kluge_value_for_zero"]
+
+    return sample_output
