@@ -198,38 +198,18 @@ class data_generator:
 
         channels = self.settings["channels"]
         scene_width = self.settings["scene_width"]
-        rng = np.random.default_rng()
 
         # read landsat file
         batch_input = np.zeros((len(years), scene_width, scene_width, len(channels)))
 
         filename = LANDSAT_DIRECTORY + "landsat_" + self.settings["tilename"] + "_" + str(years[0].numpy()) + ".tif"
+        if not os.path.isfile(filename):
+            return tf.convert_to_tensor(batch_input * np.nan)
 
         with rasterio.open(filename) as input_tiff:
-
             for isample in np.arange(0, len(years)):
-                ilat, ilon = input_tiff.index(sample_lons[isample], sample_lats[isample])
 
-                # WRONG
-                # ilat0, ilat1 = ilat[0] - scene_width / 3 * 2 + 1, ilat[0] + scene_width / 3
-                # ilon0, ilon1 = ilon[0] - scene_width / 3, ilon[0] + scene_width / 3 * 2 - 1
-
-                # CORRECT - MAYBE
-                # ilat0, ilat1 = ilat[0] - scene_width / 3, ilat[0] + scene_width / 3 * 2 - 1
-                # ilon0, ilon1 = ilon[0] - scene_width / 3, ilon[0] + scene_width / 3 * 2 - 1
-
-                ilat0, ilat1 = ilat[0] - scene_width / 3 * 2, ilat[0] + scene_width / 3 - 1
-                ilon0, ilon1 = ilon[0] - scene_width / 3 * 2, ilon[0] + scene_width / 3 - 1
-
-                window = Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1))
-                input_scene = np.transpose(input_tiff.read(channels, window=window), axes=(1, 2, 0))
-
-                # add noise to de-noise
-                if self.settings["training"]:
-                    random_noise = rng.integers(-self.settings["input_noise"], self.settings["input_noise"] + 1, size=1)
-                    batch_input[isample, :, :, :] = (input_scene + random_noise)
-                else:
-                    batch_input[isample, :, :, :] = input_scene
+                batch_input[isample, :, :, :] = read_input_data(self, input_tiff, sample_lons[isample], sample_lats[isample], channels, scene_width)
 
         # convert to tensor
         dat = tf.convert_to_tensor(batch_input)
@@ -244,30 +224,36 @@ class data_generator:
 
         # Get HFI file
         filename = DATA_DIRECTORY + "hii_" + str(years[0].numpy()) + "-01-01_uint8.tif"
-        if not os.path.isfile("filename"):
-            # print("** Loading 2020 HFI values for labels. This is not compatible with training! **")
-            filename = DATA_DIRECTORY + "hii_2020-01-01_uint8.tif"
+        if not os.path.isfile(filename):
+            return tf.convert_to_tensor(batch_output * np.nan)
 
         with rasterio.open(filename) as output_tiff:
             for isample in np.arange(0, len(years)):
 
-                ilat, ilon = output_tiff.index(sample_lons[isample], sample_lats[isample])
-                window = Window(ilon[0], ilat[0], 1, 1)
-
-                output_mask = output_tiff.read_masks(1, window=window) // 255.  # convert to 0/1, with 0 = no data
-                batch_output[isample] = output_mask * output_tiff.read(1, window=window)
-
-                # this is where we can force the network to predict zeros
-                if self.settings["training"]:
-                    if batch_output[isample] == 0.:
-                        batch_output[isample] = self.settings["kluge_value_for_zero"]
-
-                # batch_output[isample] = read_output_data(self, output_tiff, sample_lons[isample], sample_lats[isample])
+                batch_output[isample] = read_output_data(self, output_tiff, sample_lons[isample], sample_lats[isample])
 
         # convert to tensor
         dat = tf.convert_to_tensor(batch_output)
 
         return dat
+
+
+def read_input_data(self, tiff, sample_lon, sample_lat, channels, scene_width):
+
+    ilat, ilon = tiff.index(sample_lon, sample_lat)
+    ilat0, ilat1 = ilat[0] - scene_width / 3 * 2, ilat[0] + scene_width / 3 - 1
+    ilon0, ilon1 = ilon[0] - scene_width / 3 * 2, ilon[0] + scene_width / 3 - 1
+
+    window = Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1))
+    sample_output = np.transpose(tiff.read(channels, window=window), axes=(1, 2, 0))
+
+    # add noise to de-noise
+    rng = np.random.default_rng()
+    if self.settings["training"]:
+        random_noise = rng.integers(-self.settings["input_noise"], self.settings["input_noise"] + 1, size=1)
+        sample_output = (sample_output + random_noise)
+
+    return sample_output
 
 
 def read_output_data(self, tiff, sample_lon, sample_lat):
