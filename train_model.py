@@ -17,7 +17,8 @@ __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
 __version__ = "05 May 2023"
 
 
-SAVE_MODEL_DIRECTORY = "saved_models/"
+directory_paths = methods.get_directories()
+SAVE_MODEL_DIRECTORY = directory_paths["save_model_dir"]
 
 
 def scheduler(epoch, learning_rate):

@@ -9,9 +9,27 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy
 import tensorflow as tf
+import methods
 
 __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
 __date__ = "11 May 2023"
+
+
+directory_paths = methods.get_directories()
+DATA_DIRECTORY = directory_paths["data_dir"]
+LANDSAT_DIRECTORY = directory_paths["landsat_dir"]
+PREDICTIONS_DIRECTORY = directory_paths["predictions_dir"]
+
+
+def get_directories():
+    dir_dict = {
+        "data_dir": "data/",
+        "landsat_dir": "data/landsat_export_1x1/",
+        "predictions_dir": "predictions/",
+        "figures_dir": "figures/",
+        "save_model_dir": "saved_models/"
+    }
+    return dir_dict
 
 
 def get_denseweight_dist(settings, data):
@@ -86,6 +104,6 @@ def get_input_filename(years, lats, lons):
         file_year = years[isample]
         file_lat = int(np.ceil(lats[isample]))
         file_lon = int(np.floor(lons[isample]))
-        filenames.append(f"landsat_{file_lat}lat_{file_lon}lon_{file_year}.tif")
+        filenames.append(f"landsat_{file_lat}lat_{file_lon}lon_{file_year}")
 
     return filenames
