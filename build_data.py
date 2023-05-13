@@ -21,9 +21,12 @@ from rasterio.transform import Affine
 import methods
 from methods import permute_shuffle_sample_list
 
-DATA_DIRECTORY = "data/"
-LANDSAT_DIRECTORY = "data/landsat_export_1x1/"
-PREDICTIONS_DIRECTORY = "predictions/"
+
+directory_paths = methods.get_directories()
+SAVE_MODEL_DIRECTORY = directory_paths["save_model_dir"]
+DATA_DIRECTORY = directory_paths["data_dir"]
+LANDSAT_DIRECTORY = directory_paths["landsat_dir"]
+PREDICTIONS_DIRECTORY = directory_paths["predictions_dir"]
 
 
 def build_tf_dataset(settings, tags, batch_size, shuffle=True):

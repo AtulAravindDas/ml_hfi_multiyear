@@ -3,10 +3,13 @@ import numpy as np
 import rasterio
 from rasterio.windows import Window
 from rasterio.transform import Affine
+import methods
 
-DATA_DIRECTORY = "data/"
-LANDSAT_DIRECTORY = "data/landsat_export_1x1/"
-PREDICTIONS_DIRECTORY = "predictions/"
+
+directory_paths = methods.get_directories()
+DATA_DIRECTORY = directory_paths["data_dir"]
+LANDSAT_DIRECTORY = directory_paths["landsat_dir"]
+PREDICTIONS_DIRECTORY = directory_paths["predictions_dir"]
 
 
 def save_predictions_tif(settings, hfi_predict, predictions_filename):
