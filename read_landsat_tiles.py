@@ -63,10 +63,10 @@ def get_input_filename(years, lats, lons):
     return filenames
 
 
-def read_input_data(self, tif_dict, sample_year, sample_lon, sample_lat, channels, scene_width, mode):
+def read_input_data(self, tif_dict, sample_year, sample_lon, sample_lat, channels, scene_width):
 
-    # sample_lon = sample_lon[0]
-    # sample_lat = sample_lat[0]
+    sample_lon = sample_lon.numpy()
+    sample_lat = sample_lat.numpy()
 
     ilat, ilon = tif_dict["central"].index(sample_lon, sample_lat)
     ilat0, ilat1 = ilat - scene_width / 3 * 2, ilat + scene_width / 3 - 1
@@ -94,7 +94,7 @@ def read_input_data(self, tif_dict, sample_year, sample_lon, sample_lat, channel
     else:
         raise NotImplementedError("no such use case")
 
-    print(usecase)
+    # print(usecase, sample_lat, sample_lon, ilat1, ilat1, ilon0, ilon1,)
 
     # USECASE 0 - central only
     if usecase == "case_central":
@@ -236,16 +236,16 @@ def read_input_data(self, tif_dict, sample_year, sample_lon, sample_lat, channel
     else:
         raise NotImplementedError("such a case does not exist. something is wrong.")
 
-    assert sample_output.shape[0] == scene_width
-    assert sample_output.shape[1] == scene_width
+    # print(usecase, sample_lat, sample_lon, ilat1, ilat1, ilon0, ilon1,)
+    assert sample_output.shape[0] == scene_width, f"{sample_output.shape[0] = }, {usecase = }"
+    assert sample_output.shape[1] == scene_width, f"{sample_output.shape[1] = }, {usecase = }"
 
-
-    # # add noise to de-noise
-    # rng = np.random.default_rng()
-    # if self.settings["mode"] == "training":
-    #     random_noise = rng.integers(
-    #         -self.settings["input_noise"], self.settings["input_noise"] + 1, size=1
-    #     )
-    #     sample_output = sample_output + random_noise
+    # add noise to de-noise
+    rng = np.random.default_rng()
+    if self.settings["mode"] == "training":
+        random_noise = rng.integers(
+            -self.settings["input_noise"], self.settings["input_noise"] + 1, size=1
+        )
+        sample_output = sample_output + random_noise
 
     return sample_output, tif_dict
