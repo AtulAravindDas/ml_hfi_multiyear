@@ -20,6 +20,7 @@ from rasterio.windows import Window
 from rasterio.transform import Affine
 import methods
 from methods import permute_shuffle_sample_list
+import read_landsat_tiles
 
 
 directory_paths = methods.get_directories()
@@ -78,6 +79,13 @@ def build_tf_dataset(settings, tags, batch_size, shuffle=True):
 
 def get_sample_tags(settings, evaluate_all=False):
 
+    # if settings["mode"] == "training":
+        # pass
+    # elif settings["mode"] == "inference":
+        # pass
+    # else:
+        # raise NotImplementedError("no such mode.")
+
     # GET THE LATITUDE AND LONGITUDE LOCATION LISTS
     filename = DATA_DIRECTORY + "hii_2020-01-01_uint8.tif"
     filename_mask = DATA_DIRECTORY + "hii_coastal_buffer_mask.tif"
@@ -128,7 +136,7 @@ def get_sample_tags(settings, evaluate_all=False):
                 np.ones(shape=sample_lats.shape) * settings["testing_years"][0],
                 dtype=int,
             )
-            tagfile_test = methods.get_input_filename(
+            tagfile_test = read_landsat_tiles.get_input_filename(
                 tagyear_test, sample_lats, sample_lons
             )
 
@@ -188,10 +196,10 @@ def get_sample_tags(settings, evaluate_all=False):
             assert len(tagyear_val) == nval
 
             # GET FILENAMES
-            tagfile_train = methods.get_input_filename(
+            tagfile_train = read_landsat_tiles.get_input_filename(
                 tagyear_train, taglat_train, taglon_train
             )
-            tagfile_val = methods.get_input_filename(
+            tagfile_val = read_landsat_tiles.get_input_filename(
                 tagyear_val, taglat_val, taglon_val
             )
 
@@ -211,7 +219,7 @@ class data_generator:
     def __init__(self, settings):
         self.settings = settings
 
-    def get_input_data(self, years, sample_lats, sample_lons, sample_files):
+    def get_input_data(self, sample_years, sample_lats, sample_lons, sample_files):
 
         channels = self.settings["channels"]
         scene_width = self.settings["scene_width"]
@@ -220,21 +228,32 @@ class data_generator:
         assert all(x == sample_files[0].numpy().decode("utf8") for x in sample_files)
         filename = LANDSAT_DIRECTORY + sample_files[0].numpy().decode("utf8") + ".tif"
 
-        batch_input = np.zeros((len(years), scene_width, scene_width, len(channels)))
-
         if not os.path.isfile(filename):
             raise ValueError("No such input Landsat file: " + filename)
 
-        with rasterio.open(filename) as input_tiff:
-            for isample in np.arange(0, len(years)):
-                batch_input[isample, :, :, :] = read_input_data(
-                    self,
-                    input_tiff,
-                    sample_lons[isample],
-                    sample_lats[isample],
-                    channels,
-                    scene_width,
-                )
+        # intialize tif neighborhood dictionary and loop through samples to get the data
+        tif_dict = {}
+        tif_dict = read_landsat_tiles.fill_tif_dict("central", sample_years[0], sample_lats[0], sample_lons[0], tif_dict)
+
+        batch_input = np.zeros((len(sample_years), scene_width, scene_width, len(channels)))
+        for isample in np.arange(0, len(sample_years)):
+            sample_out, tif_dict = read_landsat_tiles.read_input_data(
+                self,
+                tif_dict,
+                sample_years[isample],
+                sample_lons[isample],
+                sample_lats[isample],
+                channels,
+                scene_width,
+            )
+            batch_input[isample, :, :, :] = sample_out
+
+        # close tifs in the dictionary
+        for key in tif_dict.keys():
+            try:
+                tif_dict[key].close()
+            except:
+                pass
 
         # convert to tensor
         dat = tf.convert_to_tensor(batch_input)
@@ -262,26 +281,6 @@ class data_generator:
         dat = tf.convert_to_tensor(batch_output)
 
         return dat
-
-
-def read_input_data(self, tiff, sample_lon, sample_lat, channels, scene_width):
-
-    ilat, ilon = tiff.index(sample_lon, sample_lat)
-    ilat0, ilat1 = ilat[0] - scene_width / 3 * 2, ilat[0] + scene_width / 3 - 1
-    ilon0, ilon1 = ilon[0] - scene_width / 3 * 2, ilon[0] + scene_width / 3 - 1
-
-    window = Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1))
-    sample_output = np.transpose(tiff.read(channels, window=window), axes=(1, 2, 0))
-
-    # add noise to de-noise
-    rng = np.random.default_rng()
-    if self.settings["training"]:
-        random_noise = rng.integers(
-            -self.settings["input_noise"], self.settings["input_noise"] + 1, size=1
-        )
-        sample_output = sample_output + random_noise
-
-    return sample_output
 
 
 def read_output_data(self, tiff, sample_lon, sample_lat):

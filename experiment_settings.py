@@ -14,8 +14,7 @@ def get_settings(experiment_name):
     experiments = {
 
         "exp0": {
-
-            "training": True,
+            "mode": None,  # "training" or "inference" as set in the code itself
             "training_years": (2015, 2016, 2017, 2018),  # (2000, 2005, 2010, 2013)
             "testing_years": (2020, ),
 
