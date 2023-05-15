@@ -15,12 +15,6 @@ __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
 __date__ = "11 May 2023"
 
 
-directory_paths = methods.get_directories()
-DATA_DIRECTORY = directory_paths["data_dir"]
-LANDSAT_DIRECTORY = directory_paths["landsat_dir"]
-PREDICTIONS_DIRECTORY = directory_paths["predictions_dir"]
-
-
 def get_directories():
     dir_dict = {
         "data_dir": "data/",
