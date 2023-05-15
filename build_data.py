@@ -40,18 +40,36 @@ def build_tf_dataset(settings, tags, batch_size, shuffle=True):
 
     # batch the data together so the iterator loops through batches instead of samples
     if shuffle:
-        input_tfds = input_tfds.batch(batch_size).shuffle(buffer_size=int(len(tags[0]) / batch_size), reshuffle_each_iteration=True, seed=settings["rng_seed"])
-        output_tfds = output_tfds.batch(batch_size).shuffle(buffer_size=int(len(tags[0]) / batch_size), reshuffle_each_iteration=True, seed=settings["rng_seed"])
+        input_tfds = input_tfds.batch(batch_size).shuffle(
+            buffer_size=int(len(tags[0]) / batch_size),
+            reshuffle_each_iteration=True,
+            seed=settings["rng_seed"],
+        )
+        output_tfds = output_tfds.batch(batch_size).shuffle(
+            buffer_size=int(len(tags[0]) / batch_size),
+            reshuffle_each_iteration=True,
+            seed=settings["rng_seed"],
+        )
 
     else:
         input_tfds = input_tfds.batch(batch_size)
         output_tfds = output_tfds.batch(batch_size)
 
     # use the mapping function to map sample tags to the data generator functions
-    input_tfds = input_tfds.map(lambda sample_years, sample_lats, sample_lons, sample_files:
-                                tf.py_function(data_gen.get_input_data, [sample_years, sample_lats, sample_lons, sample_files], Tout=tf.float64))
-    output_tfds = output_tfds.map(lambda sample_years, sample_lats, sample_lons, sample_files:
-                                  tf.py_function(data_gen.get_output_data, [sample_years, sample_lats, sample_lons, sample_files], Tout=tf.float64))
+    input_tfds = input_tfds.map(
+        lambda sample_years, sample_lats, sample_lons, sample_files: tf.py_function(
+            data_gen.get_input_data,
+            [sample_years, sample_lats, sample_lons, sample_files],
+            Tout=tf.float64,
+        )
+    )
+    output_tfds = output_tfds.map(
+        lambda sample_years, sample_lats, sample_lons, sample_files: tf.py_function(
+            data_gen.get_output_data,
+            [sample_years, sample_lats, sample_lons, sample_files],
+            Tout=tf.float64,
+        )
+    )
 
     tfds_all = tf.data.Dataset.zip((input_tfds, output_tfds))
 
@@ -66,15 +84,21 @@ def get_sample_tags(settings, evaluate_all=False):
 
     with rasterio.open(filename) as output_tiff:
         with rasterio.open(filename_mask) as buffer_mask:
-            ilat0, ilon0 = buffer_mask.index(settings["latlon_bounds"][2],
-                                             settings["latlon_bounds"][0])
-            ilat1, ilon1 = buffer_mask.index(settings["latlon_bounds"][3],
-                                             settings["latlon_bounds"][1])
+            ilat0, ilon0 = buffer_mask.index(
+                settings["latlon_bounds"][2], settings["latlon_bounds"][0]
+            )
+            ilat1, ilon1 = buffer_mask.index(
+                settings["latlon_bounds"][3], settings["latlon_bounds"][1]
+            )
 
-            ilat_grid, ilon_grid = np.meshgrid(np.arange(ilat0, ilat1 + 1), np.arange(ilon0, ilon1 + 1), indexing="ij")
+            ilat_grid, ilon_grid = np.meshgrid(
+                np.arange(ilat0, ilat1 + 1), np.arange(ilon0, ilon1 + 1), indexing="ij"
+            )
             print("output region shape = " + str(ilon_grid.shape))
 
-            sample_lons, sample_lats = buffer_mask.xy(np.ndarray.flatten(ilat_grid), np.ndarray.flatten(ilon_grid))
+            sample_lons, sample_lats = buffer_mask.xy(
+                np.ndarray.flatten(ilat_grid), np.ndarray.flatten(ilon_grid)
+            )
             sample_lons, sample_lats = np.asarray(sample_lons), np.asarray(sample_lats)
 
             # load HFI data
@@ -86,15 +110,27 @@ def get_sample_tags(settings, evaluate_all=False):
             hfi_mask = np.ndarray.flatten(hfi_mask)
 
             # remove oceanic locations for training
-            hfi = np.where(hfi == 255., 0., hfi)
+            hfi = np.where(hfi == 255.0, 0.0, hfi)
             iland = np.where(hfi_mask == 1)[0]
-            hfi, sample_lats, sample_lons = hfi[iland], sample_lats[iland], sample_lons[iland]
+            hfi, sample_lats, sample_lons = (
+                hfi[iland],
+                sample_lats[iland],
+                sample_lons[iland],
+            )
 
         if evaluate_all:
-            sample_lons, sample_lats = output_tiff.xy(np.ndarray.flatten(ilat_grid, order="C"), np.ndarray.flatten(ilon_grid, order="C"))
+            sample_lons, sample_lats = output_tiff.xy(
+                np.ndarray.flatten(ilat_grid, order="C"),
+                np.ndarray.flatten(ilon_grid, order="C"),
+            )
             sample_lons, sample_lats = np.asarray(sample_lons), np.asarray(sample_lats)
-            tagyear_test = np.asarray(np.ones(shape=sample_lats.shape) * settings["testing_years"][0], dtype=int)
-            tagfile_test = methods.get_input_filename(tagyear_test, sample_lats, sample_lons)
+            tagyear_test = np.asarray(
+                np.ones(shape=sample_lats.shape) * settings["testing_years"][0],
+                dtype=int,
+            )
+            tagfile_test = methods.get_input_filename(
+                tagyear_test, sample_lats, sample_lons
+            )
 
             # PRINT SIZES
             ntest = tagyear_test.shape
@@ -107,7 +143,9 @@ def get_sample_tags(settings, evaluate_all=False):
         else:
             # subsample by decile to additionally account for class imbalance
             if settings["subsample"]:
-                sampling_weights = compute_sample_weight(class_weight="balanced", y=np.round(hfi / 10) * 10)
+                sampling_weights = compute_sample_weight(
+                    class_weight="balanced", y=np.round(hfi / 10) * 10
+                )
             else:
                 sampling_weights = np.ones(np.shape(hfi))
 
@@ -120,10 +158,13 @@ def get_sample_tags(settings, evaluate_all=False):
             else:
                 years = settings["testing_years"]
             sample_years = np.asarray(years, dtype=int)
-            (sample_years,
-             sample_lats,
-             sample_lons,
-             ) = permute_shuffle_sample_list(settings, sample_years, sample_lats, sample_lons, sampling_weights)
+            (
+                sample_years,
+                sample_lats,
+                sample_lons,
+            ) = permute_shuffle_sample_list(
+                settings, sample_years, sample_lats, sample_lons, sampling_weights
+            )
 
             # CHECK IF UNIQUE (this should always be true)
             # __, counts = np.unique([sample_years, sample_lats, sample_lons], axis=1, return_counts=True)
@@ -131,16 +172,28 @@ def get_sample_tags(settings, evaluate_all=False):
 
             # SPLIT INTO TRAINING AND VALIDATION
             ntrain = settings["nbatches"][0] * settings["batch_size"]
-            tagyear_train, taglat_train, taglon_train = sample_years[:ntrain], sample_lats[:ntrain], sample_lons[:ntrain]
+            tagyear_train, taglat_train, taglon_train = (
+                sample_years[:ntrain],
+                sample_lats[:ntrain],
+                sample_lons[:ntrain],
+            )
             assert len(tagyear_train) == ntrain
 
             nval = settings["nbatches"][1] * settings["batch_size"]
-            tagyear_val, taglat_val, taglon_val = sample_years[ntrain:ntrain + nval], sample_lats[ntrain:ntrain + nval], sample_lons[ntrain:ntrain + nval]
+            tagyear_val, taglat_val, taglon_val = (
+                sample_years[ntrain: ntrain + nval],
+                sample_lats[ntrain: ntrain + nval],
+                sample_lons[ntrain: ntrain + nval],
+            )
             assert len(tagyear_val) == nval
 
             # GET FILENAMES
-            tagfile_train = methods.get_input_filename(tagyear_train, taglat_train, taglon_train)
-            tagfile_val = methods.get_input_filename(tagyear_val, taglat_val, taglon_val)
+            tagfile_train = methods.get_input_filename(
+                tagyear_train, taglat_train, taglon_train
+            )
+            tagfile_val = methods.get_input_filename(
+                tagyear_val, taglat_val, taglon_val
+            )
 
             # Put into nice packages
             tags_train = (tagyear_train, taglat_train, taglon_train, tagfile_train)
@@ -164,8 +217,8 @@ class data_generator:
         scene_width = self.settings["scene_width"]
 
         # read landsat file
-        assert all(x == sample_files[0].numpy().decode('utf8') for x in sample_files)
-        filename = LANDSAT_DIRECTORY + sample_files[0].numpy().decode('utf8') + ".tif"
+        assert all(x == sample_files[0].numpy().decode("utf8") for x in sample_files)
+        filename = LANDSAT_DIRECTORY + sample_files[0].numpy().decode("utf8") + ".tif"
 
         batch_input = np.zeros((len(years), scene_width, scene_width, len(channels)))
 
@@ -174,8 +227,14 @@ class data_generator:
 
         with rasterio.open(filename) as input_tiff:
             for isample in np.arange(0, len(years)):
-
-                batch_input[isample, :, :, :] = read_input_data(self, input_tiff, sample_lons[isample], sample_lats[isample], channels, scene_width)
+                batch_input[isample, :, :, :] = read_input_data(
+                    self,
+                    input_tiff,
+                    sample_lons[isample],
+                    sample_lats[isample],
+                    channels,
+                    scene_width,
+                )
 
         # convert to tensor
         dat = tf.convert_to_tensor(batch_input)
@@ -195,8 +254,9 @@ class data_generator:
 
         with rasterio.open(filename) as output_tiff:
             for isample in np.arange(0, len(years)):
-
-                batch_output[isample] = read_output_data(self, output_tiff, sample_lons[isample], sample_lats[isample])
+                batch_output[isample] = read_output_data(
+                    self, output_tiff, sample_lons[isample], sample_lats[isample]
+                )
 
         # convert to tensor
         dat = tf.convert_to_tensor(batch_output)
@@ -216,8 +276,10 @@ def read_input_data(self, tiff, sample_lon, sample_lat, channels, scene_width):
     # add noise to de-noise
     rng = np.random.default_rng()
     if self.settings["training"]:
-        random_noise = rng.integers(-self.settings["input_noise"], self.settings["input_noise"] + 1, size=1)
-        sample_output = (sample_output + random_noise)
+        random_noise = rng.integers(
+            -self.settings["input_noise"], self.settings["input_noise"] + 1, size=1
+        )
+        sample_output = sample_output + random_noise
 
     return sample_output
 
@@ -227,12 +289,14 @@ def read_output_data(self, tiff, sample_lon, sample_lat):
     ilat, ilon = tiff.index(sample_lon, sample_lat)
     window = Window(ilon[0], ilat[0], 1, 1)
 
-    output_mask = tiff.read_masks(1, window=window) // 255.  # convert to 0/1, with 0 = no data
+    output_mask = (
+        tiff.read_masks(1, window=window) // 255.0
+    )  # convert to 0/1, with 0 = no data
     sample_output = output_mask * tiff.read(1, window=window)
 
     # this is where we can force the network to predict zeros or ones
     if self.settings["training"]:
-        if sample_output == 0.:
+        if sample_output == 0.0:
             sample_output = self.settings["kluge_value_for_zero"]
         elif sample_output >= 99:
             sample_output = self.settings["kluge_value_for_one"]
