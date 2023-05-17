@@ -18,10 +18,10 @@ def get_settings(experiment_name):
             "training_years": (2015, 2016, 2017, 2018),  # (2000, 2005, 2010, 2013)
             "testing_years": (2020, ),
 
-            "latlon_bounds": (34.92, 34.04, 71.05, 71.93),  # (lat_north, lat_south, lon_west, lon_east)
+            "latlon_bounds": (-6.09, -6.01, 106.01, 106.09),  # (lat_south, lat_north, lon_west, lon_east)
 
             "channels": (1, 2, 3, 4, 5, 6),  # indexing starts at 1, channel 7 = WATER_MASK
-            "nbatches": (200, 50),  # (training_batches, validation_batches)
+            "nbatches": (200, 50),  # (training_batches, validation_batches per landsat tile)
             "scene_width": 114,  # in units of landsat pixels
             "rng_seed": 33,
 

@@ -63,7 +63,7 @@ def get_input_filename(years, lats, lons):
     return filenames
 
 
-def read_input_data(self, tif_dict, sample_year, sample_lon, sample_lat, channels, scene_width):
+def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, channels, scene_width):
 
     sample_lon = sample_lon.numpy()
     sample_lat = sample_lat.numpy()
@@ -73,37 +73,40 @@ def read_input_data(self, tif_dict, sample_year, sample_lon, sample_lat, channel
     ilon0, ilon1 = ilon - scene_width / 3 * 2, ilon + scene_width / 3 - 1
 
     # determine the usecase
+    # TODO: remove unnecessary checks
     if ilat0 >= 0 and ilon0 >= 0 and ilat1 < tif_dict["central_height"] and ilon1 < tif_dict["central_width"]:
-        usecase = "case_central"
+        usecase = "usecase_central"
     elif ilat0 < 0 and ilon0 < 0 and ilat1 < tif_dict["central_height"] and ilon1 < tif_dict["central_width"]:
-        usecase = "case_northwest"
+        usecase = "usecase_northwest"
     elif ilat0 < 0 and ilon0 >= 0 and ilat1 < tif_dict["central_height"] and ilon1 < tif_dict["central_width"]:
-        usecase = "case_north"
+        usecase = "usecase_north"
     elif ilat0 < 0 and ilon0 >= 0 and ilat1 < tif_dict["central_height"] and ilon1 >= tif_dict["central_width"]:
-        usecase = "case_northeast"
+        usecase = "usecase_northeast"
     elif ilat0 >= 0 and ilon0 >= 0 and ilat1 < tif_dict["central_height"] and ilon1 >= tif_dict["central_width"]:
-        usecase = "case_east"
+        usecase = "usecase_east"
     elif ilat0 >= 0 and ilon0 >= 0 and ilat1 >= tif_dict["central_height"] and ilon1 >= tif_dict["central_width"]:
-        usecase = "case_southeast"
+        usecase = "usecase_southeast"
     elif ilat0 >= 0 and ilon0 >= 0 and ilat1 >= tif_dict["central_height"] and ilon1 < tif_dict["central_width"]:
-        usecase = "case_south"
+        usecase = "usecase_south"
     elif ilat0 >= 0 and ilon0 < 0 and ilat1 >= tif_dict["central_height"] and ilon1 < tif_dict["central_width"]:
-        usecase = "case_southwest"
+        usecase = "usecase_southwest"
     elif ilat0 >= 0 and ilon0 < 0 and ilat1 < tif_dict["central_height"] and ilon1 < tif_dict["central_width"]:
-        usecase = "case_west"
+        usecase = "usecase_west"
     else:
         raise NotImplementedError("no such use case")
 
-    # print(usecase, sample_lat, sample_lon, ilat1, ilat1, ilon0, ilon1,)
+    # the speed of this code assumes that training samples will never be on edges or corners
+    if settings["mode"] == "training":
+        assert usecase == "usecase_central"
 
     # USECASE 0 - central only
-    if usecase == "case_central":
+    if usecase == "usecase_central":
         central_output = read_tif(tif_dict["central"], channels,
                                   window=Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1)))
         sample_output = central_output
 
     # USECASE 1 - northwest corner
-    elif usecase == "case_northwest":
+    elif usecase == "usecase_northwest":
         if tif_dict.get("north") is None:
             tif_dict = fill_tif_dict("north", sample_year, sample_lat, sample_lon, tif_dict)
         if tif_dict.get("northwest") is None:
@@ -124,7 +127,7 @@ def read_input_data(self, tif_dict, sample_year, sample_lon, sample_lat, channel
                                    np.hstack((west_output, central_output))))
 
     # USECASE 2 - north edge
-    elif usecase == "case_north":
+    elif usecase == "usecase_north":
         if tif_dict.get("north") is None:
             tif_dict = fill_tif_dict("north", sample_year, sample_lat, sample_lon, tif_dict)
 
@@ -136,7 +139,7 @@ def read_input_data(self, tif_dict, sample_year, sample_lon, sample_lat, channel
         sample_output = np.vstack((north_output, central_output))
 
     # USECASE 3 - northeast corner
-    elif usecase == "case_northeast":
+    elif usecase == "usecase_northeast":
         if tif_dict.get("north") is None:
             tif_dict = fill_tif_dict("north", sample_year, sample_lat, sample_lon, tif_dict)
         if tif_dict.get("northeast") is None:
@@ -157,7 +160,7 @@ def read_input_data(self, tif_dict, sample_year, sample_lon, sample_lat, channel
                                    np.hstack((central_output, east_output))))
 
     # USECASE 4 - east edge
-    elif usecase == "case_east":
+    elif usecase == "usecase_east":
         if tif_dict.get("east") is None:
             tif_dict = fill_tif_dict("east", sample_year, sample_lat, sample_lon, tif_dict)
 
@@ -169,7 +172,7 @@ def read_input_data(self, tif_dict, sample_year, sample_lon, sample_lat, channel
         sample_output = np.hstack((central_output, east_output))
 
     # USECASE 5 - southeast corner
-    elif usecase == "case_southeast":
+    elif usecase == "usecase_southeast":
         if tif_dict.get("south") is None:
             tif_dict = fill_tif_dict("south", sample_year, sample_lat, sample_lon, tif_dict)
         if tif_dict.get("southeast") is None:
@@ -190,7 +193,7 @@ def read_input_data(self, tif_dict, sample_year, sample_lon, sample_lat, channel
                                    np.hstack((south_output, southeast_output))))
 
     # USECASE 6 - south edge
-    elif usecase == "case_south":
+    elif usecase == "usecase_south":
         if tif_dict.get("south") is None:
             tif_dict = fill_tif_dict("south", sample_year, sample_lat, sample_lon, tif_dict)
 
@@ -202,7 +205,7 @@ def read_input_data(self, tif_dict, sample_year, sample_lon, sample_lat, channel
         sample_output = np.vstack((central_output, south_output))
 
     # USECASE 7 - southwest corner
-    elif usecase == "case_southwest":
+    elif usecase == "usecase_southwest":
         if tif_dict.get("south") is None:
             tif_dict = fill_tif_dict("south", sample_year, sample_lat, sample_lon, tif_dict)
         if tif_dict.get("southwest") is None:
@@ -223,7 +226,7 @@ def read_input_data(self, tif_dict, sample_year, sample_lon, sample_lat, channel
                                    np.hstack((southwest_output, south_output))))
 
     # USECASE 8 - west edge
-    elif usecase == "case_west":
+    elif usecase == "usecase_west":
         if tif_dict.get("west") is None:
             tif_dict = fill_tif_dict("west", sample_year, sample_lat, sample_lon, tif_dict)
 
@@ -242,9 +245,9 @@ def read_input_data(self, tif_dict, sample_year, sample_lon, sample_lat, channel
 
     # add noise to de-noise
     rng = np.random.default_rng()
-    if self.settings["mode"] == "training":
+    if settings["mode"] == "training":
         random_noise = rng.integers(
-            -self.settings["input_noise"], self.settings["input_noise"] + 1, size=1
+            -settings["input_noise"], settings["input_noise"] + 1, size=1
         )
         sample_output = sample_output + random_noise
 
