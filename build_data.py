@@ -30,8 +30,8 @@ DATA_DIRECTORY = directory_paths["data_dir"]
 LANDSAT_DIRECTORY = directory_paths["landsat_dir"]
 PREDICTIONS_DIRECTORY = directory_paths["predictions_dir"]
 
-DEFAULT_FILENAME = DATA_DIRECTORY + "hii_2020-01-01_uint8.tif"
 DEFAULT_MASK_FILENAME = DATA_DIRECTORY + "hii_coastal_buffer_mask.tif"
+DEFAULT_FILENAME = "hii_2020-01-01_uint8.tif"
 
 LANDSAT_TO_HII_RATIO = 10.
 LANDSAT_PIXEL_TO_DEG = 0.00026949
@@ -46,6 +46,8 @@ def build_tf_dataset(settings, tags, batch_size, mode=None):
 
     # make data generator class
     data_gen = data_generator(settings)
+
+    print(f"{len(tags[0]) = }")
 
     # create initial tf datasets
     input_tfds = tf.data.Dataset.from_tensor_slices(tags)
@@ -67,6 +69,7 @@ def build_tf_dataset(settings, tags, batch_size, mode=None):
     elif mode == "inference":
         input_tfds = input_tfds.batch(batch_size)
         output_tfds = output_tfds.batch(batch_size)
+
     else:
         raise NotImplementedError("no such mode.")
 
@@ -123,30 +126,39 @@ def get_training_tags(settings):
         for latfile in np.arange(min_latfile + TILE_LEN_DEG, max_latfile + TILE_LEN_DEG, TILE_LEN_DEG):
             for lonfile in np.arange(min_lonfile, max_lonfile, TILE_LEN_DEG):
 
-                # TODO: check that landsat file even exists
+                # check that landsat file even exists
+                landsat_filenames = read_landsat.get_input_filename(settings["training_years"],
+                                                                    np.ones(len(settings["training_years"])) * latfile,
+                                                                    np.ones(len(settings["training_years"])) * lonfile)
+                file_flag = False
+                for file in landsat_filenames:
+                    if os.path.isfile(LANDSAT_DIRECTORY + file + ".tif") is False:
+                        file_flag = True
+                        break
+                if file_flag:
+                    print(f"skipping landsat file that does not exist: {file}")
+                    continue
+
+                # get tag indices that are not water or on edites
                 print(lonfile, latfile)
-                ilat0, ilon0 = buffer_mask.index(lonfile, latfile + TILE_LEN_DEG)
-                ilat1, ilon1 = buffer_mask.index(lonfile + TILE_LEN_DEG, latfile)
+                ilat0, ilon0 = buffer_mask.index(lonfile, latfile)
+                ilat1, ilon1 = buffer_mask.index(lonfile + TILE_LEN_DEG, latfile - TILE_LEN_DEG)
                 ilat1, ilon1 = ilat1 - 1, ilon1 - 1
                 print(ilat0, ilat1, ilon0, ilon1)
 
-                assert False, "the indices are in the wrong coordinate system"
-
                 window = Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1))
-                print(window)
                 mask = buffer_mask.read(1, window=window)
                 land_pixels = np.sum(mask)
                 frac_land = land_pixels / (mask.shape[0] * mask.shape[1])
 
                 land_indices = np.argwhere(mask)
-                ilat_grid, ilon_grid = land_indices[:, 0], land_indices[:, 1]
+                ilat_grid, ilon_grid = land_indices[:, 0] + window.row_off, land_indices[:, 1] + window.col_off
 
                 subsample_lons, subsample_lats = buffer_mask.xy(ilat_grid, ilon_grid)
                 subsample_lons, subsample_lats = np.asarray(subsample_lons), np.asarray(subsample_lats)
 
                 # Remove all possibilities of edges and corners
-                # TODO: consider making smaller than scene_width
-                edge_width = (np.ceil(settings["scene_width"]) + 1) * LANDSAT_PIXEL_TO_DEG
+                edge_width = (np.ceil(settings["scene_width"] * 2 / 3) + 1) * LANDSAT_PIXEL_TO_DEG
                 # print(f"{edge_width = }")
 
                 i_nonedge = np.flatnonzero(
@@ -162,6 +174,8 @@ def get_training_tags(settings):
 
                 nbatches = int(np.ceil(np.sum(settings["nbatches"]) * frac_land))
                 nsamples = int(settings["batch_size"] * nbatches)
+
+                # grab the samples
                 isamples = rng.choice(range(len(subsample_lats)), size=nsamples, replace=False)
                 subsample_lats, subsample_lons = subsample_lats[isamples], subsample_lons[isamples]
 
@@ -183,7 +197,8 @@ def get_training_tags(settings):
     print(f"{len(sample_lats) = }")
 
     # Turn into numpy arrays
-    sample_lats, sample_lons, sample_years = np.asarray(sample_lats), np.asarray(sample_lons), np.asarray(sample_years)
+    # sample_lats, sample_lons, sample_years = np.asarray(sample_lats), np.asarray(sample_lons), np.asarray(sample_years)
+    sample_years = sample_years.astype(int)
 
     # SPLIT INTO TRAINING AND VALIDATION SETS
     nbatches = int(len(sample_lats) // settings["batch_size"])
@@ -215,41 +230,40 @@ def get_training_tags(settings):
 
 def get_inference_tags(settings):
 
-    with rasterio.open(DEFAULT_FILENAME) as output_tiff:
-        with rasterio.open(DEFAULT_MASK_FILENAME) as buffer_mask:
+    with rasterio.open(DEFAULT_MASK_FILENAME) as buffer_mask:
 
-            ilat0, ilon0 = buffer_mask.index(
-                settings["latlon_bounds"][2], settings["latlon_bounds"][0]
-            )
-            ilat1, ilon1 = buffer_mask.index(
-                settings["latlon_bounds"][3], settings["latlon_bounds"][1]
-            )
+        ilat0, ilon0 = buffer_mask.index(
+            settings["latlon_bounds"][2], settings["latlon_bounds"][1]
+        )
+        ilat1, ilon1 = buffer_mask.index(
+            settings["latlon_bounds"][3], settings["latlon_bounds"][0]
+        )
 
-            ilat_grid, ilon_grid = np.meshgrid(
-                np.arange(ilat0, ilat1 + 1), np.arange(ilon0, ilon1 + 1), indexing="ij"
-            )
-            print("output region shape = " + str(ilon_grid.shape))
+        ilat_grid, ilon_grid = np.meshgrid(
+            np.arange(ilat0, ilat1 + 1), np.arange(ilon0, ilon1 + 1), indexing="ij"
+        )
+        print("output region shape = " + str(ilon_grid.shape))
 
-            sample_lons, sample_lats = output_tiff.xy(
-                np.ndarray.flatten(ilat_grid, order="C"),
-                np.ndarray.flatten(ilon_grid, order="C"),
-            )
-            sample_lons, sample_lats = np.asarray(sample_lons), np.asarray(sample_lats)
-            tagyear_test = np.asarray(
-                np.ones(shape=sample_lats.shape) * settings["testing_years"][0],
-                dtype=int,
-            )
-            tagfile_test = read_landsat.get_input_filename(
-                tagyear_test, sample_lats, sample_lons
-            )
+        sample_lons, sample_lats = buffer_mask.xy(
+            np.ndarray.flatten(ilat_grid, order="C"),
+            np.ndarray.flatten(ilon_grid, order="C"),
+        )
+        sample_lons, sample_lats = np.asarray(sample_lons), np.asarray(sample_lats)
+        tagyear_test = np.asarray(
+            np.ones(shape=sample_lats.shape) * settings["testing_years"][0],
+            dtype=int,
+        )
+        tagfile_test = read_landsat.get_input_filename(
+            tagyear_test, sample_lats, sample_lons
+        )
 
-            # PRINT SIZES
-            ntest = tagyear_test.shape
-            print(f"{ntest = }")
+        # PRINT SIZES
+        ntest = tagyear_test.shape
+        print(f"{ntest = }")
 
-            # Put into a nice package
-            tags = (tagyear_test, sample_lats, sample_lons, tagfile_test)
-            return tags, None, None
+        # Put into a nice package
+        tags = (tagyear_test, sample_lats, sample_lons, tagfile_test)
+        return tags, None
 
 
 class data_generator:

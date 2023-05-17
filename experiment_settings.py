@@ -18,7 +18,7 @@ def get_settings(experiment_name):
             "training_years": (2015, 2016, 2017, 2018),  # (2000, 2005, 2010, 2013)
             "testing_years": (2020, ),
 
-            "latlon_bounds": (-6.09, -6.01, 106.01, 106.09),  # (lat_south, lat_north, lon_west, lon_east)
+            "latlon_bounds": (-6.999, -6.0, 106.0, 106.999),  # (lat_south, lat_north, lon_west, lon_east)
 
             "channels": (1, 2, 3, 4, 5, 6),  # indexing starts at 1, channel 7 = WATER_MASK
             "nbatches": (200, 50),  # (training_batches, validation_batches per landsat tile)
@@ -34,7 +34,7 @@ def get_settings(experiment_name):
             "kluge_value_for_one": 1.2,  # -0.2,
             "aug_randomflip": True,
             "input_noise": 10,  # in units of rgb values
-            "sample_weights_alpha": 10.0,
+            "sample_weights_alpha": 50.0,
             "subsample": True,
 
             "learning_rate": 0.001,

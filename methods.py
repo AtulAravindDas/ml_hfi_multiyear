@@ -10,9 +10,13 @@ import matplotlib.pyplot as plt
 import scipy
 import tensorflow as tf
 import methods
+import rasterio
 
 __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
 __date__ = "11 May 2023"
+
+
+DEFAULT_FILENAME = "hii_2020-01-01_uint8.tif"
 
 
 def get_directories():
@@ -42,6 +46,16 @@ def get_denseweight_dist(settings, data):
     denseweight_dist = denseweight_dist / np.mean(denseweight_dist)
 
     return denseweight_dist
+
+
+def get_denseweights(settings, tags):
+    with rasterio.open(get_directories()["data_dir"] + DEFAULT_FILENAME) as tif:
+        sample_lats = tags[1]
+        sample_lons = tags[2]
+        data = tif.sample([*zip(sample_lons, sample_lats)], indexes=1)
+        data = np.ndarray.flatten(np.asarray(list(data)))
+
+        return get_denseweight_dist(settings, data)
 
 
 def dw_calculator(denseweight_dist, data):

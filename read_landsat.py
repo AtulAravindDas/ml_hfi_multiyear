@@ -55,7 +55,7 @@ def get_input_filename(years, lats, lons):
 
     filenames = []
     for isample in range(len(years)):
-        file_year = years[isample]
+        file_year = int(years[isample])
         file_lat = int(np.ceil(lats[isample] / TILE_LEN_DEG) * TILE_LEN_DEG)
         file_lon = int(np.floor(lons[isample] / TILE_LEN_DEG) * TILE_LEN_DEG)
         filenames.append(f"landsat_{file_lat}lat_{file_lon}lon_{file_year}")
