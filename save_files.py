@@ -19,12 +19,13 @@ def save_predictions_tif(settings, hfi_predict, predictions_filename):
     )
     filename_mask = DATA_DIRECTORY + "hii_coastal_buffer_mask.tif"
 
+    # BUG: this code will not run
     with rasterio.open(filename_mask) as buffer_mask:
         ilat0, ilon0 = buffer_mask.index(
-            settings["latlon_bounds"][2], settings["latlon_bounds"][1]
+            settings["tile"][2], settings["tile"][1]
         )
         ilat1, ilon1 = buffer_mask.index(
-            settings["latlon_bounds"][3], settings["latlon_bounds"][0]
+            settings["tile"][3], settings["tile"][0]
         )
         lon0, lat0 = buffer_mask.xy(ilat0, ilon0)
         lon1, lat1 = buffer_mask.xy(ilat1, ilon1)
@@ -35,10 +36,10 @@ def save_predictions_tif(settings, hfi_predict, predictions_filename):
     if os.path.isfile(labels_filename):
         with rasterio.open(labels_filename) as labels_tiff:
             ilat0, ilon0 = labels_tiff.index(
-                settings["latlon_bounds"][2], settings["latlon_bounds"][1]
+                settings["tile"][2], settings["tile"][1]
             )
             ilat1, ilon1 = labels_tiff.index(
-                settings["latlon_bounds"][3], settings["latlon_bounds"][0]
+                settings["tile"][3], settings["tile"][0]
             )
             window = Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1))
             hfi_labels = labels_tiff.read(1, window=window)

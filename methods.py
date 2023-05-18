@@ -30,6 +30,28 @@ def get_directories():
     return dir_dict
 
 
+def trim_bounds(settings, sample_lats, sample_lons):
+
+    # FIXME: This needs to be majorally cleaned up
+    ikeep = np.where(np.logical_and((sample_lats <= settings["tile"][1]),
+                                    (sample_lats > settings["tile"][0])))[0]
+    sample_lats, sample_lons = sample_lats[ikeep], sample_lons[ikeep]
+
+    ikeep = np.where(np.logical_and((sample_lons < settings["tile"][3]),
+                                    (sample_lons >= settings["tile"][2])))[0]
+    sample_lats, sample_lons = sample_lats[ikeep], sample_lons[ikeep]
+
+    ikeep = np.where(np.logical_and((sample_lats <= settings["latlon_bounds"][1]),
+                                    (sample_lats > settings["latlon_bounds"][0])))[0]
+    sample_lats, sample_lons = sample_lats[ikeep], sample_lons[ikeep]
+
+    ikeep = np.where(np.logical_and((sample_lons < settings["latlon_bounds"][3]),
+                                    (sample_lons >= settings["latlon_bounds"][2])))[0]
+    sample_lats, sample_lons = sample_lats[ikeep], sample_lons[ikeep]
+
+    return sample_lats, sample_lons
+
+
 def get_denseweight_dist(settings, data):
     # see Steininger et al. (2021)
     # https://link.springer.com/article/10.1007/s10994-021-06023-5
@@ -80,26 +102,3 @@ class DenseWeight_Loss(tf.keras.losses.Loss):
         loss = tf.reduce_mean(loss)
 
         return tf.sqrt(loss)
-
-
-# def permute_shuffle_sample_list(settings,
-#                                 sample_years, sample_lats, sample_lons,
-#                                 sampling_weights=None):
-
-#     if sampling_weights is None:
-#         sampling_weights = np.ones(sample_years.shape)
-#     sampling_weights = sampling_weights / np.sum(sampling_weights)
-
-#     nsamples = np.sum(settings["nbatches"]) * settings["batch_size"]
-#     rng = np.random.default_rng(settings["rng_seed"])
-
-#     iloc = rng.choice(np.arange(0, sample_lats.shape[0]), size=nsamples, replace=False, p=sampling_weights)
-#     sample_lats = sample_lats[iloc]
-#     sample_lons = sample_lons[iloc]
-
-#     # sample_years = rng.choice(sample_years, size=nsamples, replace=True)  # THIS IS MUCH SLOWER
-#     # make it so that every batch has the same year throughout for loading files
-#     sample_years = np.repeat(np.random.choice(sample_years, size=np.sum(settings["nbatches"]), replace=True),
-#                              settings["batch_size"])
-
-#     return sample_years, sample_lats, sample_lons

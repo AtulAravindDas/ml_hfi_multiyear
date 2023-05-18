@@ -12,31 +12,30 @@ import rasterio
 from rasterio.windows import Window
 import methods
 
-TILE_LEN_DEG = 1.
 directory_paths = methods.get_directories()
 LANDSAT_DIRECTORY = directory_paths["landsat_dir"]
 
 
-def fill_tif_dict(name, sample_year, sample_lat, sample_lon, tif_dict):
+def fill_tif_dict(name, sample_year, sample_lat, sample_lon, tif_dict, settings):
 
     if name == "central":
-        filename = get_input_filename((sample_year,), (sample_lat,), (sample_lon,))
+        filename = get_input_filename((sample_year,), (sample_lat,), (sample_lon,), settings)
     elif name == "northwest":
-        filename = get_input_filename((sample_year,), (sample_lat + TILE_LEN_DEG,), (sample_lon - TILE_LEN_DEG,))
+        filename = get_input_filename((sample_year,), (sample_lat + settings["tile_len_deg"],), (sample_lon - settings["tile_len_deg"],), settings)
     elif name == "north":
-        filename = get_input_filename((sample_year,), (sample_lat + TILE_LEN_DEG,), (sample_lon,))
+        filename = get_input_filename((sample_year,), (sample_lat + settings["tile_len_deg"],), (sample_lon,), settings)
     elif name == "northeast":
-        filename = get_input_filename((sample_year,), (sample_lat + TILE_LEN_DEG,), (sample_lon + TILE_LEN_DEG,))
+        filename = get_input_filename((sample_year,), (sample_lat + settings["tile_len_deg"],), (sample_lon + settings["tile_len_deg"],), settings)
     elif name == "east":
-        filename = get_input_filename((sample_year,), (sample_lat,), (sample_lon + TILE_LEN_DEG,))
+        filename = get_input_filename((sample_year,), (sample_lat,), (sample_lon + settings["tile_len_deg"],), settings)
     elif name == "southeast":
-        filename = get_input_filename((sample_year,), (sample_lat - TILE_LEN_DEG,), (sample_lon + TILE_LEN_DEG,),)
+        filename = get_input_filename((sample_year,), (sample_lat - settings["tile_len_deg"],), (sample_lon + settings["tile_len_deg"],), settings)
     elif name == "south":
-        filename = get_input_filename((sample_year,), (sample_lat - TILE_LEN_DEG,), (sample_lon,))
+        filename = get_input_filename((sample_year,), (sample_lat - settings["tile_len_deg"],), (sample_lon,), settings)
     elif name == "southwest":
-        filename = get_input_filename((sample_year,), (sample_lat - TILE_LEN_DEG,), (sample_lon - TILE_LEN_DEG,))
+        filename = get_input_filename((sample_year,), (sample_lat - settings["tile_len_deg"],), (sample_lon - settings["tile_len_deg"],), settings)
     elif name == "west":
-        filename = get_input_filename((sample_year,), (sample_lat,), (sample_lon - TILE_LEN_DEG,))
+        filename = get_input_filename((sample_year,), (sample_lat,), (sample_lon - settings["tile_len_deg"],), settings)
     else:
         raise NotImplementedError("no such name.")
 
@@ -51,13 +50,13 @@ def read_tif(tif, channels, window):
     return np.transpose(tif.read(channels, window=window), axes=(1, 2, 0))
 
 
-def get_input_filename(years, lats, lons):
+def get_input_filename(years, lats, lons, settings):
 
     filenames = []
     for isample in range(len(years)):
         file_year = int(years[isample])
-        file_lat = int(np.ceil(lats[isample] / TILE_LEN_DEG) * TILE_LEN_DEG)
-        file_lon = int(np.floor(lons[isample] / TILE_LEN_DEG) * TILE_LEN_DEG)
+        file_lat = int(np.ceil(lats[isample] / settings["tile_len_deg"]) * settings["tile_len_deg"])
+        file_lon = int(np.floor(lons[isample] / settings["tile_len_deg"]) * settings["tile_len_deg"])
         filenames.append(f"landsat_{file_lat}lat_{file_lon}lon_{file_year}")
 
     return filenames
@@ -108,11 +107,11 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
     # USECASE 1 - northwest corner
     elif usecase == "usecase_northwest":
         if tif_dict.get("north") is None:
-            tif_dict = fill_tif_dict("north", sample_year, sample_lat, sample_lon, tif_dict)
+            tif_dict = fill_tif_dict("north", sample_year, sample_lat, sample_lon, tif_dict, settings)
         if tif_dict.get("northwest") is None:
-            tif_dict = fill_tif_dict("northwest", sample_year, sample_lat, sample_lon, tif_dict)
+            tif_dict = fill_tif_dict("northwest", sample_year, sample_lat, sample_lon, tif_dict, settings)
         if tif_dict.get("west") is None:
-            tif_dict = fill_tif_dict("west", sample_year, sample_lat, sample_lon, tif_dict)
+            tif_dict = fill_tif_dict("west", sample_year, sample_lat, sample_lon, tif_dict, settings)
 
         central_output = read_tif(tif_dict["central"], channels,
                                   window=Window.from_slices((0, ilat1 + 1), (0, ilon1 + 1)))
@@ -129,7 +128,7 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
     # USECASE 2 - north edge
     elif usecase == "usecase_north":
         if tif_dict.get("north") is None:
-            tif_dict = fill_tif_dict("north", sample_year, sample_lat, sample_lon, tif_dict)
+            tif_dict = fill_tif_dict("north", sample_year, sample_lat, sample_lon, tif_dict, settings)
 
         central_output = read_tif(tif_dict["central"], channels,
                                   window=Window.from_slices((0, ilat1 + 1), (ilon0, ilon1 + 1)))
@@ -141,11 +140,11 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
     # USECASE 3 - northeast corner
     elif usecase == "usecase_northeast":
         if tif_dict.get("north") is None:
-            tif_dict = fill_tif_dict("north", sample_year, sample_lat, sample_lon, tif_dict)
+            tif_dict = fill_tif_dict("north", sample_year, sample_lat, sample_lon, tif_dict, settings)
         if tif_dict.get("northeast") is None:
-            tif_dict = fill_tif_dict("northeast", sample_year, sample_lat, sample_lon, tif_dict)
+            tif_dict = fill_tif_dict("northeast", sample_year, sample_lat, sample_lon, tif_dict, settings)
         if tif_dict.get("east") is None:
-            tif_dict = fill_tif_dict("east", sample_year, sample_lat, sample_lon, tif_dict)
+            tif_dict = fill_tif_dict("east", sample_year, sample_lat, sample_lon, tif_dict, settings)
 
         central_output = read_tif(tif_dict["central"], channels,
                                   window=Window.from_slices((0, ilat1 + 1), (ilon0, tif_dict["central_width"])))
@@ -162,7 +161,7 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
     # USECASE 4 - east edge
     elif usecase == "usecase_east":
         if tif_dict.get("east") is None:
-            tif_dict = fill_tif_dict("east", sample_year, sample_lat, sample_lon, tif_dict)
+            tif_dict = fill_tif_dict("east", sample_year, sample_lat, sample_lon, tif_dict, settings)
 
         central_output = read_tif(tif_dict["central"], channels,
                                   window=Window.from_slices((ilat0, ilat1 + 1), (ilon0, tif_dict["central_width"])))
@@ -174,11 +173,11 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
     # USECASE 5 - southeast corner
     elif usecase == "usecase_southeast":
         if tif_dict.get("south") is None:
-            tif_dict = fill_tif_dict("south", sample_year, sample_lat, sample_lon, tif_dict)
+            tif_dict = fill_tif_dict("south", sample_year, sample_lat, sample_lon, tif_dict, settings)
         if tif_dict.get("southeast") is None:
-            tif_dict = fill_tif_dict("southeast", sample_year, sample_lat, sample_lon, tif_dict)
+            tif_dict = fill_tif_dict("southeast", sample_year, sample_lat, sample_lon, tif_dict, settings)
         if tif_dict.get("east") is None:
-            tif_dict = fill_tif_dict("east", sample_year, sample_lat, sample_lon, tif_dict)
+            tif_dict = fill_tif_dict("east", sample_year, sample_lat, sample_lon, tif_dict, settings)
 
         central_output = read_tif(tif_dict["central"], channels,
                                   window=Window.from_slices((ilat0, tif_dict["central_height"]), (ilon0, tif_dict["central_width"])))
@@ -195,7 +194,7 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
     # USECASE 6 - south edge
     elif usecase == "usecase_south":
         if tif_dict.get("south") is None:
-            tif_dict = fill_tif_dict("south", sample_year, sample_lat, sample_lon, tif_dict)
+            tif_dict = fill_tif_dict("south", sample_year, sample_lat, sample_lon, tif_dict, settings)
 
         central_output = read_tif(tif_dict["central"], channels,
                                   window=Window.from_slices((ilat0, tif_dict["central_height"]), (ilon0, ilon1 + 1)))
@@ -207,11 +206,11 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
     # USECASE 7 - southwest corner
     elif usecase == "usecase_southwest":
         if tif_dict.get("south") is None:
-            tif_dict = fill_tif_dict("south", sample_year, sample_lat, sample_lon, tif_dict)
+            tif_dict = fill_tif_dict("south", sample_year, sample_lat, sample_lon, tif_dict, settings)
         if tif_dict.get("southwest") is None:
-            tif_dict = fill_tif_dict("southwest", sample_year, sample_lat, sample_lon, tif_dict)
+            tif_dict = fill_tif_dict("southwest", sample_year, sample_lat, sample_lon, tif_dict, settings)
         if tif_dict.get("west") is None:
-            tif_dict = fill_tif_dict("west", sample_year, sample_lat, sample_lon, tif_dict)
+            tif_dict = fill_tif_dict("west", sample_year, sample_lat, sample_lon, tif_dict, settings)
 
         central_output = read_tif(tif_dict["central"], channels,
                                   window=Window.from_slices((ilat0, tif_dict["central_height"]), (0, ilon1 + 1)))
@@ -228,7 +227,7 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
     # USECASE 8 - west edge
     elif usecase == "usecase_west":
         if tif_dict.get("west") is None:
-            tif_dict = fill_tif_dict("west", sample_year, sample_lat, sample_lon, tif_dict)
+            tif_dict = fill_tif_dict("west", sample_year, sample_lat, sample_lon, tif_dict, settings)
 
         central_output = read_tif(tif_dict["central"], channels,
                                   window=Window.from_slices((ilat0, ilat1 + 1), (0, ilon1 + 1)))

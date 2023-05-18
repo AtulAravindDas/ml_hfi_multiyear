@@ -33,10 +33,6 @@ PREDICTIONS_DIRECTORY = directory_paths["predictions_dir"]
 DEFAULT_MASK_FILENAME = DATA_DIRECTORY + "hii_coastal_buffer_mask.tif"
 DEFAULT_FILENAME = "hii_2020-01-01_uint8.tif"
 
-LANDSAT_TO_HII_RATIO = 10.
-LANDSAT_PIXEL_TO_DEG = 0.00026949
-TILE_LEN_DEG = 1.
-
 
 def build_tf_dataset(settings, tags, batch_size, mode=None):
 
@@ -110,10 +106,10 @@ def get_training_tags(settings):
 
     rng = np.random.default_rng(settings["rng_seed"])
 
-    min_latfile = np.floor(settings["latlon_bounds"][0] / TILE_LEN_DEG) * TILE_LEN_DEG
-    max_latfile = np.ceil(settings["latlon_bounds"][1] / TILE_LEN_DEG) * TILE_LEN_DEG
-    min_lonfile = np.floor(settings["latlon_bounds"][2] / TILE_LEN_DEG) * TILE_LEN_DEG
-    max_lonfile = np.ceil(settings["latlon_bounds"][3] / TILE_LEN_DEG) * TILE_LEN_DEG
+    min_latfile = np.floor(settings["latlon_bounds"][0] / settings["tile_len_deg"]) * settings["tile_len_deg"]
+    max_latfile = np.ceil(settings["latlon_bounds"][1] / settings["tile_len_deg"]) * settings["tile_len_deg"]
+    min_lonfile = np.floor(settings["latlon_bounds"][2] / settings["tile_len_deg"]) * settings["tile_len_deg"]
+    max_lonfile = np.ceil(settings["latlon_bounds"][3] / settings["tile_len_deg"]) * settings["tile_len_deg"]
 
     print(min_latfile, max_latfile, min_lonfile, max_lonfile)
 
@@ -123,13 +119,14 @@ def get_training_tags(settings):
         sample_lons = []
         sample_years = []
 
-        for latfile in np.arange(min_latfile + TILE_LEN_DEG, max_latfile + TILE_LEN_DEG, TILE_LEN_DEG):
-            for lonfile in np.arange(min_lonfile, max_lonfile, TILE_LEN_DEG):
+        for latfile in np.arange(min_latfile + settings["tile_len_deg"], max_latfile + settings["tile_len_deg"], settings["tile_len_deg"]):
+            for lonfile in np.arange(min_lonfile, max_lonfile, settings["tile_len_deg"]):
 
                 # check that landsat file even exists
                 landsat_filenames = read_landsat.get_input_filename(settings["training_years"],
                                                                     np.ones(len(settings["training_years"])) * latfile,
-                                                                    np.ones(len(settings["training_years"])) * lonfile)
+                                                                    np.ones(len(settings["training_years"])) * lonfile,
+                                                                    settings)
                 file_flag = False
                 for file in landsat_filenames:
                     if os.path.isfile(LANDSAT_DIRECTORY + file + ".tif") is False:
@@ -139,12 +136,11 @@ def get_training_tags(settings):
                     print(f"skipping landsat file that does not exist: {file}")
                     continue
 
-                # get tag indices that are not water or on edites
-                print(lonfile, latfile)
+                # get tag indices that are not water or on edges
+                print(landsat_filenames[0])
                 ilat0, ilon0 = buffer_mask.index(lonfile, latfile)
-                ilat1, ilon1 = buffer_mask.index(lonfile + TILE_LEN_DEG, latfile - TILE_LEN_DEG)
+                ilat1, ilon1 = buffer_mask.index(lonfile + settings["tile_len_deg"], latfile - settings["tile_len_deg"])
                 ilat1, ilon1 = ilat1 - 1, ilon1 - 1
-                print(ilat0, ilat1, ilon0, ilon1)
 
                 window = Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1))
                 mask = buffer_mask.read(1, window=window)
@@ -158,13 +154,13 @@ def get_training_tags(settings):
                 subsample_lons, subsample_lats = np.asarray(subsample_lons), np.asarray(subsample_lats)
 
                 # Remove all possibilities of edges and corners
-                edge_width = (np.ceil(settings["scene_width"] * 2 / 3) + 1) * LANDSAT_PIXEL_TO_DEG
+                edge_width = (np.ceil(settings["scene_width"] * 2 / 3) + 1) * settings["landsat_pixel_to_deg"]
                 # print(f"{edge_width = }")
 
                 i_nonedge = np.flatnonzero(
                     np.logical_and(
-                        np.abs(np.abs(subsample_lons) - np.rint(np.abs(subsample_lons) / TILE_LEN_DEG) * TILE_LEN_DEG) > edge_width,
-                        np.abs(np.abs(subsample_lats) - np.rint(np.abs(subsample_lats) / TILE_LEN_DEG) * TILE_LEN_DEG) > edge_width
+                        np.abs(np.abs(subsample_lons) - np.rint(np.abs(subsample_lons) / settings["tile_len_deg"]) * settings["tile_len_deg"]) > edge_width,
+                        np.abs(np.abs(subsample_lats) - np.rint(np.abs(subsample_lats) / settings["tile_len_deg"]) * settings["tile_len_deg"]) > edge_width
                     ))
                 subsample_lats = subsample_lats[i_nonedge]
                 subsample_lons = subsample_lons[i_nonedge]
@@ -184,17 +180,17 @@ def get_training_tags(settings):
 
                 # append to list across tiles
                 # TODO: speed up using list.append and lists
-                print(f"{len(subsample_lats) = }")
                 sample_lats = np.append(sample_lats, subsample_lats)
                 sample_lons = np.append(sample_lons, subsample_lons)
                 sample_years = np.append(sample_years, subsample_years)
                 # sample_lats.append(subsample_lats.tolist())
                 # sample_lons.append(subsample_lons.tolist())
                 # sample_years.append(subsample_years.tolist())
-                print(f"{len(sample_lats) = }")
+
+                # print meta data
+                print(f"...{frac_land.round(3) = }, # samples = {len(subsample_years)}")
 
     assert len(sample_lats) > 0, "you have no training data."
-    print(f"{len(sample_lats) = }")
 
     # Turn into numpy arrays
     # sample_lats, sample_lons, sample_years = np.asarray(sample_lats), np.asarray(sample_lons), np.asarray(sample_years)
@@ -212,18 +208,18 @@ def get_training_tags(settings):
 
     # GET FILENAMES
     tagfile_train = read_landsat.get_input_filename(
-        tagyear_train, taglat_train, taglon_train
+        tagyear_train, taglat_train, taglon_train, settings
     )
     tagfile_val = read_landsat.get_input_filename(
-        tagyear_val, taglat_val, taglon_val
+        tagyear_val, taglat_val, taglon_val, settings
     )
 
     # Put into nice packages
     tags_train = (tagyear_train, taglat_train, taglon_train, tagfile_train)
     tags_val = (tagyear_val, taglat_val, taglon_val, tagfile_val)
 
-    # PRINT SIZES
-    print(f"{len(tagyear_train) = }, {len(tagyear_val) = }")
+    # PRINT META DATA
+    print(f"\ntotal training samples = {len(tagyear_train)}, total validation samples = {len(tagyear_val)}")
 
     return tags_train, tags_val
 
@@ -233,10 +229,10 @@ def get_inference_tags(settings):
     with rasterio.open(DEFAULT_MASK_FILENAME) as buffer_mask:
 
         ilat0, ilon0 = buffer_mask.index(
-            settings["latlon_bounds"][2], settings["latlon_bounds"][1]
+            settings["tile"][2], settings["tile"][1]
         )
         ilat1, ilon1 = buffer_mask.index(
-            settings["latlon_bounds"][3], settings["latlon_bounds"][0]
+            settings["tile"][3], settings["tile"][0]
         )
 
         ilat_grid, ilon_grid = np.meshgrid(
@@ -249,17 +245,22 @@ def get_inference_tags(settings):
             np.ndarray.flatten(ilon_grid, order="C"),
         )
         sample_lons, sample_lats = np.asarray(sample_lons), np.asarray(sample_lats)
+
+        # BUG: this is causing some of the issues
+        # sample_lats, sample_lons = methods.trim_bounds(settings, sample_lats, sample_lons)
+
         tagyear_test = np.asarray(
             np.ones(shape=sample_lats.shape) * settings["testing_years"][0],
             dtype=int,
         )
         tagfile_test = read_landsat.get_input_filename(
-            tagyear_test, sample_lats, sample_lons
+            tagyear_test, sample_lats, sample_lons, settings
         )
 
         # PRINT SIZES
         ntest = tagyear_test.shape
         print(f"{ntest = }")
+        assert len(ntest) > 0, "you have no data to predict."
 
         # Put into a nice package
         tags = (tagyear_test, sample_lats, sample_lons, tagfile_test)
@@ -278,17 +279,22 @@ class data_generator:
         scene_width = self.settings["scene_width"]
 
         # read landsat file
-        assert all(x == sample_files[0].numpy().decode("utf8") for x in sample_files)
+        assert all(x == sample_files[0].numpy().decode("utf8") for x in sample_files), print(sample_files)
         filename = LANDSAT_DIRECTORY + sample_files[0].numpy().decode("utf8") + ".tif"
 
+        batch_input = np.zeros((len(sample_years), scene_width, scene_width, len(channels)))
         if not os.path.isfile(filename):
-            raise ValueError("No such input Landsat file: " + filename)
+            if self.settings["mode"] == "training":
+                raise ValueError("No such input Landsat file: " + filename)
+            elif self.settings["mode"] == "inference":
+                return tf.convert_to_tensor(batch_input * np.nan)
+            else:
+                raise NotImplementedError("no such mode.")
 
         # intialize tif neighborhood dictionary and loop through samples to get the data
         tif_dict = {}
-        tif_dict = read_landsat.fill_tif_dict("central", sample_years[0], sample_lats[0], sample_lons[0], tif_dict)
+        tif_dict = read_landsat.fill_tif_dict("central", sample_years[0], sample_lats[0], sample_lons[0], tif_dict, self.settings)
 
-        batch_input = np.zeros((len(sample_years), scene_width, scene_width, len(channels)))
         for isample in np.arange(0, len(sample_years)):
             sample_out, tif_dict = read_landsat.read_input_data(
                 self.settings,
