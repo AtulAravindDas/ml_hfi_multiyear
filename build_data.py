@@ -115,7 +115,7 @@ def get_training_tags(settings):
 
     min_latfile, max_latfile, min_lonfile, max_lonfile = read_landsat.get_landsat_bounds(settings, region=settings["training_region"])
     print(min_latfile, max_latfile, min_lonfile, max_lonfile)
-    print("/n")
+    print("\n")
 
     with rasterio.open(DEFAULT_MASK_FILENAME) as buffer_mask:
 

@@ -29,7 +29,7 @@ def get_settings(experiment_name):
 
             "channels": (1, 2, 3, 4, 5, 6),  # indexing starts at 1, channel 7 = WATER_MASK
             "scene_width": 114,  # in units of landsat pixels
-            "nbatches": (750, 50),  # (training_batches, validation_batches per landsat tile)
+            "nbatches": (750, 25),  # (training_batches, validation_batches per landsat tile)
             "batches_per_epoch": 500,
             "rng_seed": 33,
 
