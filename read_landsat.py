@@ -39,9 +39,12 @@ def fill_tif_dict(name, sample_year, sample_lat, sample_lon, tif_dict, settings)
     else:
         raise NotImplementedError("no such name.")
 
-    tif_dict[name] = rasterio.open(LANDSAT_DIRECTORY + filename[0] + ".tif")
-    tif_dict[name + "_height"] = tif_dict[name].height
-    tif_dict[name + "_width"] = tif_dict[name].width
+    try:
+        tif_dict[name] = rasterio.open(LANDSAT_DIRECTORY + filename[0] + ".tif")
+        tif_dict[name + "_height"] = tif_dict[name].height
+        tif_dict[name + "_width"] = tif_dict[name].width
+    except:
+        pass
 
     return tif_dict
 

@@ -19,13 +19,13 @@ LANDSAT_PIXEL_TO_DEG = 0.00026949
 def get_settings(experiment_name):
     experiments = {
 
-        "exp1": {
+        "exp0": {
             "mode": None,  # "training" or "inference" as set in the code itself
             "training_years": (2015, 2016, 2017, 2018, 2019),  # (2000, 2005, 2010, 2013)
             "inference_years": (2020, ),
 
-            "training_region": (-8, -5, 105, 108),  # (lat_south, lat_north, lon_west, lon_east)
-            "inference_region": (-7.9, -5.1, 105.1, 107.9),  # (lat_south, lat_north, lon_west, lon_east)
+            "training_region": (-90, 90, -180, 180),  # (lat_south, lat_north, lon_west, lon_east)
+            "inference_region": (-90, 90, -180, 180),  # (lat_south, lat_north, lon_west, lon_east)
 
             "channels": (1, 2, 3, 4, 5, 6),  # indexing starts at 1, channel 7 = WATER_MASK
             "scene_width": 114,  # in units of landsat pixels

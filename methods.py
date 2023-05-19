@@ -25,7 +25,8 @@ def get_directories():
         "landsat_dir": "data/landsat_export_1x1/",
         "predictions_dir": "predictions/",
         "figures_dir": "figures/",
-        "save_model_dir": "saved_models/"
+        "save_model_dir": "saved_models/",
+        "mosaics_dir": "mosaics/",
     }
     return dir_dict
 
