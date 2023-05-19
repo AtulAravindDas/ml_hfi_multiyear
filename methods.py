@@ -10,15 +10,13 @@ import matplotlib.pyplot as plt
 import scipy
 import tensorflow as tf
 import methods
+import rasterio
 
 __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
 __date__ = "11 May 2023"
 
 
-directory_paths = methods.get_directories()
-DATA_DIRECTORY = directory_paths["data_dir"]
-LANDSAT_DIRECTORY = directory_paths["landsat_dir"]
-PREDICTIONS_DIRECTORY = directory_paths["predictions_dir"]
+DEFAULT_FILENAME = "hii_2020-01-01_uint8.tif"
 
 
 def get_directories():
@@ -27,9 +25,50 @@ def get_directories():
         "landsat_dir": "data/landsat_export_1x1/",
         "predictions_dir": "predictions/",
         "figures_dir": "figures/",
-        "save_model_dir": "saved_models/"
+        "save_model_dir": "saved_models/",
+        "mosaics_dir": "mosaics/",
     }
     return dir_dict
+
+
+def get_tile_indices(hfi_tif, tile):
+
+    ilat0, ilon0 = hfi_tif.index(tile[2], tile[1])
+    ilat1, ilon1 = hfi_tif.index(tile[3], tile[0])
+
+    indices = ilat0, ilat1, ilon0, ilon1
+    return trim_hfi_region(indices, hfi_tif, tile)
+
+
+def trim_hfi_region(indices, hfi_tif, region):
+
+    ilat0, ilat1, ilon0, ilon1 = indices
+
+    lat_indices = np.arange(ilat0, ilat1 + 1)
+    lon_indices = np.arange(ilon0, ilon1 + 1)
+
+    lons, __ = hfi_tif.xy(np.zeros(lon_indices.shape), lon_indices)
+    __, lats = hfi_tif.xy(lat_indices, np.zeros(lat_indices.shape))
+    lons, lats = np.asarray(lons), np.asarray(lats)
+
+    # get within tile bounds
+    ilat_indices = np.where((lats > region[0]) &
+                            (lats <= region[1]))[0]
+    ilon_indices = np.where((lons >= region[2]) &
+                            (lons < region[3]))[0]
+
+    # grab indices that are still in-play
+    ilat0 = lat_indices[ilat_indices][0]
+    ilat1 = lat_indices[ilat_indices][-1]
+    ilon0 = lon_indices[ilon_indices][0]
+    ilon1 = lon_indices[ilon_indices][-1]
+
+    # this can be commented out
+    # lon0, lat0 = hfi_tif.xy(ilat0, ilon0)
+    # lon1, lat1 = hfi_tif.xy(ilat1, ilon1)
+    # print(lat1, lat0, lon0, lon1)
+
+    return ilat0, ilat1, ilon0, ilon1
 
 
 def get_denseweight_dist(settings, data):
@@ -48,6 +87,16 @@ def get_denseweight_dist(settings, data):
     denseweight_dist = denseweight_dist / np.mean(denseweight_dist)
 
     return denseweight_dist
+
+
+def get_denseweights(settings, tags):
+    with rasterio.open(get_directories()["data_dir"] + DEFAULT_FILENAME) as tif:
+        sample_lats = tags[1]
+        sample_lons = tags[2]
+        data = tif.sample([*zip(sample_lons, sample_lats)], indexes=1)
+        data = np.ndarray.flatten(np.asarray(list(data)))
+
+        return get_denseweight_dist(settings, data)
 
 
 def dw_calculator(denseweight_dist, data):
@@ -72,38 +121,3 @@ class DenseWeight_Loss(tf.keras.losses.Loss):
         loss = tf.reduce_mean(loss)
 
         return tf.sqrt(loss)
-
-
-def permute_shuffle_sample_list(settings,
-                                sample_years, sample_lats, sample_lons,
-                                sampling_weights=None):
-
-    if sampling_weights is None:
-        sampling_weights = np.ones(sample_years.shape)
-    sampling_weights = sampling_weights / np.sum(sampling_weights)
-
-    nsamples = np.sum(settings["nbatches"]) * settings["batch_size"]
-    rng = np.random.default_rng(settings["rng_seed"])
-
-    iloc = rng.choice(np.arange(0, sample_lats.shape[0]), size=nsamples, replace=False, p=sampling_weights)
-    sample_lats = sample_lats[iloc]
-    sample_lons = sample_lons[iloc]
-
-    # sample_years = rng.choice(sample_years, size=nsamples, replace=True)  # THIS IS MUCH SLOWER
-    # make it so that every batch has the same year throughout for loading files
-    sample_years = np.repeat(np.random.choice(sample_years, size=np.sum(settings["nbatches"]), replace=True),
-                             settings["batch_size"])
-
-    return sample_years, sample_lats, sample_lons
-
-
-def get_input_filename(years, lats, lons):
-
-    filenames = []
-    for isample in range(len(years)):
-        file_year = years[isample]
-        file_lat = int(np.ceil(lats[isample]))
-        file_lon = int(np.floor(lons[isample]))
-        filenames.append(f"landsat_{file_lat}lat_{file_lon}lon_{file_year}")
-
-    return filenames

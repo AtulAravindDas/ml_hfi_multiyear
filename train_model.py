@@ -96,9 +96,10 @@ def train_model(settings, model, tfds_train, tfds_val, denseweight_dist):
     history = model.fit(
         tfds_train,
         validation_data=tfds_val,
+        steps_per_epoch=settings["batches_per_epoch"],
         epochs=settings["max_epochs"],
         callbacks=callbacks,
-        # batch_size=settings["batch_size"],
+        batch_size=settings["batch_size"],
         verbose=1,
     )
     stop_time = time.time()

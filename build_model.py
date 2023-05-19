@@ -6,9 +6,23 @@ build_model(settings, input_shape)
 """
 import numpy as np
 import tensorflow as tf
+import methods
 
 __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
 __date__ = "10 May 2023"
+
+directory_paths = methods.get_directories()
+SAVE_MODEL_DIRECTORY = directory_paths["save_model_dir"]
+
+
+def get_model(settings):
+    tf.keras.backend.clear_session()
+    model = build_model(settings,
+                        input_shape=(settings["scene_width"], settings["scene_width"], len(settings["channels"])))
+
+    checkpoint_dir = SAVE_MODEL_DIRECTORY + settings["exp_name"] + '/'
+    model.load_weights(tf.train.latest_checkpoint(checkpoint_dir)).expect_partial()
+    return model
 
 
 def build_model(settings, input_shape):
