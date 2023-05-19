@@ -28,8 +28,9 @@ def get_settings(experiment_name):
             "inference_region": (-7.9, -5.1, 105.1, 107.9),  # (lat_south, lat_north, lon_west, lon_east)
 
             "channels": (1, 2, 3, 4, 5, 6),  # indexing starts at 1, channel 7 = WATER_MASK
-            "nbatches": (300, 50),  # (training_batches, validation_batches per landsat tile)
             "scene_width": 114,  # in units of landsat pixels
+            "nbatches": (500, 50),  # (training_batches, validation_batches per landsat tile)
+            "batches_per_epoch": 500,
             "rng_seed": 33,
 
             "layers_units": (64, 128, 128, 128, 128),

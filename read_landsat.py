@@ -73,8 +73,8 @@ def get_input_filename(years, lats, lons, settings):
 
 def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, channels, scene_width):
 
-    sample_lon = sample_lon.numpy()
-    sample_lat = sample_lat.numpy()
+    # sample_lon = sample_lon.numpy()
+    # sample_lat = sample_lat.numpy()
 
     ilat, ilon = tif_dict["central"].index(sample_lon, sample_lat)
     ilat0, ilat1 = ilat - scene_width / 3 * 2, ilat + scene_width / 3 - 1

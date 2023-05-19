@@ -40,24 +40,31 @@ def build_tf_dataset(settings, tags, batch_size, mode=None):
     if mode is None:
         mode = settings["mode"]
 
-    # make data generator class
-    data_gen = data_generator(settings)
+    # create training tag dictionary
+    tags_dict = {}
+    sample_years, sample_lats, sample_lons, sample_files = tags
+    for filename in np.unique(sample_files):
+        i = [index for (index, item) in enumerate(sample_files) if item == filename]
+        tags_dict[filename] = (sample_years[i], sample_lats[i], sample_lons[i], np.asarray(sample_files)[i])
 
-    # print(f"{len(tags[0]) = }")
+    # make data generator class
+    data_gen = data_generator(settings, tags_dict)
 
     # create initial tf datasets
     input_tfds = tf.data.Dataset.from_tensor_slices(tags)
     output_tfds = tf.data.Dataset.from_tensor_slices(tags)
 
-    # batch the data together so the iterator loops through batches instead of samples
+    # shuffle the data
     if mode == "training":
         input_tfds = input_tfds.batch(batch_size).shuffle(
-            buffer_size=int(len(tags[0]) / batch_size),
+            # buffer_size=int(len(tags[0]) / batch_size),
+            buffer_size=2 * len(tags[0]),
             reshuffle_each_iteration=True,
             seed=settings["rng_seed"],
         )
         output_tfds = output_tfds.batch(batch_size).shuffle(
-            buffer_size=int(len(tags[0]) / batch_size),
+            buffer_size=2 * len(tags[0]),
+            # buffer_size=int(len(tags[0]) / batch_size),
             reshuffle_each_iteration=True,
             seed=settings["rng_seed"],
         )
@@ -179,13 +186,9 @@ def get_training_tags(settings):
                 assert len(subsample_years) == len(subsample_lats), "sample years and locations must be the same length"
 
                 # append to list across tiles
-                # TODO: speed up using list.append and lists
-                sample_lats = np.append(sample_lats, subsample_lats)
-                sample_lons = np.append(sample_lons, subsample_lons)
-                sample_years = np.append(sample_years, subsample_years)
-                # sample_lats.append(subsample_lats.tolist())
-                # sample_lons.append(subsample_lons.tolist())
-                # sample_years.append(subsample_years.tolist())
+                sample_lats = sample_lats + subsample_lats.tolist()
+                sample_lons = sample_lons + subsample_lons.tolist()
+                sample_years = sample_years + subsample_years.tolist()
 
                 # print meta data
                 print(f"...{frac_land.round(3) = }, # samples = {len(subsample_years)}")
@@ -193,8 +196,9 @@ def get_training_tags(settings):
     assert len(sample_lats) > 0, "you have no training data."
 
     # Turn into numpy arrays
-    # sample_lats, sample_lons, sample_years = np.asarray(sample_lats), np.asarray(sample_lons), np.asarray(sample_years)
-    sample_years = sample_years.astype(int)
+    sample_lats, sample_lons, sample_years = (np.asarray(sample_lats),
+                                              np.asarray(sample_lons),
+                                              np.asarray(sample_years, dtype="int"))
 
     # SPLIT INTO TRAINING AND VALIDATION SETS
     nbatches = int(len(sample_lats) // settings["batch_size"])
@@ -219,7 +223,7 @@ def get_training_tags(settings):
     tags_val = (tagyear_val, taglat_val, taglon_val, tagfile_val)
 
     # PRINT META DATA
-    print(f"\ntotal training samples = {len(tagyear_train)}, total validation samples = {len(tagyear_val)}")
+    print(f"\ntotal training samples = {len(tagyear_train)}, total validation samples = {len(tagyear_val)}\n")
 
     return tags_train, tags_val
 
@@ -264,18 +268,33 @@ def get_inference_tags(settings):
 
 class data_generator:
 
+    # THIS CODE ASSUMES THAT GET_INPUT_DATA() IS CALLED PRIOR TO GET_OUTPUT_DATA
+    # EVERY ITERATION BY TENSORFLOW
+
     # init method or constructor
-    def __init__(self, settings):
+    def __init__(self, settings, tags_dict):
         self.settings = settings
+        self.tags_dict = tags_dict
+        self.rng = np.random.default_rng(settings["rng_seed"])
 
     def get_input_data(self, sample_years, sample_lats, sample_lons, sample_files):
 
         channels = self.settings["channels"]
         scene_width = self.settings["scene_width"]
 
+        if self.settings["mode"] == "training":
+            # grab random tags associated with the filenames for training only
+            tile_key = sample_files[0].numpy().decode("utf8")
+            sample_years, sample_lats, sample_lons, sample_files = self.tags_dict[tile_key]
+            i = self.rng.choice(np.arange(0, len(sample_years)), self.settings["batch_size"], replace=False)
+            sample_years, sample_lats, sample_lons, sample_files = sample_years[i], sample_lats[i], sample_lons[i], sample_files[i]
+            self.current_tags = (sample_years, sample_lats, sample_lons, sample_files)
+        else:
+            self.current_tags = (sample_years, sample_lats, sample_lons, sample_files)
+
         # read landsat file
-        assert all(x == sample_files[0].numpy().decode("utf8") for x in sample_files), print(sample_files)
-        filename = LANDSAT_DIRECTORY + sample_files[0].numpy().decode("utf8") + ".tif"
+        assert all(x == sample_files[0] for x in sample_files), print(sample_files)
+        filename = LANDSAT_DIRECTORY + sample_files[0] + ".tif"
 
         batch_input = np.zeros((len(sample_years), scene_width, scene_width, len(channels)))
         if not os.path.isfile(filename):
@@ -314,19 +333,21 @@ class data_generator:
 
         return dat
 
-    def get_output_data(self, years, sample_lats, sample_lons, sample_files):
+    def get_output_data(self, sample_years, sample_lats, sample_lons, sample_files):
+
+        sample_years, sample_lats, sample_lons, sample_files = self.current_tags
 
         # Get HFI file
-        assert all(x == years[0] for x in years)
-        filename = DATA_DIRECTORY + "hii_" + str(years[0].numpy()) + "-01-01_uint8.tif"
+        assert all(x == sample_years[0] for x in sample_years)
+        filename = DATA_DIRECTORY + "hii_" + str(sample_years[0]) + "-01-01_uint8.tif"
 
-        batch_output = np.zeros((len(years), 1))
+        batch_output = np.zeros((len(sample_years), 1))
 
         if not os.path.isfile(filename):
             return tf.convert_to_tensor(batch_output * np.nan)
 
         with rasterio.open(filename) as output_tiff:
-            for isample in np.arange(0, len(years)):
+            for isample in np.arange(0, len(sample_years)):
                 batch_output[isample] = read_output_data(
                     self, output_tiff, sample_lons[isample], sample_lats[isample]
                 )
@@ -340,7 +361,7 @@ class data_generator:
 def read_output_data(self, tiff, sample_lon, sample_lat):
 
     ilat, ilon = tiff.index(sample_lon, sample_lat)
-    window = Window(ilon[0], ilat[0], 1, 1)
+    window = Window(ilon, ilat, 1, 1)
 
     output_mask = (
         tiff.read_masks(1, window=window) // 255.0
