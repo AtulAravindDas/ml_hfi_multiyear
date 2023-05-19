@@ -19,6 +19,7 @@ The following python environment was used to implement this code.
 - conda install -c conda-forge dask netCDF4
 - conda install -c conda-forge cartopy
 - conda install palettable seaborn
+- conda install -c conda-forge tifftools
 ```
 
 ## Credits

@@ -12,21 +12,19 @@ LANDSAT_DIRECTORY = directory_paths["landsat_dir"]
 PREDICTIONS_DIRECTORY = directory_paths["predictions_dir"]
 
 
-def save_predictions_tif(settings, hfi_predict, predictions_filename):
+def save_predictions_tif(settings, tags, hfi_predict, predictions_filename):
     # GET TIFF META DATA
     labels_filename = (
-        DATA_DIRECTORY + "hii_" + str(settings["testing_years"][0]) + "-01-01_uint8.tif"
+        DATA_DIRECTORY + "hii_" + str(settings["inference_years"][0]) + "-01-01_uint8.tif"
     )
     filename_mask = DATA_DIRECTORY + "hii_coastal_buffer_mask.tif"
 
-    # BUG: this code will not run
+    lat0, lat1, lon0, lon1 = (np.min(tags[1]), np.max(tags[1]), np.min(tags[2]), np.max(tags[2]))
+
     with rasterio.open(filename_mask) as buffer_mask:
-        ilat0, ilon0 = buffer_mask.index(
-            settings["tile"][2], settings["tile"][1]
-        )
-        ilat1, ilon1 = buffer_mask.index(
-            settings["tile"][3], settings["tile"][0]
-        )
+
+        ilat0, ilat1, ilon0, ilon1 = methods.get_tile_indices(buffer_mask, (lat0, lat1, lon0, lon1))
+        ilat1, ilon1 = ilat1 + 1, ilon1 + 1  # since the input region bounds were inclusive
         lon0, lat0 = buffer_mask.xy(ilat0, ilon0)
         lon1, lat1 = buffer_mask.xy(ilat1, ilon1)
 
@@ -35,12 +33,6 @@ def save_predictions_tif(settings, hfi_predict, predictions_filename):
 
     if os.path.isfile(labels_filename):
         with rasterio.open(labels_filename) as labels_tiff:
-            ilat0, ilon0 = labels_tiff.index(
-                settings["tile"][2], settings["tile"][1]
-            )
-            ilat1, ilon1 = labels_tiff.index(
-                settings["tile"][3], settings["tile"][0]
-            )
             window = Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1))
             hfi_labels = labels_tiff.read(1, window=window)
     else:

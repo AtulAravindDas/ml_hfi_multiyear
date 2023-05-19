@@ -43,7 +43,7 @@ def build_tf_dataset(settings, tags, batch_size, mode=None):
     # make data generator class
     data_gen = data_generator(settings)
 
-    print(f"{len(tags[0]) = }")
+    # print(f"{len(tags[0]) = }")
 
     # create initial tf datasets
     input_tfds = tf.data.Dataset.from_tensor_slices(tags)
@@ -106,11 +106,7 @@ def get_training_tags(settings):
 
     rng = np.random.default_rng(settings["rng_seed"])
 
-    min_latfile = np.floor(settings["latlon_bounds"][0] / settings["tile_len_deg"]) * settings["tile_len_deg"]
-    max_latfile = np.ceil(settings["latlon_bounds"][1] / settings["tile_len_deg"]) * settings["tile_len_deg"]
-    min_lonfile = np.floor(settings["latlon_bounds"][2] / settings["tile_len_deg"]) * settings["tile_len_deg"]
-    max_lonfile = np.ceil(settings["latlon_bounds"][3] / settings["tile_len_deg"]) * settings["tile_len_deg"]
-
+    min_latfile, max_latfile, min_lonfile, max_lonfile = read_landsat.get_landsat_bounds(settings, region=settings["training_region"])
     print(min_latfile, max_latfile, min_lonfile, max_lonfile)
 
     with rasterio.open(DEFAULT_MASK_FILENAME) as buffer_mask:
@@ -136,12 +132,19 @@ def get_training_tags(settings):
                     print(f"skipping landsat file that does not exist: {file}")
                     continue
 
-                # get tag indices that are not water or on edges
                 print(landsat_filenames[0])
-                ilat0, ilon0 = buffer_mask.index(lonfile, latfile)
-                ilat1, ilon1 = buffer_mask.index(lonfile + settings["tile_len_deg"], latfile - settings["tile_len_deg"])
-                ilat1, ilon1 = ilat1 - 1, ilon1 - 1
 
+                # get indices for region and tile
+                tile_bounds = (latfile - settings["tile_len_deg"], latfile, lonfile, lonfile + settings["tile_len_deg"])
+                ilat0, ilat1, ilon0, ilon1 = methods.get_tile_indices(buffer_mask, tile_bounds)
+                # ilat0, ilon0 = buffer_mask.index(lonfile, latfile)
+                # ilat1, ilon1 = buffer_mask.index(lonfile + settings["tile_len_deg"], latfile - settings["tile_len_deg"])
+                # ilat1, ilon1 = ilat1 - 1, ilon1 - 1
+                ilat0, ilat1, ilon0, ilon1 = methods.trim_hfi_region((ilat0, ilat1, ilon0, ilon1),
+                                                                     buffer_mask,
+                                                                     region=settings["training_region"])
+
+                # get tag indices that are not water or on edges
                 window = Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1))
                 mask = buffer_mask.read(1, window=window)
                 land_pixels = np.sum(mask)
@@ -228,12 +231,10 @@ def get_inference_tags(settings):
 
     with rasterio.open(DEFAULT_MASK_FILENAME) as buffer_mask:
 
-        ilat0, ilon0 = buffer_mask.index(
-            settings["tile"][2], settings["tile"][1]
-        )
-        ilat1, ilon1 = buffer_mask.index(
-            settings["tile"][3], settings["tile"][0]
-        )
+        ilat0, ilat1, ilon0, ilon1 = methods.get_tile_indices(buffer_mask, settings["tile"])
+        ilat0, ilat1, ilon0, ilon1 = methods.trim_hfi_region((ilat0, ilat1, ilon0, ilon1),
+                                                             buffer_mask,
+                                                             region=settings["inference_region"])
 
         ilat_grid, ilon_grid = np.meshgrid(
             np.arange(ilat0, ilat1 + 1), np.arange(ilon0, ilon1 + 1), indexing="ij"
@@ -244,27 +245,24 @@ def get_inference_tags(settings):
             np.ndarray.flatten(ilat_grid, order="C"),
             np.ndarray.flatten(ilon_grid, order="C"),
         )
-        sample_lons, sample_lats = np.asarray(sample_lons), np.asarray(sample_lats)
+    sample_lons, sample_lats = np.asarray(sample_lons), np.asarray(sample_lats)
 
-        # BUG: this is causing some of the issues
-        # sample_lats, sample_lons = methods.trim_bounds(settings, sample_lats, sample_lons)
+    tagyear_inf = np.asarray(
+        np.ones(shape=sample_lats.shape) * settings["inference_years"][0],
+        dtype=int,
+    )
+    tagfile_inf = read_landsat.get_input_filename(
+        tagyear_inf, sample_lats, sample_lons, settings
+    )
 
-        tagyear_test = np.asarray(
-            np.ones(shape=sample_lats.shape) * settings["testing_years"][0],
-            dtype=int,
-        )
-        tagfile_test = read_landsat.get_input_filename(
-            tagyear_test, sample_lats, sample_lons, settings
-        )
+    # PRINT SIZES
+    n_inference = tagyear_inf.shape
+    print(f"{n_inference = }")
+    assert len(n_inference) > 0, "you have no data to predict."
 
-        # PRINT SIZES
-        ntest = tagyear_test.shape
-        print(f"{ntest = }")
-        assert len(ntest) > 0, "you have no data to predict."
-
-        # Put into a nice package
-        tags = (tagyear_test, sample_lats, sample_lons, tagfile_test)
-        return tags, None
+    # Put into a nice package
+    tags = (tagyear_inf, sample_lats, sample_lons, tagfile_inf)
+    return tags, None
 
 
 class data_generator:

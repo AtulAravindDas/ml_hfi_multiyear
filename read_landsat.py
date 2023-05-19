@@ -50,6 +50,15 @@ def read_tif(tif, channels, window):
     return np.transpose(tif.read(channels, window=window), axes=(1, 2, 0))
 
 
+def get_landsat_bounds(settings, region):
+    min_latfile = np.floor(region[0] / settings["tile_len_deg"]) * settings["tile_len_deg"]
+    max_latfile = np.ceil(region[1] / settings["tile_len_deg"]) * settings["tile_len_deg"]
+    min_lonfile = np.floor(region[2] / settings["tile_len_deg"]) * settings["tile_len_deg"]
+    max_lonfile = np.ceil(region[3] / settings["tile_len_deg"]) * settings["tile_len_deg"]
+
+    return min_latfile, max_latfile, min_lonfile, max_lonfile
+
+
 def get_input_filename(years, lats, lons, settings):
 
     filenames = []

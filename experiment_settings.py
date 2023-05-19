@@ -19,49 +19,16 @@ LANDSAT_PIXEL_TO_DEG = 0.00026949
 def get_settings(experiment_name):
     experiments = {
 
-        "exp0": {
-            "mode": None,  # "training" or "inference" as set in the code itself
-            "training_years": (2015, 2016, 2017, 2018, 2019),  # (2000, 2005, 2010, 2013)
-            "testing_years": (2020, ),
-            "latlon_bounds": (-7.999, -5.0, 105.0, 107.999),  # (lat_south, lat_north, lon_west, lon_east)
-
-            "channels": (1, 2, 3, 4, 5, 6),  # indexing starts at 1, channel 7 = WATER_MASK
-            "nbatches": (200, 50),  # (training_batches, validation_batches per landsat tile)
-            "scene_width": 114,  # in units of landsat pixels
-            "rng_seed": 33,
-
-            "layers_units": (64, 128, 128, 128, 128),
-            "kernel_size": 3,
-            "max_pool_stride": (2, 2),  # (pool size, stride length)
-            "dense_units": 32,
-
-            "kluge_value_for_zero": -.2,  # -0.2,
-            "kluge_value_for_one": 1.2,  # -0.2,
-            "aug_randomflip": True,
-            "input_noise": 10,  # in units of rgb values
-            "sample_weights_alpha": 50.0,
-            "subsample": True,
-
-            "learning_rate": 0.001,
-            "dropout": 0.50,
-            "patience": 3,
-            "batch_size": 32,
-            "max_epochs": 1_000,
-            "early_stopping": True,
-
-            "pickup_where_leftoff": False,
-            "save_best_only": True,
-        },
-
         "exp1": {
             "mode": None,  # "training" or "inference" as set in the code itself
             "training_years": (2015, 2016, 2017, 2018, 2019),  # (2000, 2005, 2010, 2013)
-            "testing_years": (2020, ),
+            "inference_years": (2020, ),
 
-            "latlon_bounds": (-7.999, -5.0, 105.0, 107.999),  # (lat_south, lat_north, lon_west, lon_east)
+            "training_region": (-8, -5, 105, 108),  # (lat_south, lat_north, lon_west, lon_east)
+            "inference_region": (-7.9, -5.1, 105.1, 107.9),  # (lat_south, lat_north, lon_west, lon_east)
 
             "channels": (1, 2, 3, 4, 5, 6),  # indexing starts at 1, channel 7 = WATER_MASK
-            "nbatches": (500, 50),  # (training_batches, validation_batches per landsat tile)
+            "nbatches": (300, 50),  # (training_batches, validation_batches per landsat tile)
             "scene_width": 114,  # in units of landsat pixels
             "rng_seed": 33,
 
@@ -71,7 +38,7 @@ def get_settings(experiment_name):
             "dense_units": 32,
 
             "kluge_value_for_zero": -.2,  # -0.2,
-            "kluge_value_for_one": 1.2,  # -0.2,
+            "kluge_value_for_one": 0.,  # -0.2,
             "aug_randomflip": True,
             "input_noise": 10,  # in units of rgb values
             "sample_weights_alpha": 25.0,

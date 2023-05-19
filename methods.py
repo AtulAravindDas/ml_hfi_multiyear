@@ -30,26 +30,44 @@ def get_directories():
     return dir_dict
 
 
-def trim_bounds(settings, sample_lats, sample_lons):
+def get_tile_indices(hfi_tif, tile):
 
-    # FIXME: This needs to be majorally cleaned up
-    ikeep = np.where(np.logical_and((sample_lats <= settings["tile"][1]),
-                                    (sample_lats > settings["tile"][0])))[0]
-    sample_lats, sample_lons = sample_lats[ikeep], sample_lons[ikeep]
+    ilat0, ilon0 = hfi_tif.index(tile[2], tile[1])
+    ilat1, ilon1 = hfi_tif.index(tile[3], tile[0])
 
-    ikeep = np.where(np.logical_and((sample_lons < settings["tile"][3]),
-                                    (sample_lons >= settings["tile"][2])))[0]
-    sample_lats, sample_lons = sample_lats[ikeep], sample_lons[ikeep]
+    indices = ilat0, ilat1, ilon0, ilon1
+    return trim_hfi_region(indices, hfi_tif, tile)
 
-    ikeep = np.where(np.logical_and((sample_lats <= settings["latlon_bounds"][1]),
-                                    (sample_lats > settings["latlon_bounds"][0])))[0]
-    sample_lats, sample_lons = sample_lats[ikeep], sample_lons[ikeep]
 
-    ikeep = np.where(np.logical_and((sample_lons < settings["latlon_bounds"][3]),
-                                    (sample_lons >= settings["latlon_bounds"][2])))[0]
-    sample_lats, sample_lons = sample_lats[ikeep], sample_lons[ikeep]
+def trim_hfi_region(indices, hfi_tif, region):
 
-    return sample_lats, sample_lons
+    ilat0, ilat1, ilon0, ilon1 = indices
+
+    lat_indices = np.arange(ilat0, ilat1 + 1)
+    lon_indices = np.arange(ilon0, ilon1 + 1)
+
+    lons, __ = hfi_tif.xy(np.zeros(lon_indices.shape), lon_indices)
+    __, lats = hfi_tif.xy(lat_indices, np.zeros(lat_indices.shape))
+    lons, lats = np.asarray(lons), np.asarray(lats)
+
+    # get within tile bounds
+    ilat_indices = np.where((lats > region[0]) &
+                            (lats <= region[1]))[0]
+    ilon_indices = np.where((lons >= region[2]) &
+                            (lons < region[3]))[0]
+
+    # grab indices that are still in-play
+    ilat0 = lat_indices[ilat_indices][0]
+    ilat1 = lat_indices[ilat_indices][-1]
+    ilon0 = lon_indices[ilon_indices][0]
+    ilon1 = lon_indices[ilon_indices][-1]
+
+    # this can be commented out
+    # lon0, lat0 = hfi_tif.xy(ilat0, ilon0)
+    # lon1, lat1 = hfi_tif.xy(ilat1, ilon1)
+    # print(lat1, lat0, lon0, lon1)
+
+    return ilat0, ilat1, ilon0, ilon1
 
 
 def get_denseweight_dist(settings, data):
