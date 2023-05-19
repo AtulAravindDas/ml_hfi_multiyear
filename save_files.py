@@ -19,6 +19,7 @@ def save_predictions_tif(settings, tags, hfi_predict, predictions_filename):
     )
     filename_mask = DATA_DIRECTORY + "hii_coastal_buffer_mask.tif"
 
+    # TODO: MOVE OUT OF SAVE TO A NEW FUNCTION
     lat0, lat1, lon0, lon1 = (np.min(tags[1]), np.max(tags[1]), np.min(tags[2]), np.max(tags[2]))
 
     with rasterio.open(filename_mask) as buffer_mask:

@@ -81,24 +81,23 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
     ilon0, ilon1 = ilon - scene_width / 3 * 2, ilon + scene_width / 3 - 1
 
     # determine the usecase
-    # TODO: remove unnecessary checks
     if ilat0 >= 0 and ilon0 >= 0 and ilat1 < tif_dict["central_height"] and ilon1 < tif_dict["central_width"]:
         usecase = "usecase_central"
-    elif ilat0 < 0 and ilon0 < 0 and ilat1 < tif_dict["central_height"] and ilon1 < tif_dict["central_width"]:
+    elif ilat0 < 0 and ilon0 < 0:
         usecase = "usecase_northwest"
-    elif ilat0 < 0 and ilon0 >= 0 and ilat1 < tif_dict["central_height"] and ilon1 < tif_dict["central_width"]:
+    elif ilat0 < 0 and ilon0 >= 0 and ilon1 < tif_dict["central_width"]:
         usecase = "usecase_north"
-    elif ilat0 < 0 and ilon0 >= 0 and ilat1 < tif_dict["central_height"] and ilon1 >= tif_dict["central_width"]:
+    elif ilat0 < 0 and ilon1 >= tif_dict["central_width"]:
         usecase = "usecase_northeast"
-    elif ilat0 >= 0 and ilon0 >= 0 and ilat1 < tif_dict["central_height"] and ilon1 >= tif_dict["central_width"]:
+    elif ilat0 >= 0 and ilat1 < tif_dict["central_height"] and ilon1 >= tif_dict["central_width"]:
         usecase = "usecase_east"
-    elif ilat0 >= 0 and ilon0 >= 0 and ilat1 >= tif_dict["central_height"] and ilon1 >= tif_dict["central_width"]:
+    elif ilat1 >= tif_dict["central_height"] and ilon1 >= tif_dict["central_width"]:
         usecase = "usecase_southeast"
-    elif ilat0 >= 0 and ilon0 >= 0 and ilat1 >= tif_dict["central_height"] and ilon1 < tif_dict["central_width"]:
+    elif ilon0 >= 0 and ilat1 >= tif_dict["central_height"] and ilon1 < tif_dict["central_width"]:
         usecase = "usecase_south"
-    elif ilat0 >= 0 and ilon0 < 0 and ilat1 >= tif_dict["central_height"] and ilon1 < tif_dict["central_width"]:
+    elif ilon0 < 0 and ilat1 >= tif_dict["central_height"]:
         usecase = "usecase_southwest"
-    elif ilat0 >= 0 and ilon0 < 0 and ilat1 < tif_dict["central_height"] and ilon1 < tif_dict["central_width"]:
+    elif ilat0 >= 0 and ilon0 < 0 and ilat1 < tif_dict["central_height"]:
         usecase = "usecase_west"
     else:
         raise NotImplementedError("no such use case")

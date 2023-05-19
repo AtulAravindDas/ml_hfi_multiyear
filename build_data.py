@@ -137,9 +137,6 @@ def get_training_tags(settings):
                 # get indices for region and tile
                 tile_bounds = (latfile - settings["tile_len_deg"], latfile, lonfile, lonfile + settings["tile_len_deg"])
                 ilat0, ilat1, ilon0, ilon1 = methods.get_tile_indices(buffer_mask, tile_bounds)
-                # ilat0, ilon0 = buffer_mask.index(lonfile, latfile)
-                # ilat1, ilon1 = buffer_mask.index(lonfile + settings["tile_len_deg"], latfile - settings["tile_len_deg"])
-                # ilat1, ilon1 = ilat1 - 1, ilon1 - 1
                 ilat0, ilat1, ilon0, ilon1 = methods.trim_hfi_region((ilat0, ilat1, ilon0, ilon1),
                                                                      buffer_mask,
                                                                      region=settings["training_region"])
