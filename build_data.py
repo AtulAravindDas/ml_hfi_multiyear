@@ -162,7 +162,7 @@ def get_training_tags(settings):
                 subsample_lons, subsample_lats = np.asarray(subsample_lons), np.asarray(subsample_lats)
 
                 # Remove all possibilities of edges and corners
-                edge_width = (np.ceil(settings["scene_width"] * 2 / 3) + 1) * settings["landsat_pixel_to_deg"]
+                edge_width = (np.ceil((settings["scene_width"] - 1) / 2) + 1) * settings["landsat_to_hfi_ratio"] * settings["landsat_pixel_to_deg"]
 
                 i_nonedge = np.flatnonzero(
                     np.logical_and(
@@ -285,9 +285,6 @@ class data_generator:
 
     def get_input_data(self, sample_years, sample_lats, sample_lons, sample_files):
 
-        channels = self.settings["channels"]
-        scene_width = self.settings["scene_width"]
-
         if self.settings["mode"] == "training":
             # grab random tags associated with the filenames for training only
             tile_key = sample_files[0].numpy().decode("utf8")
@@ -312,9 +309,12 @@ class data_generator:
         try:
             assert all(x == sample_files[0] for x in sample_files), print(sample_files)
         except:
-            print(sample_years)
+            raise ValueError("this should have worked.")
 
-        batch_input = np.zeros((len(sample_years), scene_width, scene_width, len(channels)))
+        batch_input = np.zeros((len(sample_years),
+                                self.settings["scene_width_landsat"],
+                                self.settings["scene_width_landsat"],
+                                len(self.settings["channels"])))
         if not os.path.isfile(filename):
             if self.settings["mode"] == "training":
                 raise ValueError("No such input Landsat file: " + filename)
@@ -335,8 +335,8 @@ class data_generator:
                     sample_years[isample],
                     sample_lons[isample],
                     sample_lats[isample],
-                    channels,
-                    scene_width,
+                    self.settings["channels"],
+                    self.settings["scene_width"],
                 )
             except:
                 sample_out = np.nan
