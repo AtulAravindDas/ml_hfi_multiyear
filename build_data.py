@@ -113,8 +113,8 @@ def get_training_tags(settings):
 
     rng = np.random.default_rng(settings["rng_seed"])
 
-    min_latfile, max_latfile, min_lonfile, max_lonfile = read_landsat.get_landsat_bounds(settings, region=settings["training_region"])
-    print(min_latfile, max_latfile, min_lonfile, max_lonfile)
+    lat_s_bound, lat_n_bound, lon_w_bound, lon_e_bound = read_landsat.get_landsat_bounds(settings, region=settings["training_region"])
+    print(lat_s_bound, lat_n_bound, lon_w_bound, lon_e_bound)
     print("\n")
 
     with rasterio.open(DEFAULT_MASK_FILENAME) as buffer_mask:
@@ -123,8 +123,8 @@ def get_training_tags(settings):
         sample_lons = []
         sample_years = []
 
-        for latfile in np.arange(min_latfile + settings["tile_len_deg"], max_latfile + settings["tile_len_deg"], settings["tile_len_deg"]):
-            for lonfile in np.arange(min_lonfile, max_lonfile, settings["tile_len_deg"]):
+        for latfile in np.arange(lat_s_bound + settings["tile_len_deg"], lat_n_bound + settings["tile_len_deg"], settings["tile_len_deg"]):
+            for lonfile in np.arange(lon_w_bound, lon_e_bound, settings["tile_len_deg"]):
 
                 # check that landsat file even exists
                 landsat_filenames = read_landsat.get_input_filename(settings["training_years"],
@@ -144,13 +144,13 @@ def get_training_tags(settings):
 
                 # get indices for region and tile
                 tile_bounds = (latfile - settings["tile_len_deg"], latfile, lonfile, lonfile + settings["tile_len_deg"])
-                ilat0, ilat1, ilon0, ilon1 = methods.get_tile_indices(buffer_mask, tile_bounds)
-                ilat0, ilat1, ilon0, ilon1 = methods.trim_hfi_region((ilat0, ilat1, ilon0, ilon1),
-                                                                     buffer_mask,
-                                                                     region=settings["training_region"])
+                ilat_s, ilat_n, ilon_w, ilon_e = methods.get_tile_indices(buffer_mask, tile_bounds)
+                ilat_s, ilat_n, ilon_w, ilon_e = methods.trim_hfi_region((ilat_s, ilat_n, ilon_w, ilon_e),
+                                                                         buffer_mask,
+                                                                         region=settings["training_region"])
 
                 # get tag indices that are not water or on edges
-                window = Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1))
+                window = Window.from_slices((ilat_n, ilat_s + 1), (ilon_w, ilon_e + 1))
                 mask = buffer_mask.read(1, window=window)
                 land_pixels = np.sum(mask)
                 frac_land = land_pixels / (mask.shape[0] * mask.shape[1])
@@ -163,7 +163,6 @@ def get_training_tags(settings):
 
                 # Remove all possibilities of edges and corners
                 edge_width = (np.ceil(settings["scene_width"] * 2 / 3) + 1) * settings["landsat_pixel_to_deg"]
-                # print(f"{edge_width = }")
 
                 i_nonedge = np.flatnonzero(
                     np.logical_and(
@@ -233,18 +232,18 @@ def get_inference_tags(settings):
 
     with rasterio.open(DEFAULT_MASK_FILENAME) as buffer_mask:
 
-        ilat0, ilat1, ilon0, ilon1 = methods.get_tile_indices(buffer_mask, settings["tile"])
-        ilat0, ilat1, ilon0, ilon1 = methods.trim_hfi_region((ilat0, ilat1, ilon0, ilon1),
-                                                             buffer_mask,
-                                                             region=settings["inference_region"])
-        window = Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1))
+        ilat_s, ilat_n, ilon_w, ilon_e = methods.get_tile_indices(buffer_mask, settings["tile"])
+        ilat_s, ilat_n, ilon_w, ilon_e = methods.trim_hfi_region((ilat_s, ilat_n, ilon_w, ilon_e),
+                                                                 buffer_mask,
+                                                                 region=settings["inference_region"])
+        window = Window.from_slices((ilat_n, ilat_s + 1), (ilon_w, ilon_e + 1))
         mask = buffer_mask.read(1, window=window)
         land_pixels = np.sum(mask)
         if land_pixels == 0:
             return ([], [], [], []), None
 
         ilat_grid, ilon_grid = np.meshgrid(
-            np.arange(ilat0, ilat1 + 1), np.arange(ilon0, ilon1 + 1), indexing="ij"
+            np.arange(ilat_n, ilat_s + 1), np.arange(ilon_w, ilon_e + 1), indexing="ij"
         )
         print("output region shape = " + str(ilon_grid.shape))
 

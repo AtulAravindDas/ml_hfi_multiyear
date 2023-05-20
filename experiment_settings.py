@@ -28,7 +28,7 @@ def get_settings(experiment_name):
             "inference_region": (-90, 90, -180, 180),  # (lat_south, lat_north, lon_west, lon_east)
 
             "channels": (1, 2, 3, 4, 5, 6),  # indexing starts at 1, channel 7 = WATER_MASK
-            "scene_width": 114,  # in units of landsat pixels
+            "scene_width": 110,  # 30, 50, 70, 90, 110, 130
             "nbatches": (750, 25),  # (training_batches, validation_batches per landsat tile)
             "batches_per_epoch": 500,
             "rng_seed": 33,
@@ -56,7 +56,6 @@ def get_settings(experiment_name):
             "save_best_only": True,
         },
 
-
     }
 
     exp_dict = experiments[experiment_name]
@@ -65,6 +64,6 @@ def get_settings(experiment_name):
     exp_dict["landsat_to_hfi_ratio"] = LANDSAT_TO_HII_RATIO
     exp_dict["landsat_pixel_to_deg"] = LANDSAT_PIXEL_TO_DEG
 
-    assert exp_dict["scene_width"] % 3 == 0, "The scene_width must be divisible by 3."
+    assert np.isin(exp_dict["scene_width"], (30, 50, 70, 90, 110, 130)), "this scene width is not allowed."
 
     return exp_dict

@@ -54,12 +54,12 @@ def read_tif(tif, channels, window):
 
 
 def get_landsat_bounds(settings, region):
-    min_latfile = np.floor(region[0] / settings["tile_len_deg"]) * settings["tile_len_deg"]
-    max_latfile = np.ceil(region[1] / settings["tile_len_deg"]) * settings["tile_len_deg"]
-    min_lonfile = np.floor(region[2] / settings["tile_len_deg"]) * settings["tile_len_deg"]
-    max_lonfile = np.ceil(region[3] / settings["tile_len_deg"]) * settings["tile_len_deg"]
+    lat_s = np.floor(region[0] / settings["tile_len_deg"]) * settings["tile_len_deg"]
+    lat_n = np.ceil(region[1] / settings["tile_len_deg"]) * settings["tile_len_deg"]
+    lon_w = np.floor(region[2] / settings["tile_len_deg"]) * settings["tile_len_deg"]
+    lon_e = np.ceil(region[3] / settings["tile_len_deg"]) * settings["tile_len_deg"]
 
-    return min_latfile, max_latfile, min_lonfile, max_lonfile
+    return lat_s, lat_n, lon_w, lon_e
 
 
 def get_input_filename(years, lats, lons, settings):
@@ -80,27 +80,47 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
     # sample_lat = sample_lat.numpy()
 
     ilat, ilon = tif_dict["central"].index(sample_lon, sample_lat)
-    ilat0, ilat1 = ilat - scene_width / 3 * 2, ilat + scene_width / 3 - 1
-    ilon0, ilon1 = ilon - scene_width / 3 * 2, ilon + scene_width / 3 - 1
+
+    # TODO: clean this up
+    if scene_width == 30:
+        ilat_n, ilat_s = ilat - scene_width / 3, ilat + scene_width / 3 * 2 - 1
+        ilon_w, ilon_e = ilon - scene_width / 3, ilon + scene_width / 3 * 2 - 1
+    elif scene_width == 50:
+        ilat_n, ilat_s = ilat - scene_width / 5 * 2, ilat + scene_width / 5 * 3 - 1
+        ilon_w, ilon_e = ilon - scene_width / 5 * 2, ilon + scene_width / 5 * 3 - 1
+    elif scene_width == 70:
+        ilat_n, ilat_s = ilat - scene_width / 7 * 3, ilat + scene_width / 7 * 4 - 1
+        ilon_w, ilon_e = ilon - scene_width / 7 * 3, ilon + scene_width / 7 * 4 - 1
+    elif scene_width == 90:
+        ilat_n, ilat_s = ilat - scene_width / 9 * 4, ilat + scene_width / 9 * 5 - 1
+        ilon_w, ilon_e = ilon - scene_width / 9 * 4, ilon + scene_width / 9 * 5 - 1
+    elif scene_width == 110:
+        ilat_n, ilat_s = ilat - scene_width / 11 * 5, ilat + scene_width / 11 * 6 - 1
+        ilon_w, ilon_e = ilon - scene_width / 11 * 5, ilon + scene_width / 11 * 6 - 1
+    elif scene_width == 130:
+        ilat_n, ilat_s = ilat - scene_width / 13 * 6, ilat + scene_width / 13 * 7 - 1
+        ilon_w, ilon_e = ilon - scene_width / 13 * 6, ilon + scene_width / 13 * 7 - 1
+    else:
+        raise NotImplementedError("this scene width is not allowed.")
 
     # determine the usecase
-    if ilat0 >= 0 and ilon0 >= 0 and ilat1 < tif_dict["central_height"] and ilon1 < tif_dict["central_width"]:
+    if ilat_n >= 0 and ilon_w >= 0 and ilat_s < tif_dict["central_height"] and ilon_e < tif_dict["central_width"]:
         usecase = "usecase_central"
-    elif ilat0 < 0 and ilon0 < 0:
+    elif ilat_n < 0 and ilon_w < 0:
         usecase = "usecase_northwest"
-    elif ilat0 < 0 and ilon0 >= 0 and ilon1 < tif_dict["central_width"]:
+    elif ilat_n < 0 and ilon_w >= 0 and ilon_e < tif_dict["central_width"]:
         usecase = "usecase_north"
-    elif ilat0 < 0 and ilon1 >= tif_dict["central_width"]:
+    elif ilat_n < 0 and ilon_w >= tif_dict["central_width"]:
         usecase = "usecase_northeast"
-    elif ilat0 >= 0 and ilat1 < tif_dict["central_height"] and ilon1 >= tif_dict["central_width"]:
+    elif ilat_n >= 0 and ilat_s < tif_dict["central_height"] and ilon_w >= tif_dict["central_width"]:
         usecase = "usecase_east"
-    elif ilat1 >= tif_dict["central_height"] and ilon1 >= tif_dict["central_width"]:
+    elif ilat_s >= tif_dict["central_height"] and ilon_w >= tif_dict["central_width"]:
         usecase = "usecase_southeast"
-    elif ilon0 >= 0 and ilat1 >= tif_dict["central_height"] and ilon1 < tif_dict["central_width"]:
+    elif ilon_w >= 0 and ilat_s >= tif_dict["central_height"] and ilon_w < tif_dict["central_width"]:
         usecase = "usecase_south"
-    elif ilon0 < 0 and ilat1 >= tif_dict["central_height"]:
+    elif ilon_w < 0 and ilat_s >= tif_dict["central_height"]:
         usecase = "usecase_southwest"
-    elif ilat0 >= 0 and ilon0 < 0 and ilat1 < tif_dict["central_height"]:
+    elif ilat_n >= 0 and ilon_w < 0 and ilat_s < tif_dict["central_height"]:
         usecase = "usecase_west"
     else:
         raise NotImplementedError("no such use case")
@@ -112,7 +132,7 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
     # USECASE 0 - central only
     if usecase == "usecase_central":
         central_output = read_tif(tif_dict["central"], channels,
-                                  window=Window.from_slices((ilat0, ilat1 + 1), (ilon0, ilon1 + 1)))
+                                  window=Window.from_slices((ilat_n, ilat_s + 1), (ilon_w, ilon_e + 1)))
         sample_output = central_output
 
     # USECASE 1 - northwest corner
@@ -125,13 +145,13 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
             tif_dict = fill_tif_dict("west", sample_year, sample_lat, sample_lon, tif_dict, settings)
 
         central_output = read_tif(tif_dict["central"], channels,
-                                  window=Window.from_slices((0, ilat1 + 1), (0, ilon1 + 1)))
+                                  window=Window.from_slices((0, ilat_s + 1), (0, ilon_e + 1)))
         west_output = read_tif(tif_dict["west"], channels,
-                               window=Window.from_slices((0, ilat1 + 1), (tif_dict["west_width"] + ilon0, tif_dict["west_width"])))
+                               window=Window.from_slices((0, ilat_s + 1), (tif_dict["west_width"] + ilon_w, tif_dict["west_width"])))
         north_output = read_tif(tif_dict["north"], channels,
-                                window=Window.from_slices((tif_dict["north_height"] + ilat0, tif_dict["north_height"]), (0, ilon1 + 1)))
+                                window=Window.from_slices((tif_dict["north_height"] + ilat_n, tif_dict["north_height"]), (0, ilon_e + 1)))
         northwest_output = read_tif(tif_dict["northwest"], channels,
-                                    window=Window.from_slices((tif_dict["northwest_height"] + ilat0, tif_dict["northwest_height"]), (tif_dict["northwest_width"] + ilon0, tif_dict["northwest_width"])))
+                                    window=Window.from_slices((tif_dict["northwest_height"] + ilat_n, tif_dict["northwest_height"]), (tif_dict["northwest_width"] + ilon_e, tif_dict["northwest_width"])))
 
         sample_output = np.vstack((np.hstack((northwest_output, north_output)),
                                    np.hstack((west_output, central_output))))
@@ -142,9 +162,9 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
             tif_dict = fill_tif_dict("north", sample_year, sample_lat, sample_lon, tif_dict, settings)
 
         central_output = read_tif(tif_dict["central"], channels,
-                                  window=Window.from_slices((0, ilat1 + 1), (ilon0, ilon1 + 1)))
+                                  window=Window.from_slices((0, ilat_s + 1), (ilon_w, ilon_e + 1)))
         north_output = read_tif(tif_dict["north"], channels,
-                                window=Window.from_slices((tif_dict["north_height"] + ilat0, tif_dict["north_height"]), (ilon0, ilon1 + 1)))
+                                window=Window.from_slices((tif_dict["north_height"] + ilat_n, tif_dict["north_height"]), (ilon_w, ilon_e + 1)))
 
         sample_output = np.vstack((north_output, central_output))
 
@@ -158,13 +178,13 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
             tif_dict = fill_tif_dict("east", sample_year, sample_lat, sample_lon, tif_dict, settings)
 
         central_output = read_tif(tif_dict["central"], channels,
-                                  window=Window.from_slices((0, ilat1 + 1), (ilon0, tif_dict["central_width"])))
+                                  window=Window.from_slices((0, ilat_s + 1), (ilon_w, tif_dict["central_width"])))
         east_output = read_tif(tif_dict["east"], channels,
-                               window=Window.from_slices((0, ilat1 + 1), (0, ilon1 - tif_dict["central_width"] + 1)))
+                               window=Window.from_slices((0, ilat_s + 1), (0, ilon_e - tif_dict["central_width"] + 1)))
         north_output = read_tif(tif_dict["north"], channels,
-                                window=Window.from_slices((tif_dict["north_height"] + ilat0, tif_dict["north_height"]), (ilon0, tif_dict["north_width"])))
+                                window=Window.from_slices((tif_dict["north_height"] + ilat_n, tif_dict["north_height"]), (ilon_w, tif_dict["north_width"])))
         northeast_output = read_tif(tif_dict["northeast"], channels,
-                                    window=Window.from_slices((tif_dict["north_height"] + ilat0, tif_dict["north_height"]), (0, ilon1 - tif_dict["central_width"] + 1)))
+                                    window=Window.from_slices((tif_dict["north_height"] + ilat_n, tif_dict["north_height"]), (0, ilon_e - tif_dict["central_width"] + 1)))
 
         sample_output = np.vstack((np.hstack((north_output, northeast_output)),
                                    np.hstack((central_output, east_output))))
@@ -175,9 +195,9 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
             tif_dict = fill_tif_dict("east", sample_year, sample_lat, sample_lon, tif_dict, settings)
 
         central_output = read_tif(tif_dict["central"], channels,
-                                  window=Window.from_slices((ilat0, ilat1 + 1), (ilon0, tif_dict["central_width"])))
+                                  window=Window.from_slices((ilat_n, ilat_s + 1), (ilon_w, tif_dict["central_width"])))
         east_output = read_tif(tif_dict["east"], channels,
-                               window=Window.from_slices((ilat0, ilat1 + 1), (0, ilon1 - tif_dict["central_width"] + 1)))
+                               window=Window.from_slices((ilat_n, ilat_s + 1), (0, ilon_e - tif_dict["central_width"] + 1)))
 
         sample_output = np.hstack((central_output, east_output))
 
@@ -191,13 +211,13 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
             tif_dict = fill_tif_dict("east", sample_year, sample_lat, sample_lon, tif_dict, settings)
 
         central_output = read_tif(tif_dict["central"], channels,
-                                  window=Window.from_slices((ilat0, tif_dict["central_height"]), (ilon0, tif_dict["central_width"])))
+                                  window=Window.from_slices((ilat_n, tif_dict["central_height"]), (ilon_w, tif_dict["central_width"])))
         east_output = read_tif(tif_dict["east"], channels,
-                               window=Window.from_slices((ilat0, tif_dict["central_height"]), (0, ilon1 - tif_dict["central_width"] + 1)))
+                               window=Window.from_slices((ilat_n, tif_dict["central_height"]), (0, ilon_e - tif_dict["central_width"] + 1)))
         south_output = read_tif(tif_dict["south"], channels,
-                                window=Window.from_slices((0, ilat1 - tif_dict["central_height"] + 1), (ilon0, tif_dict["south_width"])))
+                                window=Window.from_slices((0, ilat_s - tif_dict["central_height"] + 1), (ilon_w, tif_dict["south_width"])))
         southeast_output = read_tif(tif_dict["southeast"], channels,
-                                    window=Window.from_slices((0, ilat1 - tif_dict["central_height"] + 1), (0, ilon1 - tif_dict["central_width"] + 1)))
+                                    window=Window.from_slices((0, ilat_s - tif_dict["central_height"] + 1), (0, ilon_e - tif_dict["central_width"] + 1)))
 
         sample_output = np.vstack((np.hstack((central_output, east_output)),
                                    np.hstack((south_output, southeast_output))))
@@ -208,9 +228,9 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
             tif_dict = fill_tif_dict("south", sample_year, sample_lat, sample_lon, tif_dict, settings)
 
         central_output = read_tif(tif_dict["central"], channels,
-                                  window=Window.from_slices((ilat0, tif_dict["central_height"]), (ilon0, ilon1 + 1)))
+                                  window=Window.from_slices((ilat_n, tif_dict["central_height"]), (ilon_w, ilon_e + 1)))
         south_output = read_tif(tif_dict["south"], channels,
-                                window=Window.from_slices((0, ilat1 - tif_dict["central_height"] + 1), (ilon0, ilon1 + 1)))
+                                window=Window.from_slices((0, ilat_s - tif_dict["central_height"] + 1), (ilon_w, ilon_e + 1)))
 
         sample_output = np.vstack((central_output, south_output))
 
@@ -224,13 +244,13 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
             tif_dict = fill_tif_dict("west", sample_year, sample_lat, sample_lon, tif_dict, settings)
 
         central_output = read_tif(tif_dict["central"], channels,
-                                  window=Window.from_slices((ilat0, tif_dict["central_height"]), (0, ilon1 + 1)))
+                                  window=Window.from_slices((ilat_n, tif_dict["central_height"]), (0, ilon_e + 1)))
         west_output = read_tif(tif_dict["west"], channels,
-                               window=Window.from_slices((ilat0, tif_dict["west_height"]), (tif_dict["west_width"] + ilon0, tif_dict["west_width"])))
+                               window=Window.from_slices((ilat_n, tif_dict["west_height"]), (tif_dict["west_width"] + ilon_w, tif_dict["west_width"])))
         south_output = read_tif(tif_dict["south"], channels,
-                                window=Window.from_slices((0, ilat1 - tif_dict["central_height"] + 1), (0, ilon1 + 1)))
+                                window=Window.from_slices((0, ilat_s - tif_dict["central_height"] + 1), (0, ilon_e + 1)))
         southwest_output = read_tif(tif_dict["southwest"], channels,
-                                    window=Window.from_slices((0, ilat1 - tif_dict["central_height"] + 1), (tif_dict["west_width"] + ilon0, tif_dict["west_width"])))
+                                    window=Window.from_slices((0, ilat_s - tif_dict["central_height"] + 1), (tif_dict["west_width"] + ilon_w, tif_dict["west_width"])))
 
         sample_output = np.vstack((np.hstack((west_output, central_output)),
                                    np.hstack((southwest_output, south_output))))
@@ -241,15 +261,15 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
             tif_dict = fill_tif_dict("west", sample_year, sample_lat, sample_lon, tif_dict, settings)
 
         central_output = read_tif(tif_dict["central"], channels,
-                                  window=Window.from_slices((ilat0, ilat1 + 1), (0, ilon1 + 1)))
+                                  window=Window.from_slices((ilat_n, ilat_s + 1), (0, ilon_e + 1)))
         west_output = read_tif(tif_dict["west"], channels,
-                               window=Window.from_slices((ilat0, ilat1 + 1), (tif_dict["west_width"] + ilon0, tif_dict["west_width"])))
+                               window=Window.from_slices((ilat_n, ilat_s + 1), (tif_dict["west_width"] + ilon_w, tif_dict["west_width"])))
 
         sample_output = np.hstack((west_output, central_output))
     else:
         raise NotImplementedError("such a case does not exist. something is wrong.")
 
-    # print(usecase, sample_lat, sample_lon, ilat1, ilat1, ilon0, ilon1,)
+    # print(usecase, sample_lat, sample_lon, ilat_s, ilat_s, ilon_w, ilon_e,)
     assert sample_output.shape[0] == scene_width, f"{sample_output.shape[0] = }, {usecase = }"
     assert sample_output.shape[1] == scene_width, f"{sample_output.shape[1] = }, {usecase = }"
 
