@@ -32,20 +32,22 @@ def get_directories():
 
 
 def get_tile_indices(hfi_tif, tile):
+    # tile == lat_s, lat_n, lon_w, lon_e
 
-    ilat0, ilon0 = hfi_tif.index(tile[2], tile[1])
-    ilat1, ilon1 = hfi_tif.index(tile[3], tile[0])
+    ilat_n, ilon_w = hfi_tif.index(tile[2], tile[1])
+    ilat_s, ilon_e = hfi_tif.index(tile[3], tile[0])
 
-    indices = ilat0, ilat1, ilon0, ilon1
+    indices = ilat_s, ilat_n, ilon_w, ilon_e
+
     return trim_hfi_region(indices, hfi_tif, tile)
 
 
 def trim_hfi_region(indices, hfi_tif, region):
 
-    ilat0, ilat1, ilon0, ilon1 = indices
+    ilat_s, ilat_n, ilon_w, ilon_e = indices
 
-    lat_indices = np.arange(ilat0, ilat1 + 1)
-    lon_indices = np.arange(ilon0, ilon1 + 1)
+    lat_indices = np.arange(ilat_n, ilat_s + 1)
+    lon_indices = np.arange(ilon_w, ilon_e + 1)
 
     lons, __ = hfi_tif.xy(np.zeros(lon_indices.shape), lon_indices)
     __, lats = hfi_tif.xy(lat_indices, np.zeros(lat_indices.shape))
@@ -58,17 +60,17 @@ def trim_hfi_region(indices, hfi_tif, region):
                             (lons < region[3]))[0]
 
     # grab indices that are still in-play
-    ilat0 = lat_indices[ilat_indices][0]
-    ilat1 = lat_indices[ilat_indices][-1]
-    ilon0 = lon_indices[ilon_indices][0]
-    ilon1 = lon_indices[ilon_indices][-1]
+    ilat_s = np.max(lat_indices[ilat_indices])
+    ilat_n = np.min(lat_indices[ilat_indices])
+    ilon_w = np.min(lon_indices[ilon_indices])
+    ilon_e = np.max(lon_indices[ilon_indices])
 
     # this can be commented out
     # lon0, lat0 = hfi_tif.xy(ilat0, ilon0)
     # lon1, lat1 = hfi_tif.xy(ilat1, ilon1)
     # print(lat1, lat0, lon0, lon1)
 
-    return ilat0, ilat1, ilon0, ilon1
+    return ilat_s, ilat_n, ilon_w, ilon_e
 
 
 def get_denseweight_dist(settings, data):

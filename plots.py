@@ -12,6 +12,7 @@ __date__ = "11 May 2023"
 
 
 def plot_hfi_tile(xplot, extent):
+    # extent = lon_w, lon_e, lat_s, lat_n,
 
     cmap = plt.get_cmap('PiYG_r')
     cmap.set_bad(color='lightgray', alpha=1.)
