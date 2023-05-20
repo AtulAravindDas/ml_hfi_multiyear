@@ -47,10 +47,8 @@ def make_predictions(settings, model, tfds, tags):
         ilat_s, ilat_n, ilon_w, ilon_e = methods.get_tile_indices(buffer_mask, (lat_s, lat_n, lon_w, lon_e))
         ilat_s, ilon_e = ilat_s + 1, ilon_e + 1  # since the input region bounds were inclusive
 
-        print(ilat_s, ilat_n, ilon_w, ilon_e)
         lon_w, lat_n = buffer_mask.xy(ilat_n, ilon_w)
         lon_e, lat_s = buffer_mask.xy(ilat_s, ilon_e)
-        print(lat_s, lat_n, lon_w, lon_e)
 
         window = Window.from_slices((ilat_n, ilat_s + 1), (ilon_w, ilon_e + 1))
         hfi_mask = buffer_mask.read(1, window=window)
@@ -86,8 +84,6 @@ def save_predictions_tif(hfi_predict, predictions_filename, trans=None, latlon_b
         res_lat = ((lat_s - lat_n)) / (height - 1)
         res_lon = ((lon_e - lon_w)) / (width - 1)
         trans = Affine.translation(lon_w, lat_n) * Affine.scale(res_lon, res_lat)
-        print(lat_s, lat_n, lon_w, lon_e)
-        print(trans)
 
     # SAVE THE TIFF
     meta_data = {}
