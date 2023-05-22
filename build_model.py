@@ -18,7 +18,9 @@ SAVE_MODEL_DIRECTORY = directory_paths["save_model_dir"]
 def get_model(settings):
     tf.keras.backend.clear_session()
     model = build_model(settings,
-                        input_shape=(settings["scene_width"], settings["scene_width"], len(settings["channels"])))
+                        input_shape=(settings["scene_width_landsat"],
+                                     settings["scene_width_landsat"],
+                                     len(settings["channels"])))
 
     checkpoint_dir = SAVE_MODEL_DIRECTORY + settings["exp_name"] + '/'
     model.load_weights(tf.train.latest_checkpoint(checkpoint_dir)).expect_partial()

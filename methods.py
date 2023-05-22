@@ -31,6 +31,23 @@ def get_directories():
     return dir_dict
 
 
+def remove_nodata(x, y=None):
+
+    assert np.shape(x) == np.shape(y)
+
+    if y is None:
+        index = np.where(x != 255)[0]
+        return x[index]
+    else:
+        index = np.where(x != 255)[0]
+        x, y = x[index], y[index]
+
+        index = np.where(y != 255)[0]
+        x, y = x[index], y[index]
+
+        return x, y
+
+
 def get_tile_indices(hfi_tif, tile):
     # tile == lat_s, lat_n, lon_w, lon_e
 
@@ -49,26 +66,19 @@ def trim_hfi_region(indices, hfi_tif, region):
     lat_indices = np.arange(ilat_n, ilat_s + 1)
     lon_indices = np.arange(ilon_w, ilon_e + 1)
 
-    lons, __ = hfi_tif.xy(np.zeros(lon_indices.shape), lon_indices)
-    __, lats = hfi_tif.xy(lat_indices, np.zeros(lat_indices.shape))
+    lons, __ = hfi_tif.xy(np.zeros(lon_indices.shape), lon_indices, offset="ul")
+    __, lats = hfi_tif.xy(lat_indices, np.zeros(lat_indices.shape), offset="ul")
     lons, lats = np.asarray(lons), np.asarray(lats)
 
     # get within tile bounds
-    ilat_indices = np.where((lats > region[0]) &
-                            (lats <= region[1]))[0]
-    ilon_indices = np.where((lons >= region[2]) &
-                            (lons < region[3]))[0]
+    ilat_indices = np.where((lats > region[0]) & (lats <= region[1]))[0]
+    ilon_indices = np.where((lons >= region[2]) & (lons < region[3]))[0]
 
     # grab indices that are still in-play
     ilat_s = np.max(lat_indices[ilat_indices])
     ilat_n = np.min(lat_indices[ilat_indices])
     ilon_w = np.min(lon_indices[ilon_indices])
     ilon_e = np.max(lon_indices[ilon_indices])
-
-    # this can be commented out
-    # lon0, lat0 = hfi_tif.xy(ilat0, ilon0)
-    # lon1, lat1 = hfi_tif.xy(ilat1, ilon1)
-    # print(lat1, lat0, lon0, lon1)
 
     return ilat_s, ilat_n, ilon_w, ilon_e
 
@@ -87,6 +97,10 @@ def get_denseweight_dist(settings, data):
 
     denseweight_dist = np.maximum(1. - alpha * hist_dist, epsilon)
     denseweight_dist = denseweight_dist / np.mean(denseweight_dist)
+
+    if "extra_denseweight_high" in settings.keys():
+        high_index = settings["extra_denseweight_high"][0]
+        denseweight_dist[high_index:] = denseweight_dist[high_index:] * settings["extra_denseweight_high"][1]
 
     return denseweight_dist
 
@@ -116,10 +130,9 @@ class DenseWeight_Loss(tf.keras.losses.Loss):
     def call(self, y_true, y_pred):
 
         loss = tf.math.squared_difference(y_true, y_pred)
-
         weights = dw_calculator(self.denseweight_dist, y_true)
-        loss = tf.multiply(loss, weights)
 
+        loss = tf.multiply(loss, weights)
         loss = tf.reduce_mean(loss)
 
         return tf.sqrt(loss)

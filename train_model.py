@@ -22,14 +22,13 @@ SAVE_MODEL_DIRECTORY = directory_paths["save_model_dir"]
 
 
 def scheduler(epoch, learning_rate):
-    if epoch < 10.:
+    if epoch < 10.0:
         return learning_rate
     else:
         return learning_rate * tf.math.exp(-0.1)
 
 
 def train_model(settings, model, tfds_train, tfds_val, denseweight_dist):
-
     # SET RANDOM SEEDS AGAIN FOR MODEL TRAINING
     np.random.seed(settings["rng_seed"])
     random.seed(settings["rng_seed"])
@@ -39,33 +38,46 @@ def train_model(settings, model, tfds_train, tfds_val, denseweight_dist):
 
     # early stopping
     earlystopping_callback = tf.keras.callbacks.EarlyStopping(
-        monitor='val_loss', patience=settings["patience"], verbose=1, mode='auto', restore_best_weights=True)
+        monitor="val_loss",
+        patience=settings["patience"],
+        verbose=1,
+        mode="auto",
+        restore_best_weights=True,
+    )
 
     # learning rate scheduler
-    learning_rate_callback = tf.keras.callbacks.LearningRateScheduler(scheduler, verbose=0)
+    learning_rate_callback = tf.keras.callbacks.LearningRateScheduler(
+        scheduler, verbose=0
+    )
 
     # checkpoint callback
-    checkpoint_dir = SAVE_MODEL_DIRECTORY + settings["exp_name"] + '/'
+    checkpoint_dir = SAVE_MODEL_DIRECTORY + settings["exp_name"] + "/"
     if not os.path.isdir(checkpoint_dir):
         os.makedirs(checkpoint_dir)
 
     if settings["save_best_only"]:
-        checkpoint_path = checkpoint_dir + 'model_' + settings["exp_name"] + '.ckpt'
+        checkpoint_path = checkpoint_dir + "model_" + settings["exp_name"] + ".ckpt"
     else:
-        checkpoint_path = checkpoint_dir + 'model_' + settings["exp_name"] + '.{epoch:04d}.ckpt'
+        checkpoint_path = (
+            checkpoint_dir + "model_" + settings["exp_name"] + ".{epoch:04d}.ckpt"
+        )
 
     checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=checkpoint_path,
-        monitor='val_loss', mode='min',
-        save_freq='epoch',
+        monitor="val_loss",
+        mode="min",
+        save_freq="epoch",
         save_weights_only=True,
-        save_best_only=settings["save_best_only"])
+        save_best_only=settings["save_best_only"],
+    )
 
     # put the callbacks together
     if settings["early_stopping"]:
-        callbacks = [earlystopping_callback, learning_rate_callback, checkpoint_callback],
+        callbacks = (
+            [earlystopping_callback, learning_rate_callback, checkpoint_callback],
+        )
     else:
-        callbacks = [learning_rate_callback, checkpoint_callback],
+        callbacks = ([learning_rate_callback, checkpoint_callback],)
 
     # optimizer
     optimizer = tf.keras.optimizers.Adam(settings["learning_rate"])
@@ -82,11 +94,15 @@ def train_model(settings, model, tfds_train, tfds_val, denseweight_dist):
     model.compile(
         loss=loss,
         optimizer=optimizer,
-        metrics=["mae", ]
+        metrics=[
+            "mae",
+        ],
     )
 
     # PICK-UP TRAINING WHERE LEFT OFF,IF DESIRED
-    if settings["pickup_where_leftoff"] and os.path.isfile(checkpoint_dir + 'checkpoint'):
+    if settings["pickup_where_leftoff"] and os.path.isfile(
+        checkpoint_dir + "checkpoint"
+    ):
         print("loading pre-saved weights")
         latest_model = tf.train.latest_checkpoint(checkpoint_dir)
         model.load_weights(latest_model)
