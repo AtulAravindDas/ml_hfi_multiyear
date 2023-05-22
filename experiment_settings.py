@@ -42,7 +42,7 @@ def get_settings(experiment_name):
             "kluge_value_for_one": 0.,  # -0.2,
             "aug_randomflip": True,
             "input_noise": 10,  # in units of rgb values
-            "sample_weights_alpha": 25.0,
+            "sample_weights_alpha": 15.0,
             "subsample": True,
 
             "learning_rate": 0.001,
