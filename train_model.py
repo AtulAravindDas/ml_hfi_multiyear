@@ -84,8 +84,7 @@ def train_model(settings, model, tfds_train, tfds_val, denseweight_dist):
 
     # loss function
     # loss = tf.keras.losses.MeanSquaredError()
-    loss = methods.DenseWeight_Loss(tf.constant(denseweight_dist, dtype="float32"),
-                                    power=settings["loss_power"])
+    loss = methods.DenseWeight_Loss(tf.constant(denseweight_dist, dtype="float32"))
 
     # SET PRE-FETCH ON DATA
     tfds_train = tfds_train.prefetch(tf.data.AUTOTUNE)

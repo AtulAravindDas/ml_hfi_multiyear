@@ -98,6 +98,10 @@ def get_denseweight_dist(settings, data):
     denseweight_dist = np.maximum(1. - alpha * hist_dist, epsilon)
     denseweight_dist = denseweight_dist / np.mean(denseweight_dist)
 
+    if "extra_denseweight_high" in settings.keys():
+        high_index = settings["extra_denseweight_high"][0]
+        denseweight_dist[high_index:] = denseweight_dist[high_index:] * settings["extra_denseweight_high"][1]
+
     return denseweight_dist
 
 
@@ -119,22 +123,16 @@ def dw_calculator(denseweight_dist, data):
 
 
 class DenseWeight_Loss(tf.keras.losses.Loss):
-    def __init__(self, denseweight_dist, power=2):
+    def __init__(self, denseweight_dist):
         super().__init__()
         self.denseweight_dist = denseweight_dist
-        self.power = power
 
     def call(self, y_true, y_pred):
 
-        # loss = tf.math.squared_difference(y_true, y_pred)
-
-        loss = tf.math.subtract(y_true, y_pred)
-        loss = tf.math.pow(loss, self.power)
-
+        loss = tf.math.squared_difference(y_true, y_pred)
         weights = dw_calculator(self.denseweight_dist, y_true)
-        loss = tf.multiply(loss, weights)
 
+        loss = tf.multiply(loss, weights)
         loss = tf.reduce_mean(loss)
 
-        # return tf.sqrt(loss)
-        return tf.math.pow(loss, (1. / self.power))
+        return tf.sqrt(loss)

@@ -38,7 +38,6 @@ def get_settings(experiment_name):
             "max_pool_stride": (2, 2),  # (pool size, stride length)
             "dense_units": 32,
 
-            "loss_power": 2,
             "kluge_value_for_zero": 0.,  # -0.2,
             "kluge_value_for_one": 0.,  # -0.2,
             "aug_randomflip": True,
@@ -47,7 +46,7 @@ def get_settings(experiment_name):
             "subsample": True,
 
             "learning_rate": 0.001,
-            "dropout": 0.50,
+            "dropout": 0.10,
             "patience": 3,
             "batch_size": 32,
             "max_epochs": 1_000,
@@ -76,7 +75,7 @@ def get_settings(experiment_name):
             "max_pool_stride": (2, 2),  # (pool size, stride length)
             "dense_units": 32,
 
-            "loss_power": 4,
+            "extra_denseweight_high": (80, 1.3),
             "kluge_value_for_zero": 0.,  # -0.2,
             "kluge_value_for_one": 0.,  # -0.2,
             "aug_randomflip": True,
