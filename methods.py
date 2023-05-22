@@ -122,7 +122,7 @@ def dw_calculator(denseweight_dist, data):
     return tf.gather(denseweight_dist, scaled_data)
 
 
-class DenseWeight_Loss(tf.keras.losses.Loss):
+class DenseWeightMSE_Loss(tf.keras.losses.Loss):
     def __init__(self, denseweight_dist):
         super().__init__()
         self.denseweight_dist = denseweight_dist
@@ -136,3 +136,31 @@ class DenseWeight_Loss(tf.keras.losses.Loss):
         loss = tf.reduce_mean(loss)
 
         return tf.sqrt(loss)
+
+
+class DenseDualWeightMSE_Loss(tf.keras.losses.Loss):
+    # NOTE: to also focus on zero, one could subtract 50 from the predictions
+    # and truth and then use this loss as currently written
+
+    # got this idea from:
+    # R. Lagerquist, D. Turner, I. Ebert-Uphoff, J. Stewart, and V. Hagerty,
+    # “Using deep learning to emulate and accelerate a radiative-transfer model,”
+    # Journal of Atmospheric and Oceanic Technology, vol. conditionally accepted, 2021.
+
+    def __init__(self, denseweight_dist, params):
+        super().__init__()
+        self.denseweight_dist = denseweight_dist
+        self.gamma_weight = params[0]
+        self.offset = params[1]
+
+    def call(self, y_true, y_pred):
+
+        loss = tf.math.squared_difference(y_true, y_pred)
+
+        weights = dw_calculator(self.denseweight_dist, y_true)
+        loss = tf.multiply(loss, weights)
+
+        weights = (tf.math.maximum(tf.math.abs(y_true - self.offset), tf.math.abs(y_pred - self.offset))) ** self.gamma_weight
+        loss = tf.multiply(loss, weights)
+
+        return tf.sqrt(tf.reduce_mean(loss))

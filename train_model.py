@@ -83,8 +83,17 @@ def train_model(settings, model, tfds_train, tfds_val, denseweight_dist):
     optimizer = tf.keras.optimizers.Adam(settings["learning_rate"])
 
     # loss function
-    # loss = tf.keras.losses.MeanSquaredError()
-    loss = methods.DenseWeight_Loss(tf.constant(denseweight_dist, dtype="float32"))
+    if "loss" in settings.keys():
+        if settings["loss"] == "DenseWeightMSE":
+            loss = methods.DenseWeightMSE_Loss(tf.constant(denseweight_dist, dtype="float32"))
+        elif settings["loss"] == "DenseDualWeightMSE":
+            loss = methods.DenseDualWeightMSE_Loss(tf.constant(denseweight_dist, dtype="float32"),
+                                                   tf.constant(settings["loss_params"], dtype="float32"))
+        else:
+            raise NotImplementedError("no such loss defined.")
+    else:
+        loss = tf.keras.losses.MeanSquaredError()
+    print(f"using {loss = }")
 
     # SET PRE-FETCH ON DATA
     tfds_train = tfds_train.prefetch(tf.data.AUTOTUNE)
