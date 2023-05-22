@@ -194,7 +194,7 @@ def get_settings(experiment_name):
             "dense_units": 32,
 
             "loss": "DenseDualWeightMSE",
-            "loss_params": (0.4, 50.),  # gamma power, offset
+            "loss_params": (0.2, 50.),  # gamma power, offset
             "kluge_value_for_zero": 0.,  # -0.2,
             "kluge_value_for_one": 0.,  # -0.2,
             "aug_randomflip": True,
