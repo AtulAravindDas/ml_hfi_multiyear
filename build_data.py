@@ -55,51 +55,34 @@ def build_tf_dataset(settings, tags, batch_size, mode=None):
     # make data generator class
     data_gen = data_generator(settings, tags_dict)
 
-    # create initial tf datasets
-    input_tfds = tf.data.Dataset.from_tensor_slices(tags)
-    output_tfds = tf.data.Dataset.from_tensor_slices(tags)
+    # define the dataset generator that flips through filenames
+    dataset = tf.data.Dataset.from_generator(
+        lambda: sample_files, output_types=tf.string
+    )
 
-    # shuffle the data
+    # perform tf batching and shuffling
     if mode == "training":
-        input_tfds = input_tfds.batch(batch_size).shuffle(
-            # buffer_size=int(len(tags[0]) / batch_size),
-            buffer_size=2 * len(tags[0]),
-            reshuffle_each_iteration=True,
-            seed=settings["rng_seed"],
-        )
-        output_tfds = output_tfds.batch(batch_size).shuffle(
-            buffer_size=2 * len(tags[0]),
-            # buffer_size=int(len(tags[0]) / batch_size),
+        dataset = dataset.batch(batch_size).shuffle(
+            buffer_size=int(len(sample_files)),
             reshuffle_each_iteration=True,
             seed=settings["rng_seed"],
         )
 
     elif mode == "inference":
-        input_tfds = input_tfds.batch(batch_size)
-        output_tfds = output_tfds.batch(batch_size)
+        dataset = dataset.batch(batch_size)
 
     else:
         raise NotImplementedError("no such mode.")
 
-    # use the mapping function to map sample tags to the data generator functions
-    input_tfds = input_tfds.map(
-        lambda sample_years, sample_lats, sample_lons, sample_files: tf.py_function(
-            data_gen.get_input_data,
-            [sample_years, sample_lats, sample_lons, sample_files],
-            Tout=tf.float64,
-        )
-    )
-    output_tfds = output_tfds.map(
-        lambda sample_years, sample_lats, sample_lons, sample_files: tf.py_function(
-            data_gen.get_output_data,
-            [sample_years, sample_lats, sample_lons, sample_files],
-            Tout=tf.float64,
-        )
+    # map to get_data function to actually get the inputs and outputs
+    dataset = dataset.map(
+        lambda sample_files: tf.py_function(
+            func=data_gen.get_data, inp=[sample_files], Tout=[tf.float64, tf.float64]
+        ),
+        num_parallel_calls=tf.data.AUTOTUNE,
     )
 
-    tfds_all = tf.data.Dataset.zip((input_tfds, output_tfds))
-
-    return tfds_all
+    return dataset
 
 
 def get_tags(settings):
@@ -184,7 +167,9 @@ def get_training_tags(settings):
                     land_indices[:, 1] + window.col_off,
                 )
 
-                subsample_lons, subsample_lats = buffer_mask.xy(ilat_grid, ilon_grid, offset="ul")
+                subsample_lons, subsample_lats = buffer_mask.xy(
+                    ilat_grid, ilon_grid, offset="ul"
+                )
                 subsample_lons, subsample_lats = np.asarray(subsample_lons), np.asarray(
                     subsample_lats
                 )
@@ -347,8 +332,6 @@ def get_inference_tags(settings):
 
 
 class data_generator:
-    # THIS CODE ASSUMES THAT GET_INPUT_DATA() IS CALLED PRIOR TO GET_OUTPUT_DATA
-    # EVERY ITERATION BY TENSORFLOW
 
     # init method or constructor
     def __init__(self, settings, tags_dict):
@@ -356,46 +339,43 @@ class data_generator:
         self.tags_dict = tags_dict
         self.rng = np.random.default_rng(settings["rng_seed"])
 
-    def get_input_data(self, sample_years, sample_lats, sample_lons, sample_files):
-        if self.settings["mode"] == "training":
-            # grab random tags associated with the filenames for training only
-            tile_key = sample_files[0].numpy().decode("utf8")
-            sample_years, sample_lats, sample_lons, sample_files = self.tags_dict[
-                tile_key
-            ]
+    def get_data(self, sample_files):
+        tile_key = sample_files[0].numpy().decode("utf8")
+        sample_years, sample_lats, sample_lons, sample_files = self.tags_dict[tile_key]
 
+        if self.settings["mode"] == "training":
             i = self.rng.choice(
                 np.arange(0, len(sample_years)),
                 self.settings["batch_size"],
                 replace=False,
             )
+
             sample_years, sample_lats, sample_lons, sample_files = (
                 sample_years[i],
                 sample_lats[i],
                 sample_lons[i],
                 sample_files[i],
             )
+        # print(sample_years[0], sample_lats[0], sample_lons[0], sample_files[0])
+        assert all(x == sample_files[0] for x in sample_files), print(sample_files)
 
-            filename = LANDSAT_DIRECTORY + sample_files[0] + ".tif"
+        # TODO: remove comments below
+        # try:
+        #     assert all(x == sample_files[0] for x in sample_files), print(sample_files)
+        # except:
+        #     print(sample_files)
+        #     raise AssertionError("something is wrong. could just be the GPU though.")
 
-        else:
-            sample_years = sample_years.numpy()
-            sample_lats = sample_lats.numpy()
-            sample_lons = sample_lons.numpy()
-            sample_files = sample_files
+        input_data = self.get_input_data(
+            sample_years, sample_lats, sample_lons, sample_files
+        )
+        output_data = self.get_output_data(
+            sample_years, sample_lats, sample_lons, sample_files
+        )
 
-            filename = (
-                LANDSAT_DIRECTORY + sample_files[0].numpy().decode("utf8") + ".tif"
-            )
+        return input_data, output_data
 
-        self.current_tags = (sample_years, sample_lats, sample_lons, sample_files)
-
-        # read landsat file
-        try:
-            assert all(x == sample_files[0] for x in sample_files), print(sample_files)
-        except:
-            print(sample_files)
-            raise AssertionError("something is wrong. could just be the GPU though.")
+    def get_input_data(self, sample_years, sample_lats, sample_lons, sample_files):
 
         batch_input = np.zeros(
             (
@@ -405,6 +385,10 @@ class data_generator:
                 len(self.settings["channels"]),
             )
         )
+
+        # read landsat file
+        filename = LANDSAT_DIRECTORY + sample_files[0] + ".tif"
+
         if not os.path.isfile(filename):
             if self.settings["mode"] == "training":
                 raise ValueError("No such input Landsat file: " + filename)
@@ -436,7 +420,8 @@ class data_generator:
                     self.settings["scene_width"],
                 )
             except:
-                sample_out = 0.0  # when we create a generator, make this nan so that the output is set to nan if possible.
+                sample_out = 0.0
+
             batch_input[isample, :, :, :] = sample_out
 
         # close tifs in the dictionary
@@ -452,21 +437,19 @@ class data_generator:
         return dat
 
     def get_output_data(self, sample_years, sample_lats, sample_lons, sample_files):
-        sample_years, sample_lats, sample_lons, sample_files = self.current_tags
-
         # Get HFI file
-        assert all(x == sample_years[0] for x in sample_years)
-        filename = DATA_DIRECTORY + "hii_" + str(sample_years[0]) + "-01-01_uint8.tif"
+        # assert all(x == sample_years[0] for x in sample_years)
 
         batch_output = np.zeros((len(sample_years), 1))
 
+        filename = DATA_DIRECTORY + "hii_" + str(sample_years[0]) + "-01-01_uint8.tif"
         if not os.path.isfile(filename):
             return tf.convert_to_tensor(batch_output * 0.0)
 
         with rasterio.open(filename) as output_tiff:
             for isample in np.arange(0, len(sample_years)):
                 batch_output[isample] = read_output_data(
-                    self, output_tiff, sample_lons[isample], sample_lats[isample]
+                    self.settings, output_tiff, sample_lons[isample], sample_lats[isample]
                 )
 
         # convert to tensor
@@ -475,7 +458,7 @@ class data_generator:
         return dat
 
 
-def read_output_data(self, tiff, sample_lon, sample_lat):
+def read_output_data(settings, tiff, sample_lon, sample_lat):
     ilat, ilon = tiff.index(sample_lon, sample_lat)
     window = Window(ilon, ilat, 1, 1)
 
@@ -488,8 +471,8 @@ def read_output_data(self, tiff, sample_lon, sample_lat):
         sample_output = 0.0
 
     # this is where we can force the network to predict zeros or ones
-    if self.settings["mode"] == "training":
+    if settings["mode"] == "training":
         if sample_output == 0.0:
-            sample_output = self.settings["kluge_value_for_zero"]
+            sample_output = settings["kluge_value_for_zero"]
 
     return sample_output
