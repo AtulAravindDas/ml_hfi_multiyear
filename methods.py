@@ -128,7 +128,7 @@ class DenseWeight_Loss(tf.keras.losses.Loss):
 
         # loss = tf.math.squared_difference(y_true, y_pred)
 
-        loss = tf.math.difference(y_true, y_pred)
+        loss = tf.math.subtract(y_true, y_pred)
         loss = tf.math.pow(loss, self.power)
 
         weights = dw_calculator(self.denseweight_dist, y_true)
