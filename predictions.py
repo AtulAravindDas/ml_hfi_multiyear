@@ -81,8 +81,8 @@ def save_predictions_tif(hfi_predict, predictions_filename, trans=None, latlon_b
 
     if trans is None:
         lat_s, lat_n, lon_w, lon_e = latlon_bounds
-        res_lat = ((lat_s - lat_n)) / (height - 1)
-        res_lon = ((lon_e - lon_w)) / (width - 1)
+        res_lat = (lat_s - lat_n) / (height - 1)
+        res_lon = (lon_e - lon_w) / (width - 1)
         trans = Affine.translation(lon_w, lat_n) * Affine.scale(res_lon, res_lat)
 
     # SAVE THE TIFF

@@ -31,6 +31,23 @@ def get_directories():
     return dir_dict
 
 
+def remove_nodata(x, y=None):
+
+    assert np.shape(x) == np.shape(y)
+
+    if y is None:
+        index = np.where(x != 255)[0]
+        return x[index]
+    else:
+        index = np.where(x != 255)[0]
+        x, y = x[index], y[index]
+
+        index = np.where(y != 255)[0]
+        x, y = x[index], y[index]
+
+        return x, y
+
+
 def get_tile_indices(hfi_tif, tile):
     # tile == lat_s, lat_n, lon_w, lon_e
 
@@ -54,21 +71,14 @@ def trim_hfi_region(indices, hfi_tif, region):
     lons, lats = np.asarray(lons), np.asarray(lats)
 
     # get within tile bounds
-    ilat_indices = np.where((lats > region[0]) &
-                            (lats <= region[1]))[0]
-    ilon_indices = np.where((lons >= region[2]) &
-                            (lons < region[3]))[0]
+    ilat_indices = np.where((lats > region[0]) & (lats <= region[1]))[0]
+    ilon_indices = np.where((lons >= region[2]) & (lons < region[3]))[0]
 
     # grab indices that are still in-play
     ilat_s = np.max(lat_indices[ilat_indices])
     ilat_n = np.min(lat_indices[ilat_indices])
     ilon_w = np.min(lon_indices[ilon_indices])
     ilon_e = np.max(lon_indices[ilon_indices])
-
-    # this can be commented out
-    # lon0, lat0 = hfi_tif.xy(ilat0, ilon0)
-    # lon1, lat1 = hfi_tif.xy(ilat1, ilon1)
-    # print(lat1, lat0, lon0, lon1)
 
     return ilat_s, ilat_n, ilon_w, ilon_e
 
@@ -109,13 +119,17 @@ def dw_calculator(denseweight_dist, data):
 
 
 class DenseWeight_Loss(tf.keras.losses.Loss):
-    def __init__(self, denseweight_dist):
+    def __init__(self, denseweight_dist, power=2):
         super().__init__()
         self.denseweight_dist = denseweight_dist
+        self.power = power
 
     def call(self, y_true, y_pred):
 
-        loss = tf.math.squared_difference(y_true, y_pred)
+        # loss = tf.math.squared_difference(y_true, y_pred)
+
+        loss = tf.math.difference(y_true, y_pred)
+        loss = tf.math.pow(loss, self.power)
 
         weights = dw_calculator(self.denseweight_dist, y_true)
         loss = tf.multiply(loss, weights)
