@@ -38,6 +38,7 @@ def get_settings(experiment_name):
             "max_pool_stride": (2, 2),  # (pool size, stride length)
             "dense_units": 32,
 
+            "loss": "DenseWeightMSE",
             "kluge_value_for_zero": 0.,  # -0.2,
             "kluge_value_for_one": 0.,  # -0.2,
             "aug_randomflip": True,
@@ -75,6 +76,7 @@ def get_settings(experiment_name):
             "max_pool_stride": (2, 2),  # (pool size, stride length)
             "dense_units": 32,
 
+            "loss": "DenseWeightMSE",
             "extra_denseweight_high": (80, 1.3),
             "kluge_value_for_zero": 0.,  # -0.2,
             "kluge_value_for_one": 0.,  # -0.2,
@@ -113,6 +115,47 @@ def get_settings(experiment_name):
             "max_pool_stride": (2, 2),  # (pool size, stride length)
             "dense_units": 32,
 
+            "loss": "DenseDualWeightMSE",
+            "loss_params": (0.2, 0.0),  # gamma power, offset
+            "kluge_value_for_zero": 0.,  # -0.2,
+            "kluge_value_for_one": 0.,  # -0.2,
+            "aug_randomflip": True,
+            "input_noise": 10,  # in units of rgb values
+            "sample_weights_alpha": 15.0,
+            "subsample": True,
+
+            "learning_rate": 0.001,
+            "dropout": 0.10,
+            "patience": 3,
+            "batch_size": 32,
+            "max_epochs": 1_000,
+            "early_stopping": True,
+
+            "pickup_where_leftoff": False,
+            "save_best_only": True,
+        },
+
+        "exp3": {
+            "mode": None,  # "training" or "inference" as set in the code itself
+            "training_years": (2015, 2016, 2017, 2018, 2019),  # (2000, 2005, 2010, 2013)
+            "inference_years": (2020, ),
+
+            "training_region": (-90, 90, -180, 180),  # (lat_south, lat_north, lon_west, lon_east)
+            "inference_region": (-90, 90, -180, 180),  # (lat_south, lat_north, lon_west, lon_east)
+
+            "channels": (1, 2, 3, 4, 5, 6),  # indexing starts at 1, channel 7 = WATER_MASK
+            "scene_width": 11,  # in units of HFI, must be ODD. 30, 50, 70, 90, 110, 130
+            "nbatches": (750, 25),  # (training_batches, validation_batches per landsat tile)
+            "batches_per_epoch": 750,
+            "rng_seed": 33,
+
+            "layers_units": (64, 128, 128, 128, 128),
+            "kernel_size": 3,
+            "max_pool_stride": (2, 2),  # (pool size, stride length)
+            "dense_units": 32,
+
+            "loss": "DenseDualWeightMSE",
+            "loss_params": (0.2, 50.),  # gamma power, offset
             "kluge_value_for_zero": 0.,  # -0.2,
             "kluge_value_for_one": 0.,  # -0.2,
             "aug_randomflip": True,
