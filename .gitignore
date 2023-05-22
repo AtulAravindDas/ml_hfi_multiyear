@@ -24,6 +24,7 @@ processed_data/
 saved_models/
 predictions/
 mosaics/
+sandbox_scripts/
 
 # Horrible Apple stuff
 # find . -name "Icon?" -print0 | xargs -0 rm -rf
