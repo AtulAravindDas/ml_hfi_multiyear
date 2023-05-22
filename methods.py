@@ -66,8 +66,8 @@ def trim_hfi_region(indices, hfi_tif, region):
     lat_indices = np.arange(ilat_n, ilat_s + 1)
     lon_indices = np.arange(ilon_w, ilon_e + 1)
 
-    lons, __ = hfi_tif.xy(np.zeros(lon_indices.shape), lon_indices)
-    __, lats = hfi_tif.xy(lat_indices, np.zeros(lat_indices.shape))
+    lons, __ = hfi_tif.xy(np.zeros(lon_indices.shape), lon_indices, offset="ul")
+    __, lats = hfi_tif.xy(lat_indices, np.zeros(lat_indices.shape), offset="ul")
     lons, lats = np.asarray(lons), np.asarray(lats)
 
     # get within tile bounds
@@ -136,4 +136,5 @@ class DenseWeight_Loss(tf.keras.losses.Loss):
 
         loss = tf.reduce_mean(loss)
 
-        return tf.sqrt(loss)
+        # return tf.sqrt(loss)
+        return tf.math.pow(loss, (1. / self.power))

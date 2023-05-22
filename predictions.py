@@ -47,8 +47,8 @@ def make_predictions(settings, model, tfds, tags):
         ilat_s, ilat_n, ilon_w, ilon_e = methods.get_tile_indices(buffer_mask, (lat_s, lat_n, lon_w, lon_e))
         ilat_s, ilon_e = ilat_s + 1, ilon_e + 1  # since the input region bounds were inclusive
 
-        lon_w, lat_n = buffer_mask.xy(ilat_n, ilon_w)
-        lon_e, lat_s = buffer_mask.xy(ilat_s, ilon_e)
+        lon_w, lat_n = buffer_mask.xy(ilat_n, ilon_w, offset="ul")
+        lon_e, lat_s = buffer_mask.xy(ilat_s, ilon_e, offset="ul")
 
         window = Window.from_slices((ilat_n, ilat_s + 1), (ilon_w, ilon_e + 1))
         hfi_mask = buffer_mask.read(1, window=window)

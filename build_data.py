@@ -184,7 +184,7 @@ def get_training_tags(settings):
                     land_indices[:, 1] + window.col_off,
                 )
 
-                subsample_lons, subsample_lats = buffer_mask.xy(ilat_grid, ilon_grid)
+                subsample_lons, subsample_lats = buffer_mask.xy(ilat_grid, ilon_grid, offset="ul")
                 subsample_lons, subsample_lats = np.asarray(subsample_lons), np.asarray(
                     subsample_lats
                 )
@@ -309,6 +309,7 @@ def get_inference_tags(settings):
             region=settings["inference_region"],
         )
         window = Window.from_slices((ilat_n, ilat_s + 1), (ilon_w, ilon_e + 1))
+        print(window)
         mask = buffer_mask.read(1, window=window)
         land_pixels = np.sum(mask)
         if land_pixels == 0:
@@ -322,7 +323,9 @@ def get_inference_tags(settings):
         sample_lons, sample_lats = buffer_mask.xy(
             np.ndarray.flatten(ilat_grid, order="C"),
             np.ndarray.flatten(ilon_grid, order="C"),
+            offset="ul",
         )
+        print(np.min(sample_lats), np.max(sample_lats), np.min(sample_lons), np.max(sample_lons))
 
     sample_lons, sample_lats = np.asarray(sample_lons), np.asarray(sample_lats)
 
