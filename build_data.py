@@ -392,7 +392,8 @@ class data_generator:
         try:
             assert all(x == sample_files[0] for x in sample_files), print(sample_files)
         except:
-            raise ValueError("this should have worked.")
+            print(sample_files)
+            raise AssertionError("something is wrong. could just be the GPU though.")
 
         batch_input = np.zeros(
             (
