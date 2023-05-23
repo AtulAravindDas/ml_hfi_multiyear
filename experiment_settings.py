@@ -213,8 +213,6 @@ def get_settings(experiment_name):
             "save_best_only": True,
         },
 
-
-
     }
 
     exp_dict = experiments[experiment_name]
