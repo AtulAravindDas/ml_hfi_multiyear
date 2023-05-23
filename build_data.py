@@ -36,34 +36,29 @@ DEFAULT_FILENAME = "hii_2020-01-01_uint8.tif"
 
 
 def build_tf_dataset(settings, tags, batch_size, mode=None):
+    # sample_years, sample_lats, sample_lons, sample_files = tags
+
     # override mode if desired
     if mode is None:
         mode = settings["mode"]
 
     # create tag dictionary for training
     tags_dict = {}
-    sample_years, sample_lats, sample_lons, sample_files = tags
-    for filename in np.unique(sample_files):
-        i = [index for (index, item) in enumerate(sample_files) if item == filename]
-        tags_dict[filename] = (
-            sample_years[i],
-            sample_lats[i],
-            sample_lons[i],
-            np.asarray(sample_files)[i],
-        )
+    for filename in np.unique(tags[-1]):
+        isample = [index for (index, item) in enumerate(tags[-1]) if item == filename]
+        tags_dict[filename] = np.asarray(isample)
 
     # make data generator class
-    data_gen = data_generator(settings, tags_dict)
+    data_gen = data_generator(settings, tags, tags_dict)
 
     # define the dataset generator that flips through filenames
-    dataset = tf.data.Dataset.from_generator(
-        lambda: sample_files, output_types=tf.string
-    )
+    samples_iter = list(range(len(tags[0])))
+    dataset = tf.data.Dataset.from_generator(lambda: samples_iter, tf.int32)
 
     # perform tf batching and shuffling
     if mode == "training":
         dataset = dataset.batch(batch_size).shuffle(
-            buffer_size=int(len(sample_files)),
+            buffer_size=int(len(samples_iter)),
             reshuffle_each_iteration=True,
             seed=settings["rng_seed"],
         )
@@ -76,8 +71,8 @@ def build_tf_dataset(settings, tags, batch_size, mode=None):
 
     # map to get_data function to actually get the inputs and outputs
     dataset = dataset.map(
-        lambda sample_files: tf.py_function(
-            func=data_gen.get_data, inp=[sample_files], Tout=[tf.float64, tf.float64]
+        lambda samples_iter: tf.py_function(
+            func=data_gen.get_data, inp=[samples_iter], Tout=[tf.float64, tf.float64]
         ),
         num_parallel_calls=tf.data.AUTOTUNE,
     )
@@ -334,37 +329,41 @@ def get_inference_tags(settings):
 class data_generator:
 
     # init method or constructor
-    def __init__(self, settings, tags_dict):
+    def __init__(self, settings, tags, tags_dict):
         self.settings = settings
+        self.tags = tags
         self.tags_dict = tags_dict
         self.rng = np.random.default_rng(settings["rng_seed"])
 
-    def get_data(self, sample_files):
-        tile_key = sample_files[0].numpy().decode("utf8")
-        sample_years, sample_lats, sample_lons, sample_files = self.tags_dict[tile_key]
+    def get_data(self, samples_iter):
+
+        samples_iter = samples_iter.numpy()
+        sample_years, sample_lats, sample_lons, sample_files = self.tags
 
         if self.settings["mode"] == "training":
+            tile_key = sample_files[samples_iter[0]]
+
             i = self.rng.choice(
-                np.arange(0, len(sample_years)),
+                self.tags_dict[tile_key],
                 self.settings["batch_size"],
                 replace=False,
             )
+            sample_years = sample_years[i]
+            sample_lats = sample_lats[i]
+            sample_lons = sample_lons[i]
+            sample_files = np.asarray(sample_files)[i]
 
-            sample_years, sample_lats, sample_lons, sample_files = (
-                sample_years[i],
-                sample_lats[i],
-                sample_lons[i],
-                sample_files[i],
-            )
-        # print(sample_years[0], sample_lats[0], sample_lons[0], sample_files[0])
-        assert all(x == sample_files[0] for x in sample_files), print(sample_files)
+        elif self.settings["mode"] == "inference":
 
-        # TODO: remove comments below
-        # try:
-        #     assert all(x == sample_files[0] for x in sample_files), print(sample_files)
-        # except:
-        #     print(sample_files)
-        #     raise AssertionError("something is wrong. could just be the GPU though.")
+            sample_years = sample_years[samples_iter]
+            sample_lats = sample_lats[samples_iter]
+            sample_lons = sample_lons[samples_iter]
+            sample_files = np.asarray(sample_files)[samples_iter]
+
+        else:
+            raise NotImplementedError("no such mode.")
+
+        assert all(x == sample_files[0] for x in sample_files), f"these must all be the same files: {sample_files}"
 
         input_data = self.get_input_data(
             sample_years, sample_lats, sample_lons, sample_files
@@ -437,8 +436,9 @@ class data_generator:
         return dat
 
     def get_output_data(self, sample_years, sample_lats, sample_lons, sample_files):
+
         # Get HFI file
-        # assert all(x == sample_years[0] for x in sample_years)
+        assert all(x == sample_years[0] for x in sample_years), f"these must all be the same years: {sample_years}"
 
         batch_output = np.zeros((len(sample_years), 1))
 

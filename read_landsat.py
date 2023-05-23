@@ -76,9 +76,6 @@ def get_input_filename(years, lats, lons, settings):
 
 def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, channels, scene_width):
 
-    # sample_lon = sample_lon.numpy()
-    # sample_lat = sample_lat.numpy()
-
     ilat, ilon = tif_dict["central"].index(sample_lon, sample_lat)
 
     scene_width_2 = int((scene_width - 1) / 2)
@@ -86,27 +83,6 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
     ilat_s = int(ilat + settings["landsat_to_hfi_ratio"] * (scene_width_2 + 1) - 1)
     ilon_w = int(ilon - settings["landsat_to_hfi_ratio"] * scene_width_2)
     ilon_e = int(ilon + settings["landsat_to_hfi_ratio"] * (scene_width_2 + 1) - 1)
-
-    # if scene_width == 30:
-    #     ilat_n, ilat_s = ilat - scene_width / 3, ilat + scene_width / 3 * 2 - 1
-    #     ilon_w, ilon_e = ilon - scene_width / 3, ilon + scene_width / 3 * 2 - 1
-    # elif scene_width == 50:
-    #     ilat_n, ilat_s = ilat - scene_width / 5 * 2, ilat + scene_width / 5 * 3 - 1
-    #     ilon_w, ilon_e = ilon - scene_width / 5 * 2, ilon + scene_width / 5 * 3 - 1
-    # elif scene_width == 70:
-    #     ilat_n, ilat_s = ilat - scene_width / 7 * 3, ilat + scene_width / 7 * 4 - 1
-    #     ilon_w, ilon_e = ilon - scene_width / 7 * 3, ilon + scene_width / 7 * 4 - 1
-    # elif scene_width == 90:
-    #     ilat_n, ilat_s = ilat - scene_width / 9 * 4, ilat + scene_width / 9 * 5 - 1
-    #     ilon_w, ilon_e = ilon - scene_width / 9 * 4, ilon + scene_width / 9 * 5 - 1
-    # elif scene_width == 110:
-    #     ilat_n, ilat_s = ilat - scene_width / 11 * 5, ilat + scene_width / 11 * 6 - 1
-    #     ilon_w, ilon_e = ilon - scene_width / 11 * 5, ilon + scene_width / 11 * 6 - 1
-    # elif scene_width == 130:
-    #     ilat_n, ilat_s = ilat - scene_width / 13 * 6, ilat + scene_width / 13 * 7 - 1
-    #     ilon_w, ilon_e = ilon - scene_width / 13 * 6, ilon + scene_width / 13 * 7 - 1
-    # else:
-    #     raise NotImplementedError("this scene width is not allowed.")
 
     # determine the usecase
     if ilat_n >= 0 and ilon_w >= 0 and ilat_s < tif_dict["central_height"] and ilon_e < tif_dict["central_width"]:
