@@ -149,10 +149,9 @@ def read_input_data(settings, tif_dict, sample_year, sample_lon, sample_lat, cha
             channels,
             window=Window.from_slices(
                 (tif_dict["northwest_height"] + ilat_n, tif_dict["northwest_height"]),
-                (tif_dict["northwest_width"] + ilon_e, tif_dict["northwest_width"]),
+                (tif_dict["northwest_width"] + ilon_w, tif_dict["northwest_width"]),
             ),
         )
-
         sample_output = np.vstack(
             (np.hstack((northwest_output, north_output)), np.hstack((west_output, central_output)))
         )
