@@ -19,12 +19,9 @@ The following python environment was used to implement this code.
 - conda install -c conda-forge dask netCDF4
 - conda install -c conda-forge cartopy
 - conda install palettable seaborn
-- conda install -c conda-forge tifftools
 ```
 
 ## Notes
-* ```lat_s, lat_n, lon_w, lon_e = (lat_south, lat_north, longitude_west, longitude_east)```
-* ```ilat_s, ilat_n, ilon_w, ilon_e = (lat_south_index, lat_north_index, longitude_west_index, longitude_east_index)```
 
 ## Credits
 ***

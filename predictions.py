@@ -17,11 +17,20 @@ PREDICTIONS_DIRECTORY = directory_paths["predictions_dir"]
 def create_mosaic(filenames_list):
     src_files_to_mosaic = []
     for fp in filenames_list:
-        src = rasterio.open(PREDICTIONS_DIRECTORY + fp)
+        src = rasterio.open(fp)
         src_files_to_mosaic.append(src)
         # print(src.meta)
 
+    # merge the tif files
     mosaic, out_trans = merge.merge(src_files_to_mosaic)
+
+    # NOTE: alternative if we want every mosaic to cover the entire globe.
+    # This takes up more space though.
+    # with rasterio.open(DATA_DIRECTORY + "hii_coastal_buffer_mask.tif") as buffer_tif:
+    #     bb = buffer_tif.bounds
+    #     mosaic, out_trans = merge.merge(src_files_to_mosaic,
+    #                                     bounds=bb,
+    #                                     )
 
     for src in src_files_to_mosaic:
         src.close()
@@ -74,7 +83,7 @@ def make_predictions(settings, model, tfds, tags):
     return hfi_predict, hfi_labels, latlon_bounds
 
 
-def save_predictions_tif(hfi_predict, predictions_filename, trans=None, latlon_bounds=None):
+def save_predictions_tif(hfi_predict, predictions_filename, trans=None, latlon_bounds=None, nodata=255):
 
     width = hfi_predict.shape[1]
     height = hfi_predict.shape[0]
@@ -87,7 +96,7 @@ def save_predictions_tif(hfi_predict, predictions_filename, trans=None, latlon_b
 
     # SAVE THE TIFF
     meta_data = {}
-    meta_data["nodata"] = 255
+    meta_data["nodata"] = nodata
     meta_data["width"] = width
     meta_data["height"] = height
     meta_data["driver"] = "GTiff"

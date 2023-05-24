@@ -8,6 +8,7 @@ permute_shuffle_sample_list(settings, sample_years, sample_lats, sample_lons)
 import numpy as np
 import matplotlib.pyplot as plt
 import rasterio
+from rasterio.windows import Window
 
 __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
 __date__ = "11 May 2023"
@@ -26,18 +27,17 @@ def get_directories():
     return dir_dict
 
 
-def remove_nodata(x, y=None):
-
+def remove_nodata(x, y=None, nodata=255):
     if y is None:
-        index = np.where(x != 255)[0]
+        index = np.where(x != nodata)[0]
         return x[index]
     else:
         assert np.shape(x) == np.shape(y)
 
-        index = np.where(x != 255)[0]
+        index = np.where(x != nodata)[0]
         x, y = x[index], y[index]
 
-        index = np.where(y != 255)[0]
+        index = np.where(y != nodata)[0]
         x, y = x[index], y[index]
 
         return x, y
@@ -55,7 +55,6 @@ def get_tile_indices(hfi_tif, tile):
 
 
 def trim_hfi_region(indices, hfi_tif, region):
-
     ilat_s, ilat_n, ilon_w, ilon_e = indices
 
     lat_indices = np.arange(ilat_n, ilat_s + 1)
@@ -76,3 +75,36 @@ def trim_hfi_region(indices, hfi_tif, region):
     ilon_e = np.max(lon_indices[ilon_indices])
 
     return ilat_s, ilat_n, ilon_w, ilon_e
+
+
+def mask_shapefile_region(hfi_tif, mask_tif, shp_dict, country_names, showplot=False):
+
+    # trim the grids to be the same
+    lon_w, lat_n = hfi_tif.xy(0, 0, offset="ul")
+    lon_e, lat_s = hfi_tif.xy(hfi_tif.height - 1, hfi_tif.width - 1, offset="ul")
+
+    ilat_s, ilat_n, ilon_w, ilon_e = get_tile_indices(
+        mask_tif, (lat_s, lat_n, lon_w, lon_e)
+    )
+    ilat_s, ilon_e = (
+        ilat_s + 1,
+        ilon_e + 1,
+    )  # since the input region bounds were inclusive
+
+    # get shapefile values
+    window = Window.from_slices((ilat_n, ilat_s + 1), (ilon_w, ilon_e + 1))
+    shp_mask = mask_tif.read(1, window=window)
+
+    # get hfi values
+    hfi = np.asarray(hfi_tif.read(1), dtype="float")
+
+    # mask the hfi
+    country_codes = shp_dict.loc[shp_dict["ADMIN"].isin(country_names)].index.to_numpy()
+    masked_hfi = np.where(np.isin(shp_mask, country_codes), hfi, 255)
+
+    if showplot:
+        plt.figure()
+        plt.imshow(masked_hfi)
+        plt.show()
+
+    return masked_hfi
