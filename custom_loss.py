@@ -16,7 +16,7 @@ __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
 __date__ = "11 May 2023"
 
 
-DEFAULT_FILENAME = "hii_2020-01-01_uint8.tif"
+DEFAULT_FILENAME = "hii_2015-01-01_uint8.tif"
 
 
 def get_denseweight_dist(settings, data):
@@ -36,7 +36,9 @@ def get_denseweight_dist(settings, data):
 
     if "extra_denseweight_high" in settings.keys():
         high_index = settings["extra_denseweight_high"][0]
-        denseweight_dist[high_index:] = denseweight_dist[high_index:] * settings["extra_denseweight_high"][1]
+        denseweight_dist[high_index:] = (
+            denseweight_dist[high_index:] * settings["extra_denseweight_high"][1]
+        )
 
     return denseweight_dist
 
@@ -86,6 +88,7 @@ class DenseDualWeightMSE_Loss(tf.keras.losses.Loss):
         self.denseweight_dist = denseweight_dist
         self.gamma_weight = params[0]
         self.offset = params[1]
+        self.offset_width = params[2]
 
     def call(self, y_true, y_pred):
         loss = tf.math.squared_difference(y_true, y_pred)
@@ -93,9 +96,10 @@ class DenseDualWeightMSE_Loss(tf.keras.losses.Loss):
         weights = apply_denseweights(self.denseweight_dist, y_true)
         loss = tf.multiply(loss, weights)
 
-        weights = (
-            tf.math.maximum(tf.math.abs(y_true - self.offset), tf.math.abs(y_pred - self.offset))
-        ) ** self.gamma_weight
+        yt = tf.math.maximum(tf.math.abs(y_true - self.offset), self.offset_width)
+        yp = tf.math.maximum(tf.math.abs(y_pred - self.offset), self.offset_width)
+
+        weights = (tf.math.maximum(yt, yp)) ** self.gamma_weight
         loss = tf.multiply(loss, weights)
 
         return tf.sqrt(tf.reduce_mean(loss))
