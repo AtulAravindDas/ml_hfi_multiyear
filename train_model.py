@@ -8,10 +8,11 @@ train_model(settings, model)
 import os
 import time
 import numpy as np
-import silence_tensorflow.auto
 import tensorflow as tf
+import silence_tensorflow.auto
 import random
 import methods
+import custom_loss
 
 __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
 __version__ = "05 May 2023"
@@ -85,10 +86,14 @@ def train_model(settings, model, tfds_train, tfds_val, denseweight_dist):
     # loss function
     if "loss" in settings.keys():
         if settings["loss"] == "DenseWeightMSE":
-            loss = methods.DenseWeightMSE_Loss(tf.constant(denseweight_dist, dtype="float32"))
+            loss = custom_loss.DenseWeightMSE_Loss(
+                tf.constant(denseweight_dist, dtype="float32")
+            )
         elif settings["loss"] == "DenseDualWeightMSE":
-            loss = methods.DenseDualWeightMSE_Loss(tf.constant(denseweight_dist, dtype="float32"),
-                                                   tf.constant(settings["loss_params"], dtype="float32"))
+            loss = custom_loss.DenseDualWeightMSE_Loss(
+                tf.constant(denseweight_dist, dtype="float32"),
+                tf.constant(settings["loss_params"], dtype="float32"),
+            )
         else:
             raise NotImplementedError("no such loss defined.")
     else:
