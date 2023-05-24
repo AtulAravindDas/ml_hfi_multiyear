@@ -7,16 +7,11 @@ permute_shuffle_sample_list(settings, sample_years, sample_lats, sample_lons)
 """
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy
-import tensorflow as tf
-import methods
 import rasterio
+from rasterio.windows import Window
 
 __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
 __date__ = "11 May 2023"
-
-
-DEFAULT_FILENAME = "hii_2020-01-01_uint8.tif"
 
 
 def get_directories():
@@ -27,22 +22,22 @@ def get_directories():
         "figures_dir": "figures/",
         "save_model_dir": "saved_models/",
         "mosaics_dir": "mosaics/",
+        "shapefiles_dir": "data/shapefiles/",
     }
     return dir_dict
 
 
-def remove_nodata(x, y=None):
-
-    assert np.shape(x) == np.shape(y)
-
+def remove_nodata(x, y=None, nodata=255):
     if y is None:
-        index = np.where(x != 255)[0]
+        index = np.where(x != nodata)[0]
         return x[index]
     else:
-        index = np.where(x != 255)[0]
+        assert np.shape(x) == np.shape(y)
+
+        index = np.where(x != nodata)[0]
         x, y = x[index], y[index]
 
-        index = np.where(y != 255)[0]
+        index = np.where(y != nodata)[0]
         x, y = x[index], y[index]
 
         return x, y
@@ -60,7 +55,6 @@ def get_tile_indices(hfi_tif, tile):
 
 
 def trim_hfi_region(indices, hfi_tif, region):
-
     ilat_s, ilat_n, ilon_w, ilon_e = indices
 
     lat_indices = np.arange(ilat_n, ilat_s + 1)
@@ -83,84 +77,31 @@ def trim_hfi_region(indices, hfi_tif, region):
     return ilat_s, ilat_n, ilon_w, ilon_e
 
 
-def get_denseweight_dist(settings, data):
-    # see Steininger et al. (2021)
-    # https://link.springer.com/article/10.1007/s10994-021-06023-5
+def mask_shapefile_region(hfi_tif, mask_tif, shp_dict, country_names, showplot=False):
+    # trim the grids to be the same
+    lon_w, lat_n = hfi_tif.xy(0, 0, offset="ul")
+    lon_e, lat_s = hfi_tif.xy(hfi_tif.height - 1, hfi_tif.width - 1, offset="ul")
 
-    epsilon = 0.001
-    alpha = settings["sample_weights_alpha"]
-    x_values = np.arange(0, 101, 1)
+    ilat_s, ilat_n, ilon_w, ilon_e = get_tile_indices(mask_tif, (lat_s, lat_n, lon_w, lon_e))
+    ilat_s, ilon_e = (
+        ilat_s + 1,
+        ilon_e + 1,
+    )  # since the input region bounds were inclusive
 
-    hist = np.histogram(data, bins=x_values)
-    hist_dist = scipy.stats.rv_histogram(hist, density=True)
-    hist_dist = hist_dist.pdf(x_values)
+    # get shapefile values
+    window = Window.from_slices((ilat_n, ilat_s + 1), (ilon_w, ilon_e + 1))
+    shp_mask = mask_tif.read(1, window=window)
 
-    denseweight_dist = np.maximum(1. - alpha * hist_dist, epsilon)
-    denseweight_dist = denseweight_dist / np.mean(denseweight_dist)
+    # get hfi values
+    hfi = np.asarray(hfi_tif.read(1), dtype="float")
 
-    if "extra_denseweight_high" in settings.keys():
-        high_index = settings["extra_denseweight_high"][0]
-        denseweight_dist[high_index:] = denseweight_dist[high_index:] * settings["extra_denseweight_high"][1]
+    # mask the hfi
+    country_codes = shp_dict.loc[shp_dict["ADMIN"].isin(country_names)].index.to_numpy()
+    masked_hfi = np.where(np.isin(shp_mask, country_codes), hfi, 255)
 
-    return denseweight_dist
+    if showplot:
+        plt.figure()
+        plt.imshow(masked_hfi)
+        plt.show()
 
-
-def get_denseweights(settings, tags):
-    with rasterio.open(get_directories()["data_dir"] + DEFAULT_FILENAME) as tif:
-        sample_lats = tags[1]
-        sample_lons = tags[2]
-        data = tif.sample([*zip(sample_lons, sample_lats)], indexes=1)
-        data = np.ndarray.flatten(np.asarray(list(data)))
-
-        return get_denseweight_dist(settings, data)
-
-
-def dw_calculator(denseweight_dist, data):
-
-    # scaled_data = tf.cast(tf.math.round(100. * data), dtype=tf.int32)
-    scaled_data = tf.cast(tf.math.round(data), dtype=tf.int32)
-    return tf.gather(denseweight_dist, scaled_data)
-
-
-class DenseWeightMSE_Loss(tf.keras.losses.Loss):
-    def __init__(self, denseweight_dist):
-        super().__init__()
-        self.denseweight_dist = denseweight_dist
-
-    def call(self, y_true, y_pred):
-
-        loss = tf.math.squared_difference(y_true, y_pred)
-        weights = dw_calculator(self.denseweight_dist, y_true)
-
-        loss = tf.multiply(loss, weights)
-        loss = tf.reduce_mean(loss)
-
-        return tf.sqrt(loss)
-
-
-class DenseDualWeightMSE_Loss(tf.keras.losses.Loss):
-    # NOTE: to also focus on zero, one could subtract 50 from the predictions
-    # and truth and then use this loss as currently written
-
-    # got this idea from:
-    # R. Lagerquist, D. Turner, I. Ebert-Uphoff, J. Stewart, and V. Hagerty,
-    # “Using deep learning to emulate and accelerate a radiative-transfer model,”
-    # Journal of Atmospheric and Oceanic Technology, vol. conditionally accepted, 2021.
-
-    def __init__(self, denseweight_dist, params):
-        super().__init__()
-        self.denseweight_dist = denseweight_dist
-        self.gamma_weight = params[0]
-        self.offset = params[1]
-
-    def call(self, y_true, y_pred):
-
-        loss = tf.math.squared_difference(y_true, y_pred)
-
-        weights = dw_calculator(self.denseweight_dist, y_true)
-        loss = tf.multiply(loss, weights)
-
-        weights = (tf.math.maximum(tf.math.abs(y_true - self.offset), tf.math.abs(y_pred - self.offset))) ** self.gamma_weight
-        loss = tf.multiply(loss, weights)
-
-        return tf.sqrt(tf.reduce_mean(loss))
+    return masked_hfi

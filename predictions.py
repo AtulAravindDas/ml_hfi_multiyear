@@ -17,11 +17,20 @@ PREDICTIONS_DIRECTORY = directory_paths["predictions_dir"]
 def create_mosaic(filenames_list):
     src_files_to_mosaic = []
     for fp in filenames_list:
-        src = rasterio.open(PREDICTIONS_DIRECTORY + fp)
+        src = rasterio.open(fp)
         src_files_to_mosaic.append(src)
         # print(src.meta)
 
+    # merge the tif files
     mosaic, out_trans = merge.merge(src_files_to_mosaic)
+
+    # NOTE: alternative if we want every mosaic to cover the entire globe.
+    # This takes up more space though.
+    # with rasterio.open(DATA_DIRECTORY + "hii_coastal_buffer_mask.tif") as buffer_tif:
+    #     bb = buffer_tif.bounds
+    #     mosaic, out_trans = merge.merge(src_files_to_mosaic,
+    #                                     bounds=bb,
+    #                                     )
 
     for src in src_files_to_mosaic:
         src.close()
@@ -30,20 +39,16 @@ def create_mosaic(filenames_list):
 
 
 def make_predictions(settings, model, tfds, tags):
-
     hfi_predict = model.predict(tfds, verbose=1)
     gc.collect()
 
     # GET TIFF META DATA
-    labels_filename = (
-        DATA_DIRECTORY + "hii_" + str(settings["inference_years"][0]) + "-01-01_uint8.tif"
-    )
+    labels_filename = DATA_DIRECTORY + "hii_" + str(settings["inference_years"][0]) + "-01-01_uint8.tif"
     filename_mask = DATA_DIRECTORY + "hii_coastal_buffer_mask.tif"
 
     lat_s, lat_n, lon_w, lon_e = (np.min(tags[1]), np.max(tags[1]), np.min(tags[2]), np.max(tags[2]))
 
     with rasterio.open(filename_mask) as buffer_mask:
-
         ilat_s, ilat_n, ilon_w, ilon_e = methods.get_tile_indices(buffer_mask, (lat_s, lat_n, lon_w, lon_e))
         ilat_s, ilon_e = ilat_s + 1, ilon_e + 1  # since the input region bounds were inclusive
 
@@ -74,8 +79,7 @@ def make_predictions(settings, model, tfds, tags):
     return hfi_predict, hfi_labels, latlon_bounds
 
 
-def save_predictions_tif(hfi_predict, predictions_filename, trans=None, latlon_bounds=None):
-
+def save_predictions_tif(hfi_predict, predictions_filename, trans=None, latlon_bounds=None, nodata=255):
     width = hfi_predict.shape[1]
     height = hfi_predict.shape[0]
 
@@ -87,7 +91,7 @@ def save_predictions_tif(hfi_predict, predictions_filename, trans=None, latlon_b
 
     # SAVE THE TIFF
     meta_data = {}
-    meta_data["nodata"] = 255
+    meta_data["nodata"] = nodata
     meta_data["width"] = width
     meta_data["height"] = height
     meta_data["driver"] = "GTiff"
@@ -97,9 +101,7 @@ def save_predictions_tif(hfi_predict, predictions_filename, trans=None, latlon_b
     meta_data["transform"] = trans
     meta_data["compress"] = "lzw"
 
-    with rasterio.open(
-        predictions_filename, "w", **meta_data
-    ) as dst:
+    with rasterio.open(predictions_filename, "w", **meta_data) as dst:
         dst.write(hfi_predict, 1)
         dst.set_band_description(1, "mlHFI prediction")
 
