@@ -71,9 +71,7 @@ def build_tf_dataset(settings, tags, batch_size, mode=None):
 
     # map to get_data function to actually get the inputs and outputs
     dataset = dataset.map(
-        lambda samples_iter: tf.py_function(
-            func=data_gen.get_data, inp=[samples_iter], Tout=[tf.float64, tf.float64]
-        ),
+        lambda samples_iter: tf.py_function(func=data_gen.get_data, inp=[samples_iter], Tout=[tf.float64, tf.float64]),
         num_parallel_calls=tf.data.AUTOTUNE,
     )
 
@@ -113,9 +111,7 @@ def get_training_tags(settings):
             lat_n_bound + settings["tile_len_deg"],
             settings["tile_len_deg"],
         ):
-            for lonfile in np.arange(
-                lon_w_bound, lon_e_bound, settings["tile_len_deg"]
-            ):
+            for lonfile in np.arange(lon_w_bound, lon_e_bound, settings["tile_len_deg"]):
                 # check that landsat file even exists
                 landsat_filenames = read_landsat.get_input_filename(
                     settings["training_years"],
@@ -141,9 +137,7 @@ def get_training_tags(settings):
                     lonfile,
                     lonfile + settings["tile_len_deg"],
                 )
-                ilat_s, ilat_n, ilon_w, ilon_e = methods.get_tile_indices(
-                    buffer_mask, tile_bounds
-                )
+                ilat_s, ilat_n, ilon_w, ilon_e = methods.get_tile_indices(buffer_mask, tile_bounds)
                 ilat_s, ilat_n, ilon_w, ilon_e = methods.trim_hfi_region(
                     (ilat_s, ilat_n, ilon_w, ilon_e),
                     buffer_mask,
@@ -162,12 +156,8 @@ def get_training_tags(settings):
                     land_indices[:, 1] + window.col_off,
                 )
 
-                subsample_lons, subsample_lats = buffer_mask.xy(
-                    ilat_grid, ilon_grid, offset="ul"
-                )
-                subsample_lons, subsample_lats = np.asarray(subsample_lons), np.asarray(
-                    subsample_lats
-                )
+                subsample_lons, subsample_lats = buffer_mask.xy(ilat_grid, ilon_grid, offset="ul")
+                subsample_lons, subsample_lats = np.asarray(subsample_lons), np.asarray(subsample_lats)
 
                 # Remove all possibilities of edges and corners
                 edge_width = (
@@ -180,14 +170,12 @@ def get_training_tags(settings):
                     np.logical_and(
                         np.abs(
                             np.abs(subsample_lons)
-                            - np.rint(np.abs(subsample_lons) / settings["tile_len_deg"])
-                            * settings["tile_len_deg"]
+                            - np.rint(np.abs(subsample_lons) / settings["tile_len_deg"]) * settings["tile_len_deg"]
                         )
                         > edge_width,
                         np.abs(
                             np.abs(subsample_lats)
-                            - np.rint(np.abs(subsample_lats) / settings["tile_len_deg"])
-                            * settings["tile_len_deg"]
+                            - np.rint(np.abs(subsample_lats) / settings["tile_len_deg"]) * settings["tile_len_deg"]
                         )
                         > edge_width,
                     )
@@ -202,23 +190,17 @@ def get_training_tags(settings):
                 nsamples = int(settings["batch_size"] * nbatches)
 
                 # grab the samples
-                isamples = rng.choice(
-                    range(len(subsample_lats)), size=nsamples, replace=False
-                )
+                isamples = rng.choice(range(len(subsample_lats)), size=nsamples, replace=False)
                 subsample_lats, subsample_lons = (
                     subsample_lats[isamples],
                     subsample_lons[isamples],
                 )
 
                 subsample_years = np.repeat(
-                    np.random.choice(
-                        settings["training_years"], size=nbatches, replace=True
-                    ),
+                    np.random.choice(settings["training_years"], size=nbatches, replace=True),
                     settings["batch_size"],
                 )
-                assert len(subsample_years) == len(
-                    subsample_lats
-                ), "sample years and locations must be the same length"
+                assert len(subsample_years) == len(subsample_lats), "sample years and locations must be the same length"
 
                 # append to list across tiles
                 sample_lats = sample_lats + subsample_lats.tolist()
@@ -259,30 +241,22 @@ def get_training_tags(settings):
     )
 
     # GET FILENAMES
-    tagfile_train = read_landsat.get_input_filename(
-        tagyear_train, taglat_train, taglon_train, settings
-    )
-    tagfile_val = read_landsat.get_input_filename(
-        tagyear_val, taglat_val, taglon_val, settings
-    )
+    tagfile_train = read_landsat.get_input_filename(tagyear_train, taglat_train, taglon_train, settings)
+    tagfile_val = read_landsat.get_input_filename(tagyear_val, taglat_val, taglon_val, settings)
 
     # Put into nice packages
     tags_train = (tagyear_train, taglat_train, taglon_train, tagfile_train)
     tags_val = (tagyear_val, taglat_val, taglon_val, tagfile_val)
 
     # PRINT META DATA
-    print(
-        f"\ntotal training samples = {len(tagyear_train)}, total validation samples = {len(tagyear_val)}\n"
-    )
+    print(f"\ntotal training samples = {len(tagyear_train)}, total validation samples = {len(tagyear_val)}\n")
 
     return tags_train, tags_val
 
 
 def get_inference_tags(settings):
     with rasterio.open(DEFAULT_MASK_FILENAME) as buffer_mask:
-        ilat_s, ilat_n, ilon_w, ilon_e = methods.get_tile_indices(
-            buffer_mask, settings["tile"]
-        )
+        ilat_s, ilat_n, ilon_w, ilon_e = methods.get_tile_indices(buffer_mask, settings["tile"])
         ilat_s, ilat_n, ilon_w, ilon_e = methods.trim_hfi_region(
             (ilat_s, ilat_n, ilon_w, ilon_e),
             buffer_mask,
@@ -294,9 +268,7 @@ def get_inference_tags(settings):
         if land_pixels == 0:
             return ([], [], [], []), None
 
-        ilat_grid, ilon_grid = np.meshgrid(
-            np.arange(ilat_n, ilat_s + 1), np.arange(ilon_w, ilon_e + 1), indexing="ij"
-        )
+        ilat_grid, ilon_grid = np.meshgrid(np.arange(ilat_n, ilat_s + 1), np.arange(ilon_w, ilon_e + 1), indexing="ij")
         print("output region shape = " + str(ilon_grid.shape))
 
         sample_lons, sample_lats = buffer_mask.xy(
@@ -312,9 +284,7 @@ def get_inference_tags(settings):
         np.ones(shape=sample_lats.shape) * settings["inference_years"][0],
         dtype=int,
     )
-    tagfile_inf = read_landsat.get_input_filename(
-        tagyear_inf, sample_lats, sample_lons, settings
-    )
+    tagfile_inf = read_landsat.get_input_filename(tagyear_inf, sample_lats, sample_lons, settings)
 
     # PRINT SIZES
     n_inference = tagyear_inf.shape
@@ -327,7 +297,6 @@ def get_inference_tags(settings):
 
 
 class data_generator:
-
     # init method or constructor
     def __init__(self, settings, tags, tags_dict):
         self.settings = settings
@@ -336,7 +305,6 @@ class data_generator:
         self.rng = np.random.default_rng(settings["rng_seed"])
 
     def get_data(self, samples_iter):
-
         samples_iter = samples_iter.numpy()
         sample_years, sample_lats, sample_lons, sample_files = self.tags
 
@@ -354,7 +322,6 @@ class data_generator:
             sample_files = np.asarray(sample_files)[i]
 
         elif self.settings["mode"] == "inference":
-
             sample_years = sample_years[samples_iter]
             sample_lats = sample_lats[samples_iter]
             sample_lons = sample_lons[samples_iter]
@@ -365,17 +332,12 @@ class data_generator:
 
         assert all(x == sample_files[0] for x in sample_files), f"these must all be the same files: {sample_files}"
 
-        input_data = self.get_input_data(
-            sample_years, sample_lats, sample_lons, sample_files
-        )
-        output_data = self.get_output_data(
-            sample_years, sample_lats, sample_lons, sample_files
-        )
+        input_data = self.get_input_data(sample_years, sample_lats, sample_lons, sample_files)
+        output_data = self.get_output_data(sample_years, sample_lats, sample_lons, sample_files)
 
         return input_data, output_data
 
     def get_input_data(self, sample_years, sample_lats, sample_lons, sample_files):
-
         batch_input = np.zeros(
             (
                 len(sample_years),
@@ -436,7 +398,6 @@ class data_generator:
         return dat
 
     def get_output_data(self, sample_years, sample_lats, sample_lons, sample_files):
-
         # Get HFI file
         assert all(x == sample_years[0] for x in sample_years), f"these must all be the same years: {sample_years}"
 
@@ -449,7 +410,10 @@ class data_generator:
         with rasterio.open(filename) as output_tiff:
             for isample in np.arange(0, len(sample_years)):
                 batch_output[isample] = read_output_data(
-                    self.settings, output_tiff, sample_lons[isample], sample_lats[isample]
+                    self.settings,
+                    output_tiff,
+                    sample_lons[isample],
+                    sample_lats[isample],
                 )
 
         # convert to tensor
@@ -462,9 +426,7 @@ def read_output_data(settings, tiff, sample_lon, sample_lat):
     ilat, ilon = tiff.index(sample_lon, sample_lat)
     window = Window(ilon, ilat, 1, 1)
 
-    output_mask = (
-        tiff.read_masks(1, window=window) // 255.0
-    )  # convert to 0/1, with 0 = no data
+    output_mask = tiff.read_masks(1, window=window) // 255.0  # convert to 0/1, with 0 = no data
     sample_output = output_mask * tiff.read(1, window=window)
 
     if len(sample_output) == 0:

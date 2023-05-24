@@ -78,14 +78,11 @@ def trim_hfi_region(indices, hfi_tif, region):
 
 
 def mask_shapefile_region(hfi_tif, mask_tif, shp_dict, country_names, showplot=False):
-
     # trim the grids to be the same
     lon_w, lat_n = hfi_tif.xy(0, 0, offset="ul")
     lon_e, lat_s = hfi_tif.xy(hfi_tif.height - 1, hfi_tif.width - 1, offset="ul")
 
-    ilat_s, ilat_n, ilon_w, ilon_e = get_tile_indices(
-        mask_tif, (lat_s, lat_n, lon_w, lon_e)
-    )
+    ilat_s, ilat_n, ilon_w, ilon_e = get_tile_indices(mask_tif, (lat_s, lat_n, lon_w, lon_e))
     ilat_s, ilon_e = (
         ilat_s + 1,
         ilon_e + 1,

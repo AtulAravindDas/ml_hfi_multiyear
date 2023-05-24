@@ -31,7 +31,7 @@ def get_denseweight_dist(settings, data):
     hist_dist = scipy.stats.rv_histogram(hist, density=True)
     hist_dist = hist_dist.pdf(x_values)
 
-    denseweight_dist = np.maximum(1. - alpha * hist_dist, epsilon)
+    denseweight_dist = np.maximum(1.0 - alpha * hist_dist, epsilon)
     denseweight_dist = denseweight_dist / np.mean(denseweight_dist)
 
     if "extra_denseweight_high" in settings.keys():
@@ -52,7 +52,6 @@ def get_denseweights(settings, tags):
 
 
 def apply_denseweights(denseweight_dist, data):
-
     # scaled_data = tf.cast(tf.math.round(100. * data), dtype=tf.int32)
     scaled_data = tf.cast(tf.math.round(data), dtype=tf.int32)
     return tf.gather(denseweight_dist, scaled_data)
@@ -64,7 +63,6 @@ class DenseWeightMSE_Loss(tf.keras.losses.Loss):
         self.denseweight_dist = denseweight_dist
 
     def call(self, y_true, y_pred):
-
         loss = tf.math.squared_difference(y_true, y_pred)
         weights = apply_denseweights(self.denseweight_dist, y_true)
 
@@ -90,13 +88,14 @@ class DenseDualWeightMSE_Loss(tf.keras.losses.Loss):
         self.offset = params[1]
 
     def call(self, y_true, y_pred):
-
         loss = tf.math.squared_difference(y_true, y_pred)
 
         weights = apply_denseweights(self.denseweight_dist, y_true)
         loss = tf.multiply(loss, weights)
 
-        weights = (tf.math.maximum(tf.math.abs(y_true - self.offset), tf.math.abs(y_pred - self.offset))) ** self.gamma_weight
+        weights = (
+            tf.math.maximum(tf.math.abs(y_true - self.offset), tf.math.abs(y_pred - self.offset))
+        ) ** self.gamma_weight
         loss = tf.multiply(loss, weights)
 
         return tf.sqrt(tf.reduce_mean(loss))

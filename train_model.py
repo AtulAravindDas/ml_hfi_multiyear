@@ -47,9 +47,7 @@ def train_model(settings, model, tfds_train, tfds_val, denseweight_dist):
     )
 
     # learning rate scheduler
-    learning_rate_callback = tf.keras.callbacks.LearningRateScheduler(
-        scheduler, verbose=0
-    )
+    learning_rate_callback = tf.keras.callbacks.LearningRateScheduler(scheduler, verbose=0)
 
     # checkpoint callback
     checkpoint_dir = SAVE_MODEL_DIRECTORY + settings["exp_name"] + "/"
@@ -59,9 +57,7 @@ def train_model(settings, model, tfds_train, tfds_val, denseweight_dist):
     if settings["save_best_only"]:
         checkpoint_path = checkpoint_dir + "model_" + settings["exp_name"] + ".ckpt"
     else:
-        checkpoint_path = (
-            checkpoint_dir + "model_" + settings["exp_name"] + ".{epoch:04d}.ckpt"
-        )
+        checkpoint_path = checkpoint_dir + "model_" + settings["exp_name"] + ".{epoch:04d}.ckpt"
 
     checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=checkpoint_path,
@@ -74,9 +70,7 @@ def train_model(settings, model, tfds_train, tfds_val, denseweight_dist):
 
     # put the callbacks together
     if settings["early_stopping"]:
-        callbacks = (
-            [earlystopping_callback, learning_rate_callback, checkpoint_callback],
-        )
+        callbacks = ([earlystopping_callback, learning_rate_callback, checkpoint_callback],)
     else:
         callbacks = ([learning_rate_callback, checkpoint_callback],)
 
@@ -86,9 +80,7 @@ def train_model(settings, model, tfds_train, tfds_val, denseweight_dist):
     # loss function
     if "loss" in settings.keys():
         if settings["loss"] == "DenseWeightMSE":
-            loss = custom_loss.DenseWeightMSE_Loss(
-                tf.constant(denseweight_dist, dtype="float32")
-            )
+            loss = custom_loss.DenseWeightMSE_Loss(tf.constant(denseweight_dist, dtype="float32"))
         elif settings["loss"] == "DenseDualWeightMSE":
             loss = custom_loss.DenseDualWeightMSE_Loss(
                 tf.constant(denseweight_dist, dtype="float32"),
@@ -114,9 +106,7 @@ def train_model(settings, model, tfds_train, tfds_val, denseweight_dist):
     )
 
     # PICK-UP TRAINING WHERE LEFT OFF,IF DESIRED
-    if settings["pickup_where_leftoff"] and os.path.isfile(
-        checkpoint_dir + "checkpoint"
-    ):
+    if settings["pickup_where_leftoff"] and os.path.isfile(checkpoint_dir + "checkpoint"):
         print("loading pre-saved weights")
         latest_model = tf.train.latest_checkpoint(checkpoint_dir)
         model.load_weights(latest_model)
