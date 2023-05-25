@@ -32,7 +32,6 @@ LANDSAT_DIRECTORY = directory_paths["landsat_dir"]
 PREDICTIONS_DIRECTORY = directory_paths["predictions_dir"]
 
 DEFAULT_MASK_FILENAME = DATA_DIRECTORY + "hii_coastal_buffer_mask.tif"
-DEFAULT_FILENAME = "hii_2020-01-01_uint8.tif"
 
 
 def build_tf_dataset(settings, tags, batch_size, mode=None):
@@ -370,6 +369,7 @@ class data_generator:
         )
 
         for isample in np.arange(0, len(sample_years)):
+
             try:
                 sample_out, tif_dict = read_landsat.read_input_data(
                     self.settings,
@@ -432,9 +432,10 @@ def read_output_data(settings, tiff, sample_lon, sample_lat):
     if len(sample_output) == 0:
         sample_output = 0.0
 
+    # TODO: We are trying to make this obsolete, so delete later.
     # this is where we can force the network to predict zeros or ones
-    if settings["mode"] == "training":
-        if sample_output == 0.0:
-            sample_output = settings["kluge_value_for_zero"]
+    # if settings["mode"] == "training":
+    #     if sample_output == 0.0:
+    #         sample_output = settings["kluge_value_for_zero"]
 
     return sample_output
