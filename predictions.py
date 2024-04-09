@@ -39,7 +39,7 @@ def create_mosaic(filenames_list):
 
 
 def make_predictions(settings, model, tfds, tags):
-    hfi_predict = model.predict(tfds, verbose=1)
+    hfi_predict = model.predict(tfds, verbose=0)
     gc.collect()
 
     # GET TIFF META DATA
