@@ -75,7 +75,7 @@ def build_tf_dataset(settings, tags, batch_size, mode=None):
         lambda samples_iter: tf.py_function(
             func=data_gen.get_data, inp=[samples_iter], Tout=[tf.float64, tf.float64]
         ),
-        num_parallel_calls=tf.data.AUTOTUNE,
+        # num_parallel_calls=tf.data.AUTOTUNE,
     )
 
     return dataset
@@ -335,9 +335,9 @@ class data_generator:
         self.tags_dict = tags_dict
         self.rng = np.random.default_rng(settings["rng_seed"])
 
-    def get_data(self, samples_iter):
+    def get_data(self, samples_iter, input_only=False):
 
-        samples_iter = samples_iter.numpy()
+        # samples_iter = samples_iter.numpy()
         sample_years, sample_lats, sample_lons, sample_files = self.tags
 
         if self.settings["mode"] == "training":
@@ -369,6 +369,9 @@ class data_generator:
         input_data = self.get_input_data(
             sample_years, sample_lats, sample_lons, sample_files
         )
+
+        if input_only:
+            return input_data
 
         output_data = self.get_output_data(
             sample_years, sample_lats, sample_lons, sample_files
@@ -408,7 +411,6 @@ class data_generator:
             self.settings,
         )
 
-        start_time = time.time()
         for isample in np.arange(0, len(sample_years)):
 
             sample_out, tif_dict, usecase = read_landsat.read_input_data(
@@ -429,8 +431,6 @@ class data_generator:
                 tif_dict[key].close()
         # convert to tensor
         dat = tf.convert_to_tensor(batch_input)
-
-        print(f"time.loop = {time.time() - start_time}; {usecase = }")
 
         return dat
 

@@ -6,6 +6,7 @@ from rasterio.windows import Window
 from rasterio.transform import Affine
 import methods
 import gc
+import build_data
 
 
 directory_paths = methods.get_directories()
@@ -38,8 +39,27 @@ def create_mosaic(filenames_list):
     return mosaic[0, :, :], out_trans
 
 
-def make_predictions(settings, model, tfds, tags):
-    hfi_predict = model.predict(tfds, verbose=0)
+def make_predictions(settings, model, tags):
+
+    # Make predictions with data generator, not tf.dataset
+    # TODO: put this in the experiment_settings
+    gen_inc = 5_000
+
+    tags_dict = {}
+    for filename in np.unique(tags[-1]):
+        isample = [index for (index, item) in enumerate(tags[-1]) if item == filename]
+        tags_dict[filename] = np.asarray(isample)
+
+    data_gen = build_data.data_generator(settings, tags, tags_dict)
+
+    hfi_predict = np.zeros((tags[0].shape[0], 1))
+    for i in np.arange(0, tags[0].shape[0], gen_inc):
+        index_end = np.min([i + gen_inc, tags[0].shape[0]])
+        x_input = data_gen.get_data(np.arange(i, index_end), input_only=True)
+        hfi_predict[i:index_end] = model.predict(x_input, batch_size=settings["batch_size"], verbose=0)
+        gc.collect()
+
+    # hfi_predict = model.predict(tfds, verbose=1)
     gc.collect()
 
     # GET TIFF META DATA
