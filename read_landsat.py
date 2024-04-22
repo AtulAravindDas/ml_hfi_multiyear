@@ -176,6 +176,7 @@ def read_input_data(
         assert usecase == "usecase_central"
 
     # start_time = time.time()
+
     # USECASE 0 - central only
     if usecase == "usecase_central":
         central_output = read_tif(
@@ -191,14 +192,22 @@ def read_input_data(
             tif_dict, flag_north = fill_tif_dict(
                 "north", sample_year, sample_lat, sample_lon, tif_dict, settings
             )
+        else:
+            flag_north = False
+
         if tif_dict.get("northwest") is None:
             tif_dict, flag_northwest = fill_tif_dict(
                 "northwest", sample_year, sample_lat, sample_lon, tif_dict, settings
             )
+        else:
+            flag_northwest = False
+
         if tif_dict.get("west") is None:
             tif_dict, flag_west = fill_tif_dict(
                 "west", sample_year, sample_lat, sample_lon, tif_dict, settings
             )
+        else:
+            flag_west = False
 
         if any([flag_north, flag_northwest, flag_west]):
             sample_output = 0.0
@@ -245,6 +254,9 @@ def read_input_data(
             tif_dict, flag_north = fill_tif_dict(
                 "north", sample_year, sample_lat, sample_lon, tif_dict, settings
             )
+        else:
+            flag_north = False
+
         if flag_north:
             sample_output = 0.0
         else:
@@ -270,14 +282,23 @@ def read_input_data(
             tif_dict, flag_north = fill_tif_dict(
                 "north", sample_year, sample_lat, sample_lon, tif_dict, settings
             )
+        else:
+            flag_north = False
+
         if tif_dict.get("northeast") is None:
             tif_dict, flag_northeast = fill_tif_dict(
                 "northeast", sample_year, sample_lat, sample_lon, tif_dict, settings
             )
+        else:
+            flag_northeast = False
+
         if tif_dict.get("east") is None:
             tif_dict, flag_east = fill_tif_dict(
                 "east", sample_year, sample_lat, sample_lon, tif_dict, settings
             )
+        else:
+            flag_east = False
+
         if any([flag_north, flag_northeast, flag_east]):
             sample_output = 0.0
         else:
@@ -325,6 +346,9 @@ def read_input_data(
             tif_dict, flag_east = fill_tif_dict(
                 "east", sample_year, sample_lat, sample_lon, tif_dict, settings
             )
+        else:
+            flag_east = False
+
         if flag_east:
             sample_output = 0.0
         else:
@@ -351,14 +375,22 @@ def read_input_data(
             tif_dict, flag_south = fill_tif_dict(
                 "south", sample_year, sample_lat, sample_lon, tif_dict, settings
             )
+        else:
+            flag_south = False
+
         if tif_dict.get("southeast") is None:
             tif_dict, flag_southeast = fill_tif_dict(
                 "southeast", sample_year, sample_lat, sample_lon, tif_dict, settings
             )
+        else:
+            flag_southeast = False
+
         if tif_dict.get("east") is None:
             tif_dict, flag_east = fill_tif_dict(
                 "east", sample_year, sample_lat, sample_lon, tif_dict, settings
             )
+        else:
+            flag_east = False
 
         if any([flag_south, flag_southeast, flag_east]):
             sample_output = 0.0
@@ -409,6 +441,8 @@ def read_input_data(
             tif_dict, flag_south = fill_tif_dict(
                 "south", sample_year, sample_lat, sample_lon, tif_dict, settings
             )
+        else:
+            flag_south = False
 
         if flag_south:
             sample_output = 0.0
@@ -436,14 +470,22 @@ def read_input_data(
             tif_dict, flag_south = fill_tif_dict(
                 "south", sample_year, sample_lat, sample_lon, tif_dict, settings
             )
+        else:
+            flag_south = False
+
         if tif_dict.get("southwest") is None:
             tif_dict, flag_southwest = fill_tif_dict(
                 "southwest", sample_year, sample_lat, sample_lon, tif_dict, settings
             )
+        else:
+            flag_southwest = False
+
         if tif_dict.get("west") is None:
             tif_dict, flag_west = fill_tif_dict(
                 "west", sample_year, sample_lat, sample_lon, tif_dict, settings
             )
+        else:
+            flag_west = False
 
         if any([flag_south, flag_southwest, flag_west]):
             sample_output = 0.0
@@ -492,6 +534,8 @@ def read_input_data(
             tif_dict, flag_west = fill_tif_dict(
                 "west", sample_year, sample_lat, sample_lon, tif_dict, settings
             )
+        else:
+            flag_west = False
 
         if flag_west:
             sample_output = 0.0

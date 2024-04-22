@@ -11,7 +11,7 @@ __date__ = "09 May 2023"
 
 
 # DECLARE CONSTANTS
-TILE_LEN_DEG = 10.0
+TILE_LEN_DEG = 1.0
 LANDSAT_TO_HII_RATIO = 10.0
 LANDSAT_PIXEL_TO_DEG = 0.00026949
 
@@ -251,6 +251,7 @@ def get_settings(experiment_name):
             "scene_width": 11,  # in units of HFI, must be ODD. 30, 50, 70, 90, 110, 130
             "nbatches": (750, 25),  # (training_batches, validation_batches per landsat tile)
             "batches_per_epoch": 750,
+            "inference_chunksize": 5_000,
             "rng_seed": 33,
             "layers_units": (64, 128, 128, 128, 128),
             "kernel_size": 3,
