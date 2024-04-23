@@ -6,8 +6,8 @@ This module contains functions for creating a mosaic from a list of filenames.
 Functions:
 ----------
 create_mosaic(filenames_list: list) -> Tuple[numpy.ndarray, rasterio.Affine]:
-predict(settings, model, tags) -> numpy.ndarray:
-make_predictions(settings, model, tags) -> Tuple[numpy.ndarray, numpy.ndarray, Tuple[float, float, float, float]]:
+predict(config, model, tags) -> numpy.ndarray:
+make_predictions(config, model, tags) -> Tuple[numpy.ndarray, numpy.ndarray, Tuple[float, float, float, float]]:
 
 """
 
@@ -19,7 +19,7 @@ from rasterio.windows import Window
 from rasterio.transform import Affine
 import methods
 import gc
-import build_data
+# import data_loader.build_tags as build_tags
 
 
 # Get the directory paths from the methods module
@@ -65,12 +65,12 @@ def create_mosaic(filenames_list):
     return mosaic[0, :, :], out_trans
 
 
-def predict(settings, model, tags):
+def predict(config, model, tags):
     """
-    Make predictions using the given settings, model, and tags.
+    Make predictions using the given config, model, and tags.
 
     Args:
-        settings (dict): A dictionary containing the settings for prediction.
+        config (dict): A dictionary containing the config for prediction.
         model: The trained model used for prediction.
         tags: The tags used for prediction.
 
@@ -83,33 +83,33 @@ def predict(settings, model, tags):
     # gc.collect()
 
     # Make predictions with data generator only and custom loop
-    chunk_size = settings["inference_chunksize"]
+    chunk_size = config["inference_chunksize"]
 
     tags_dict = {}
     for filename in np.unique(tags[-1]):
         isample = [index for (index, item) in enumerate(tags[-1]) if item == filename]
         tags_dict[filename] = np.asarray(isample)
 
-    data_gen = build_data.data_generator(settings, tags, tags_dict)
+    data_gen = build_tags.data_generator(config, tags, tags_dict)
 
     hfi_predict = np.zeros((tags[0].shape[0], 1))
     for i in np.arange(0, tags[0].shape[0], chunk_size):
         index_end = np.min([i + chunk_size, tags[0].shape[0]])
         x_input = data_gen.get_data(np.arange(i, index_end), input_only=True)
         hfi_predict[i:index_end] = model.predict(
-            x_input, batch_size=settings["batch_size"], verbose=0
+            x_input, batch_size=config["batch_size"], verbose=0
         )
         gc.collect()
 
     return hfi_predict
 
 
-def make_predictions(settings, model, tags):
+def make_predictions(config, model, tags):
     """
     Generate predictions for ml-HFI.
 
     Args:
-        settings (dict): A dictionary containing the settings for prediction.
+        config (dict): A dictionary containing the config for prediction.
         model: The trained model used for prediction.
         tags: The tags used for prediction.
 
@@ -121,13 +121,13 @@ def make_predictions(settings, model, tags):
 
     """
 
-    hfi_predict = predict(settings, model, tags)
+    hfi_predict = predict(config, model, tags)
 
     # GET TIFF META DATA
     labels_filename = (
         DATA_DIRECTORY
         + "hii_"
-        + str(settings["inference_years"][0])
+        + str(config["inference_years"][0])
         + "-01-01_uint8.tif"
     )
     filename_mask = DATA_DIRECTORY + "hii_coastal_buffer_mask.tif"

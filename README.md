@@ -1,6 +1,6 @@
 # Multi-year ml-HFI
 ***
-Deep-learing estimate of the human footprint index (HFI or HII; also known as the Human Impact Index as trained here) throughout the past decade(s) as estimated from Landsat imagery.
+Deep-learning estimate of the human footprint index (HFI or HII; also known as the Human Impact Index as trained here) throughout the past decade(s) as estimated from Landsat imagery.
 
 This work relies entirely on the efforts of [0] to create a labeled dataset of 2nd generation human footprint [1]. This puts the resolution of the HFI at ~300m.
 
@@ -8,7 +8,7 @@ This work relies entirely on the efforts of [0] to create a labeled dataset of 2
 ***
 This code was written in python 3.10.10 and tensorflow 2.10 and can be significantly sped-up using GPUs.
 
-### Python Environment
+### Python Environment - Tensorflow
 The following python environment was used to implement this code.
 ```
 - conda create --name env-mlhfi python=3.10.10
@@ -29,7 +29,7 @@ The following python environment was used to implement this code.
     * landsat tiles
     * 2015-2020 HII labels
     * at minimum you will need ``shapefile_mosaic.tif`` and ``shapefile_dataframe.pkl`` (_you will not need the rest of the shapefiles unless you want to recreate the shapefile masks_)
-* Set ``experiment_settings.py`` as desired.
+* Set ``experiment_config.py`` as desired.
 * Order to run major scripts.
   * _driver.ipynb
   * _oracle.ipynb

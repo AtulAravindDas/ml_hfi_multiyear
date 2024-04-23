@@ -3,7 +3,7 @@
 Functions
 ---------
 scheduler(epoch, lr)
-train_model(settings, model)
+train_model(config, model)
 """
 import os
 import time
@@ -12,7 +12,7 @@ import tensorflow as tf
 import silence_tensorflow.auto
 import random
 import methods
-import custom_loss
+import archive.custom_loss as custom_loss
 
 __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
 __version__ = "05 May 2023"
@@ -29,18 +29,18 @@ def scheduler(epoch, learning_rate):
         return learning_rate * tf.math.exp(-0.1)
 
 
-def train_model(settings, model, tfds_train, tfds_val, denseweight_dist):
+def train_model(config, model, tfds_train, tfds_val, denseweight_dist):
     # SET RANDOM SEEDS AGAIN FOR MODEL TRAINING
-    np.random.seed(settings["rng_seed"])
-    random.seed(settings["rng_seed"])
-    tf.random.set_seed(settings["rng_seed"])
+    np.random.seed(config["rng_seed"])
+    random.seed(config["rng_seed"])
+    tf.random.set_seed(config["rng_seed"])
 
     # DEFINE ALL CALLBACKS
 
     # early stopping
     earlystopping_callback = tf.keras.callbacks.EarlyStopping(
         monitor="val_loss",
-        patience=settings["patience"],
+        patience=config["patience"],
         verbose=1,
         mode="auto",
         restore_best_weights=True,
@@ -50,14 +50,14 @@ def train_model(settings, model, tfds_train, tfds_val, denseweight_dist):
     learning_rate_callback = tf.keras.callbacks.LearningRateScheduler(scheduler, verbose=0)
 
     # checkpoint callback
-    checkpoint_dir = SAVE_MODEL_DIRECTORY + settings["exp_name"] + "/"
+    checkpoint_dir = SAVE_MODEL_DIRECTORY + config["exp_name"] + "/"
     if not os.path.isdir(checkpoint_dir):
         os.makedirs(checkpoint_dir)
 
-    if settings["save_best_only"]:
-        checkpoint_path = checkpoint_dir + "model_" + settings["exp_name"] + ".ckpt"
+    if config["save_best_only"]:
+        checkpoint_path = checkpoint_dir + "model_" + config["exp_name"] + ".ckpt"
     else:
-        checkpoint_path = checkpoint_dir + "model_" + settings["exp_name"] + ".{epoch:04d}.ckpt"
+        checkpoint_path = checkpoint_dir + "model_" + config["exp_name"] + ".{epoch:04d}.ckpt"
 
     checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=checkpoint_path,
@@ -65,26 +65,26 @@ def train_model(settings, model, tfds_train, tfds_val, denseweight_dist):
         mode="min",
         save_freq="epoch",
         save_weights_only=True,
-        save_best_only=settings["save_best_only"],
+        save_best_only=config["save_best_only"],
     )
 
     # put the callbacks together
-    if settings["early_stopping"]:
+    if config["early_stopping"]:
         callbacks = ([earlystopping_callback, learning_rate_callback, checkpoint_callback],)
     else:
         callbacks = ([learning_rate_callback, checkpoint_callback],)
 
     # optimizer
-    optimizer = tf.keras.optimizers.Adam(settings["learning_rate"])
+    optimizer = tf.keras.optimizers.Adam(config["learning_rate"])
 
     # loss function
-    if "loss" in settings.keys():
-        if settings["loss"] == "DenseWeightMSE":
+    if "loss" in config.keys():
+        if config["loss"] == "DenseWeightMSE":
             loss = custom_loss.DenseWeightMSE_Loss(tf.constant(denseweight_dist, dtype="float32"))
-        elif settings["loss"] == "DenseDualWeightMSE":
+        elif config["loss"] == "DenseDualWeightMSE":
             loss = custom_loss.DenseDualWeightMSE_Loss(
                 tf.constant(denseweight_dist, dtype="float32"),
-                tf.constant(settings["loss_params"], dtype="float32"),
+                tf.constant(config["loss_params"], dtype="float32"),
             )
         else:
             raise NotImplementedError("no such loss defined.")
@@ -106,7 +106,7 @@ def train_model(settings, model, tfds_train, tfds_val, denseweight_dist):
     )
 
     # PICK-UP TRAINING WHERE LEFT OFF,IF DESIRED
-    if settings["pickup_where_leftoff"] and os.path.isfile(checkpoint_dir + "checkpoint"):
+    if config["pickup_where_leftoff"] and os.path.isfile(checkpoint_dir + "checkpoint"):
         print("loading pre-saved weights")
         latest_model = tf.train.latest_checkpoint(checkpoint_dir)
         model.load_weights(latest_model)
@@ -116,10 +116,10 @@ def train_model(settings, model, tfds_train, tfds_val, denseweight_dist):
     history = model.fit(
         tfds_train,
         validation_data=tfds_val,
-        steps_per_epoch=settings["batches_per_epoch"],
-        epochs=settings["max_epochs"],
+        steps_per_epoch=config["batches_per_epoch"],
+        epochs=config["max_epochs"],
         callbacks=callbacks,
-        batch_size=settings["batch_size"],
+        batch_size=config["batch_size"],
         verbose=1,
     )
     stop_time = time.time()
@@ -135,4 +135,4 @@ def train_model(settings, model, tfds_train, tfds_val, denseweight_dist):
         "mae_valid": history.history["val_mae"][best_epoch],
     }
 
-    return model, fit_summary, history, settings
+    return model, fit_summary, history, config

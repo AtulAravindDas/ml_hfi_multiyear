@@ -18,66 +18,66 @@ directory_paths = methods.get_directories()
 LANDSAT_DIRECTORY = directory_paths["landsat_dir"]
 
 
-def fill_tif_dict(name, sample_year, sample_lat, sample_lon, tif_dict, settings):
+def fill_tif_dict(name, sample_year, sample_lat, sample_lon, tif_dict, config):
     if name == "central":
         filename = get_input_filename(
-            (sample_year,), (sample_lat,), (sample_lon,), settings
+            (sample_year,), (sample_lat,), (sample_lon,), config
         )
     elif name == "northwest":
         filename = get_input_filename(
             (sample_year,),
-            (sample_lat + settings["tile_len_deg"],),
-            (sample_lon - settings["tile_len_deg"],),
-            settings,
+            (sample_lat + config["tile_len_deg"],),
+            (sample_lon - config["tile_len_deg"],),
+            config,
         )
     elif name == "north":
         filename = get_input_filename(
             (sample_year,),
-            (sample_lat + settings["tile_len_deg"],),
+            (sample_lat + config["tile_len_deg"],),
             (sample_lon,),
-            settings,
+            config,
         )
     elif name == "northeast":
         filename = get_input_filename(
             (sample_year,),
-            (sample_lat + settings["tile_len_deg"],),
-            (sample_lon + settings["tile_len_deg"],),
-            settings,
+            (sample_lat + config["tile_len_deg"],),
+            (sample_lon + config["tile_len_deg"],),
+            config,
         )
     elif name == "east":
         filename = get_input_filename(
             (sample_year,),
             (sample_lat,),
-            (sample_lon + settings["tile_len_deg"],),
-            settings,
+            (sample_lon + config["tile_len_deg"],),
+            config,
         )
     elif name == "southeast":
         filename = get_input_filename(
             (sample_year,),
-            (sample_lat - settings["tile_len_deg"],),
-            (sample_lon + settings["tile_len_deg"],),
-            settings,
+            (sample_lat - config["tile_len_deg"],),
+            (sample_lon + config["tile_len_deg"],),
+            config,
         )
     elif name == "south":
         filename = get_input_filename(
             (sample_year,),
-            (sample_lat - settings["tile_len_deg"],),
+            (sample_lat - config["tile_len_deg"],),
             (sample_lon,),
-            settings,
+            config,
         )
     elif name == "southwest":
         filename = get_input_filename(
             (sample_year,),
-            (sample_lat - settings["tile_len_deg"],),
-            (sample_lon - settings["tile_len_deg"],),
-            settings,
+            (sample_lat - config["tile_len_deg"],),
+            (sample_lon - config["tile_len_deg"],),
+            config,
         )
     elif name == "west":
         filename = get_input_filename(
             (sample_year,),
             (sample_lat,),
-            (sample_lon - settings["tile_len_deg"],),
-            settings,
+            (sample_lon - config["tile_len_deg"],),
+            config,
         )
     else:
         raise NotImplementedError("no such name.")
@@ -100,25 +100,25 @@ def read_tif(tif, channels, window):
     return np.transpose(tif.read(channels, window=window), axes=(1, 2, 0))
 
 
-def get_landsat_bounds(settings, region):
-    lat_s = np.floor(region[0] / settings["tile_len_deg"]) * settings["tile_len_deg"]
-    lat_n = np.ceil(region[1] / settings["tile_len_deg"]) * settings["tile_len_deg"]
-    lon_w = np.floor(region[2] / settings["tile_len_deg"]) * settings["tile_len_deg"]
-    lon_e = np.ceil(region[3] / settings["tile_len_deg"]) * settings["tile_len_deg"]
+def get_landsat_bounds(config, region):
+    lat_s = np.floor(region[0] / config["tile_len_deg"]) * config["tile_len_deg"]
+    lat_n = np.ceil(region[1] / config["tile_len_deg"]) * config["tile_len_deg"]
+    lon_w = np.floor(region[2] / config["tile_len_deg"]) * config["tile_len_deg"]
+    lon_e = np.ceil(region[3] / config["tile_len_deg"]) * config["tile_len_deg"]
 
     return lat_s, lat_n, lon_w, lon_e
 
 
-def get_input_filename(years, lats, lons, settings):
+def get_input_filename(years, lats, lons, config):
     filenames = []
     for isample in range(len(years)):
         file_year = int(years[isample])
         file_lat = int(
-            np.ceil(lats[isample] / settings["tile_len_deg"]) * settings["tile_len_deg"]
+            np.ceil(lats[isample] / config["tile_len_deg"]) * config["tile_len_deg"]
         )
         file_lon = int(
-            np.floor(lons[isample] / settings["tile_len_deg"])
-            * settings["tile_len_deg"]
+            np.floor(lons[isample] / config["tile_len_deg"])
+            * config["tile_len_deg"]
         )
         filenames.append(f"landsat_{file_lat}lat_{file_lon}lon_{file_year}")
 
@@ -126,15 +126,15 @@ def get_input_filename(years, lats, lons, settings):
 
 
 def read_input_data(
-    settings, tif_dict, sample_year, sample_lon, sample_lat, channels, scene_width
+    config, tif_dict, sample_year, sample_lon, sample_lat, channels, scene_width
 ):
     ilat, ilon = tif_dict["central"].index(sample_lon, sample_lat)
 
     scene_width_2 = int((scene_width - 1) / 2)
-    ilat_n = int(ilat - settings["landsat_to_hfi_ratio"] * scene_width_2)
-    ilat_s = int(ilat + settings["landsat_to_hfi_ratio"] * (scene_width_2 + 1) - 1)
-    ilon_w = int(ilon - settings["landsat_to_hfi_ratio"] * scene_width_2)
-    ilon_e = int(ilon + settings["landsat_to_hfi_ratio"] * (scene_width_2 + 1) - 1)
+    ilat_n = int(ilat - config["landsat_to_hfi_ratio"] * scene_width_2)
+    ilat_s = int(ilat + config["landsat_to_hfi_ratio"] * (scene_width_2 + 1) - 1)
+    ilon_w = int(ilon - config["landsat_to_hfi_ratio"] * scene_width_2)
+    ilon_e = int(ilon + config["landsat_to_hfi_ratio"] * (scene_width_2 + 1) - 1)
 
     # determine the usecase
     if (
@@ -172,7 +172,7 @@ def read_input_data(
         raise NotImplementedError("no such use case")
 
     # the speed of this code assumes that training samples will never be on edges or corners
-    if settings["mode"] == "training":
+    if config["mode"] == "training":
         assert usecase == "usecase_central"
 
     # start_time = time.time()
@@ -190,21 +190,21 @@ def read_input_data(
     elif usecase == "usecase_northwest":
         if tif_dict.get("north") is None:
             tif_dict, flag_north = fill_tif_dict(
-                "north", sample_year, sample_lat, sample_lon, tif_dict, settings
+                "north", sample_year, sample_lat, sample_lon, tif_dict, config
             )
         else:
             flag_north = False
 
         if tif_dict.get("northwest") is None:
             tif_dict, flag_northwest = fill_tif_dict(
-                "northwest", sample_year, sample_lat, sample_lon, tif_dict, settings
+                "northwest", sample_year, sample_lat, sample_lon, tif_dict, config
             )
         else:
             flag_northwest = False
 
         if tif_dict.get("west") is None:
             tif_dict, flag_west = fill_tif_dict(
-                "west", sample_year, sample_lat, sample_lon, tif_dict, settings
+                "west", sample_year, sample_lat, sample_lon, tif_dict, config
             )
         else:
             flag_west = False
@@ -252,7 +252,7 @@ def read_input_data(
     elif usecase == "usecase_north":
         if tif_dict.get("north") is None:
             tif_dict, flag_north = fill_tif_dict(
-                "north", sample_year, sample_lat, sample_lon, tif_dict, settings
+                "north", sample_year, sample_lat, sample_lon, tif_dict, config
             )
         else:
             flag_north = False
@@ -280,21 +280,21 @@ def read_input_data(
     elif usecase == "usecase_northeast":
         if tif_dict.get("north") is None:
             tif_dict, flag_north = fill_tif_dict(
-                "north", sample_year, sample_lat, sample_lon, tif_dict, settings
+                "north", sample_year, sample_lat, sample_lon, tif_dict, config
             )
         else:
             flag_north = False
 
         if tif_dict.get("northeast") is None:
             tif_dict, flag_northeast = fill_tif_dict(
-                "northeast", sample_year, sample_lat, sample_lon, tif_dict, settings
+                "northeast", sample_year, sample_lat, sample_lon, tif_dict, config
             )
         else:
             flag_northeast = False
 
         if tif_dict.get("east") is None:
             tif_dict, flag_east = fill_tif_dict(
-                "east", sample_year, sample_lat, sample_lon, tif_dict, settings
+                "east", sample_year, sample_lat, sample_lon, tif_dict, config
             )
         else:
             flag_east = False
@@ -344,7 +344,7 @@ def read_input_data(
     elif usecase == "usecase_east":
         if tif_dict.get("east") is None:
             tif_dict, flag_east = fill_tif_dict(
-                "east", sample_year, sample_lat, sample_lon, tif_dict, settings
+                "east", sample_year, sample_lat, sample_lon, tif_dict, config
             )
         else:
             flag_east = False
@@ -373,21 +373,21 @@ def read_input_data(
     elif usecase == "usecase_southeast":
         if tif_dict.get("south") is None:
             tif_dict, flag_south = fill_tif_dict(
-                "south", sample_year, sample_lat, sample_lon, tif_dict, settings
+                "south", sample_year, sample_lat, sample_lon, tif_dict, config
             )
         else:
             flag_south = False
 
         if tif_dict.get("southeast") is None:
             tif_dict, flag_southeast = fill_tif_dict(
-                "southeast", sample_year, sample_lat, sample_lon, tif_dict, settings
+                "southeast", sample_year, sample_lat, sample_lon, tif_dict, config
             )
         else:
             flag_southeast = False
 
         if tif_dict.get("east") is None:
             tif_dict, flag_east = fill_tif_dict(
-                "east", sample_year, sample_lat, sample_lon, tif_dict, settings
+                "east", sample_year, sample_lat, sample_lon, tif_dict, config
             )
         else:
             flag_east = False
@@ -439,7 +439,7 @@ def read_input_data(
     elif usecase == "usecase_south":
         if tif_dict.get("south") is None:
             tif_dict, flag_south = fill_tif_dict(
-                "south", sample_year, sample_lat, sample_lon, tif_dict, settings
+                "south", sample_year, sample_lat, sample_lon, tif_dict, config
             )
         else:
             flag_south = False
@@ -468,21 +468,21 @@ def read_input_data(
     elif usecase == "usecase_southwest":
         if tif_dict.get("south") is None:
             tif_dict, flag_south = fill_tif_dict(
-                "south", sample_year, sample_lat, sample_lon, tif_dict, settings
+                "south", sample_year, sample_lat, sample_lon, tif_dict, config
             )
         else:
             flag_south = False
 
         if tif_dict.get("southwest") is None:
             tif_dict, flag_southwest = fill_tif_dict(
-                "southwest", sample_year, sample_lat, sample_lon, tif_dict, settings
+                "southwest", sample_year, sample_lat, sample_lon, tif_dict, config
             )
         else:
             flag_southwest = False
 
         if tif_dict.get("west") is None:
             tif_dict, flag_west = fill_tif_dict(
-                "west", sample_year, sample_lat, sample_lon, tif_dict, settings
+                "west", sample_year, sample_lat, sample_lon, tif_dict, config
             )
         else:
             flag_west = False
@@ -532,7 +532,7 @@ def read_input_data(
     elif usecase == "usecase_west":
         if tif_dict.get("west") is None:
             tif_dict, flag_west = fill_tif_dict(
-                "west", sample_year, sample_lat, sample_lon, tif_dict, settings
+                "west", sample_year, sample_lat, sample_lon, tif_dict, config
             )
         else:
             flag_west = False
@@ -562,17 +562,17 @@ def read_input_data(
         return 0.0, tif_dict, usecase
     else:
         assert (
-            sample_output.shape[0] == settings["scene_width_landsat"]
+            sample_output.shape[0] == config["scene_width_landsat"]
         ), f"{sample_output.shape[0] = }, {usecase = }"
         assert (
-            sample_output.shape[1] == settings["scene_width_landsat"]
+            sample_output.shape[1] == config["scene_width_landsat"]
         ), f"{sample_output.shape[1] = }, {usecase = }"
 
         # add noise to de-noise
         rng = np.random.default_rng()
-        if settings["mode"] == "training":
+        if config["mode"] == "training":
             random_noise = rng.integers(
-                -settings["input_noise"], settings["input_noise"] + 1, size=1
+                -config["input_noise"], config["input_noise"] + 1, size=1
             )
             sample_output = sample_output + random_noise
 

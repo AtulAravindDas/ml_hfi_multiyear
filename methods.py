@@ -2,8 +2,8 @@
 
 Functions
 ---------
-get_sample_weights(settings, data)
-permute_shuffle_sample_list(settings, sample_years, sample_lats, sample_lons)
+get_sample_weights(config, data)
+permute_shuffle_sample_list(config, sample_years, sample_lats, sample_lons)
 """
 import numpy as np
 import matplotlib.pyplot as plt
