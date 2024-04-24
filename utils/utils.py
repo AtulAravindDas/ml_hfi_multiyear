@@ -18,6 +18,16 @@ import torch
 import numpy as np
 
 
+def get_directories():
+    with open("utils/directories.json") as f:
+        directories = json.load(f)
+    return directories
+
+
+def get_model_name(expname, seed):
+    return expname + "_seed" + str(seed)
+
+
 def prepare_device(device="gpu"):
     """
     setup GPU device if available. get gpu device indices which are used for DataParallel

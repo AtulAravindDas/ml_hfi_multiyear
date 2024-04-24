@@ -17,12 +17,14 @@
 qgis/
 figures/
 docs/
+_docs/
 documents/
 archive/
+_archive/
 data/
 shapefiles/
 processed_data/
-saved_models/
+saved/
 predictions/
 mosaics/
 sandbox_scripts/

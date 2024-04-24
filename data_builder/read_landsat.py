@@ -11,10 +11,10 @@ import os
 import numpy as np
 import rasterio
 from rasterio.windows import Window
-import methods
+from utils import utils
 import time
 
-directory_paths = methods.get_directories()
+directory_paths = utils.get_directories()
 LANDSAT_DIRECTORY = directory_paths["landsat_dir"]
 
 

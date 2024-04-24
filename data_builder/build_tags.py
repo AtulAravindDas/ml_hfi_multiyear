@@ -19,13 +19,14 @@ from sklearn.utils.class_weight import compute_sample_weight
 import rasterio
 from rasterio.windows import Window
 from rasterio.transform import Affine
-import methods
 import time
 
+from utils import utils
 from data_builder import read_landsat
+from data_builder import data_methods
 
 
-directory_paths = methods.get_directories()
+directory_paths = utils.get_directories()
 SAVE_MODEL_DIRECTORY = directory_paths["save_model_dir"]
 DATA_DIRECTORY = directory_paths["data_dir"]
 LANDSAT_DIRECTORY = directory_paths["landsat_dir"]
@@ -95,10 +96,10 @@ def get_training_tags(config):
                     lonfile,
                     lonfile + config["tile_len_deg"],
                 )
-                ilat_s, ilat_n, ilon_w, ilon_e = methods.get_tile_indices(
+                ilat_s, ilat_n, ilon_w, ilon_e = data_methods.get_tile_indices(
                     buffer_mask, tile_bounds
                 )
-                ilat_s, ilat_n, ilon_w, ilon_e = methods.trim_hfi_region(
+                ilat_s, ilat_n, ilon_w, ilon_e = data_methods.trim_hfi_region(
                     (ilat_s, ilat_n, ilon_w, ilon_e),
                     buffer_mask,
                     region=config["training_region"],
@@ -234,10 +235,10 @@ def get_training_tags(config):
 
 def get_inference_tags(config):
     with rasterio.open(DEFAULT_MASK_FILENAME) as buffer_mask:
-        ilat_s, ilat_n, ilon_w, ilon_e = methods.get_tile_indices(
+        ilat_s, ilat_n, ilon_w, ilon_e = data_methods.get_tile_indices(
             buffer_mask, config["tile"]
         )
-        ilat_s, ilat_n, ilon_w, ilon_e = methods.trim_hfi_region(
+        ilat_s, ilat_n, ilon_w, ilon_e = data_methods.trim_hfi_region(
             (ilat_s, ilat_n, ilon_w, ilon_e),
             buffer_mask,
             region=config["inference_region"],

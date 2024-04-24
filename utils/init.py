@@ -1,7 +1,7 @@
 import os
-import methods
+from data_builder import methods
 
-dirs = methods.get_directories()
+dirs = utils.get_directories()
 
 for key in dirs:
 

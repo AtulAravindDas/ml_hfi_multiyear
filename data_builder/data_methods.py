@@ -2,29 +2,16 @@
 
 Functions
 ---------
-get_sample_weights(config, data)
-permute_shuffle_sample_list(config, sample_years, sample_lats, sample_lons)
+
 """
+
 import numpy as np
 import matplotlib.pyplot as plt
 import rasterio
 from rasterio.windows import Window
 
 __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
-__date__ = "11 May 2023"
-
-
-def get_directories():
-    dir_dict = {
-        "data_dir": "data/",
-        "landsat_dir": "data/landsat_export_1x1/",
-        "predictions_dir": "predictions/",
-        "figures_dir": "figures/",
-        "save_model_dir": "saved_models/",
-        "mosaics_dir": "mosaics/",
-        "shapefiles_dir": "data/shapefiles/",
-    }
-    return dir_dict
+__date__ = "24 April 2024"
 
 
 def remove_nodata(x, y=None, nodata=255):
@@ -82,7 +69,9 @@ def mask_shapefile_region(hfi_tif, mask_tif, shp_dict, country_names, showplot=F
     lon_w, lat_n = hfi_tif.xy(0, 0, offset="ul")
     lon_e, lat_s = hfi_tif.xy(hfi_tif.height - 1, hfi_tif.width - 1, offset="ul")
 
-    ilat_s, ilat_n, ilon_w, ilon_e = get_tile_indices(mask_tif, (lat_s, lat_n, lon_w, lon_e))
+    ilat_s, ilat_n, ilon_w, ilon_e = get_tile_indices(
+        mask_tif, (lat_s, lat_n, lon_w, lon_e)
+    )
     ilat_s, ilon_e = (
         ilat_s + 1,
         ilon_e + 1,

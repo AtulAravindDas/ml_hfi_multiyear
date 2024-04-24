@@ -17,13 +17,14 @@ import rasterio
 from rasterio import merge
 from rasterio.windows import Window
 from rasterio.transform import Affine
-import methods
+from data_builder import data_methods
 import gc
-# import data_loader.build_tags as build_tags
+import utils.utils as utils
+import torch
 
 
 # Get the directory paths from the methods module
-directory_paths = methods.get_directories()
+directory_paths = utils.get_directories()
 DATA_DIRECTORY = directory_paths["data_dir"]
 LANDSAT_DIRECTORY = directory_paths["landsat_dir"]
 PREDICTIONS_DIRECTORY = directory_paths["predictions_dir"]
@@ -65,46 +66,7 @@ def create_mosaic(filenames_list):
     return mosaic[0, :, :], out_trans
 
 
-def predict(config, model, tags):
-    """
-    Make predictions using the given config, model, and tags.
-
-    Args:
-        config (dict): A dictionary containing the config for prediction.
-        model: The trained model used for prediction.
-        tags: The tags used for prediction.
-
-    Returns:
-        numpy.ndarray: An array containing the predicted values.
-
-    """
-    # Make predictions with tf.dataset - SLOW
-    # hfi_predict = model.predict(tfds, verbose=1)
-    # gc.collect()
-
-    # Make predictions with data generator only and custom loop
-    chunk_size = config["inference_chunksize"]
-
-    tags_dict = {}
-    for filename in np.unique(tags[-1]):
-        isample = [index for (index, item) in enumerate(tags[-1]) if item == filename]
-        tags_dict[filename] = np.asarray(isample)
-
-    data_gen = build_tags.data_generator(config, tags, tags_dict)
-
-    hfi_predict = np.zeros((tags[0].shape[0], 1))
-    for i in np.arange(0, tags[0].shape[0], chunk_size):
-        index_end = np.min([i + chunk_size, tags[0].shape[0]])
-        x_input = data_gen.get_data(np.arange(i, index_end), input_only=True)
-        hfi_predict[i:index_end] = model.predict(
-            x_input, batch_size=config["batch_size"], verbose=0
-        )
-        gc.collect()
-
-    return hfi_predict
-
-
-def make_predictions(config, model, tags):
+def make_predictions(config, model, tags, dataloader):
     """
     Generate predictions for ml-HFI.
 
@@ -120,15 +82,19 @@ def make_predictions(config, model, tags):
         FileNotFoundError: If the labels file is not found.
 
     """
+    device = utils.prepare_device(config["device"])
+    with torch.inference_mode():
+        hfi_predict = model.predict(
+            dataloader=dataloader,
+            batch_size=None,
+            device=device,
+        )
 
-    hfi_predict = predict(config, model, tags)
+    # hfi_predict = predict(config, model, tags)
 
     # GET TIFF META DATA
     labels_filename = (
-        DATA_DIRECTORY
-        + "hii_"
-        + str(config["inference_years"][0])
-        + "-01-01_uint8.tif"
+        DATA_DIRECTORY + "hii_" + str(config["inference_years"][0]) + "-01-01_uint8.tif"
     )
     filename_mask = DATA_DIRECTORY + "hii_coastal_buffer_mask.tif"
 
@@ -140,7 +106,7 @@ def make_predictions(config, model, tags):
     )
 
     with rasterio.open(filename_mask) as buffer_mask:
-        ilat_s, ilat_n, ilon_w, ilon_e = methods.get_tile_indices(
+        ilat_s, ilat_n, ilon_w, ilon_e = data_methods.get_tile_indices(
             buffer_mask, (lat_s, lat_n, lon_w, lon_e)
         )
         ilat_s, ilon_e = (

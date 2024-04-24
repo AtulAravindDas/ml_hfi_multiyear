@@ -15,10 +15,10 @@ import rasterio
 from rasterio.windows import Window
 
 from data_builder import read_landsat
-import methods
+from utils import utils
 
 
-directory_paths = methods.get_directories()
+directory_paths = utils.get_directories()
 SAVE_MODEL_DIRECTORY = directory_paths["save_model_dir"]
 DATA_DIRECTORY = directory_paths["data_dir"]
 LANDSAT_DIRECTORY = directory_paths["landsat_dir"]
@@ -61,7 +61,6 @@ class CustomData(torch.utils.data.Dataset):
             id_batch * self.config["batch_size"],
             (id_batch + 1) * self.config["batch_size"],
         )
-        # print(f"{id_batch=}: {idx=}")
 
         if self.config["mode"] == "training":
             tile_key = self.sample_files[idx[0]]
@@ -72,17 +71,23 @@ class CustomData(torch.utils.data.Dataset):
                 replace=False,
             )
 
-            # print(f"{id_batch=}: {i=}")
             sample_years = self.sample_years[i]
             sample_lats = self.sample_lats[i]
             sample_lons = self.sample_lons[i]
             sample_files = np.asarray(self.sample_files)[i]
 
         elif self.config["mode"] == "inference":
-            sample_years = self.sample_years[idx]
-            sample_lats = self.sample_lats[idx]
-            sample_lons = self.sample_lons[idx]
-            sample_files = np.asarray(self.sample_files)[idx]
+            try:
+                sample_years = self.sample_years[idx]
+                sample_lats = self.sample_lats[idx]
+                sample_lons = self.sample_lons[idx]
+                sample_files = np.asarray(self.sample_files)[idx]
+            except:
+                idx = np.where(idx < len(self.sample_years))[0]
+                sample_years = self.sample_years[idx]
+                sample_lats = self.sample_lats[idx]
+                sample_lons = self.sample_lons[idx]
+                sample_files = np.asarray(self.sample_files)[idx]
 
         else:
             raise NotImplementedError("no such mode.")

@@ -19,21 +19,23 @@ import torch
 import numpy as np
 from torchvision.transforms import v2
 from base.base_model import BaseModel
+import utils.utils as utils
 
-import methods
+import time
 
 # https://github.com/FrancescoSaverioZuppichini/Pytorch-how-and-when-to-use-Module-Sequential-ModuleList-and-ModuleDict
 
-directory_paths = methods.get_directories()
+directory_paths = utils.get_directories()
 SAVE_MODEL_DIRECTORY = directory_paths["save_model_dir"]
 
 
 def get_model(config):
     model = TorchModel(config)
 
-    checkpoint_dir = SAVE_MODEL_DIRECTORY + config["exp_name"] + "/"
+    # checkpoint_dir = SAVE_MODEL_DIRECTORY + config["exp_name"] + "/"
     # model.load_weights(tf.train.latest_checkpoint(checkpoint_dir)).expect_partial()
-    return model
+    model_name = utils.get_model_name(config["exp_name"], config["seed"])
+    return utils.load_torch_model(model, SAVE_MODEL_DIRECTORY + model_name + ".pt")
 
 
 def conv_couplet(in_channels, out_channels, act_fun, *args, **kwargs):
@@ -177,40 +179,30 @@ class TorchModel(BaseModel):
 
         return x
 
-    def predict(self, dataset=None, dataloader=None, batch_size=128, device="cpu"):
-
-        if (dataset is None) & (dataloader is None):
-            raise ValueError("both dataset and dataloader cannot be none.")
-
-        if (dataset is not None) & (dataloader is not None):
-            raise ValueError(
-                "dataset and dataloader cannot both be defined. choose one."
-            )
-
-        if dataset is not None:
-            dataloader = torch.utils.data.DataLoader(
-                dataset,
-                batch_size=batch_size,
-                shuffle=False,
-                drop_last=False,
-            )
+    def predict(self, dataloader=None, batch_size=128, device="cpu"):
 
         self.to(device)
         self.eval()
         with torch.inference_mode():
 
-            output = None
-            for batch_idx, (data, target) in enumerate(dataloader):
-                input, input_unit, target = (
-                    data[0].to(device),
-                    data[1].to(device),
-                    target.to(device),
-                )
+            start_time = time.time()
 
-                out = self(input, input_unit).to("cpu").numpy()
-                if output is None:
-                    output = out
-                else:
-                    output = np.concatenate((output, out), axis=0)
+            output = np.zeros((len(dataloader.dataset.sample_files), 1))
+            for batch_idx, (data, target) in enumerate(dataloader):
+                input, target = data.to(device), target.to(device)
+                out = self(input).to("cpu")
+
+                batch_size = len(out)
+                output[batch_idx * batch_size : (batch_idx + 1) * batch_size] = out
+                # outputs.extend([result.cpu() for result in results])
+
+                # torch.cuda.empty_cache()
+                # torch.mps.empty_cache()
+
+            end_time = time.time()
+            execution_time = end_time - start_time
+            print(f"Execution time: {execution_time:.3f}s")
+            print(f"Number samples: {output.shape[0]}")
+            print(f"Time per sample: {execution_time/output.shape[0]:.7f}s")
 
         return output
