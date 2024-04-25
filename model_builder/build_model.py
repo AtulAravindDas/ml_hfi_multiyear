@@ -121,8 +121,8 @@ class TorchModel(BaseModel):
 
         # Augmentation layers
         self.augmentation = torch.nn.Sequential(
-            v2.RandomHorizontalFlip(),
-            v2.RandomVerticalFlip(),
+            v2.RandomHorizontalFlip(p=0.5),
+            v2.RandomVerticalFlip(p=0.5),
         )
 
         # CNN block
@@ -160,11 +160,12 @@ class TorchModel(BaseModel):
     def forward(self, input):
 
         # rescale input
-        x_scaled = self.rescale_input(input)
+        input = self.rescale_input(input)
+        x = input
 
         # data augmentation
-        #TODO: CHECK THAT THIS IS OFF DURING INFERENCE
-        x = self.augmentation(x_scaled)
+        if self.training:
+            x = self.augmentation(x)
 
         # CNN block
         x = self.conv_block(x)
@@ -173,8 +174,8 @@ class TorchModel(BaseModel):
         x = self.flat(x)
 
         # skip connection
-        x_scaled_flat = self.flat(x_scaled[:, 2, :, :])
-        x = torch.cat((x, x_scaled_flat), dim=-1)
+        input_flat = self.flat(input[:, 2, :, :])
+        x = torch.cat((x, input_flat), dim=-1)
 
         # dropout layer
         x = self.dropout(x)
