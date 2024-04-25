@@ -39,6 +39,7 @@
 
     "trainer": {
         "max_epochs": 5,
+        "loss": "MSELoss",
         "early_stopping":{
             "args":{
                 "patience": 3,
