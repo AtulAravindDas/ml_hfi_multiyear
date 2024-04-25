@@ -86,11 +86,8 @@ def make_predictions(config, model, tags, dataloader):
     with torch.inference_mode():
         hfi_predict = model.predict(
             dataloader=dataloader,
-            batch_size=None,
             device=device,
         )
-
-    # hfi_predict = predict(config, model, tags)
 
     # GET TIFF META DATA
     labels_filename = (

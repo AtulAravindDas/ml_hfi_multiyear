@@ -119,6 +119,12 @@ class TorchModel(BaseModel):
         )
         assert len(self.config["dense_units"]) == len(self.config["dense_activations"])
 
+        # Augmentation layers
+        self.augmentation = torch.nn.Sequential(
+            v2.RandomHorizontalFlip(),
+            v2.RandomVerticalFlip(),
+        )
+
         # CNN block
         self.conv_block = conv_block(
             [self.input_shape[-1], *config["filters"][:-1]],
@@ -129,6 +135,9 @@ class TorchModel(BaseModel):
 
         # Flat layer
         self.flat = torch.nn.Flatten(start_dim=1)
+
+        # Dropout layer
+        self.dropout = torch.nn.Dropout(p=config["dropout"])
 
         # Dense blocks
         self.denseblock = dense_block(
@@ -154,8 +163,8 @@ class TorchModel(BaseModel):
         x_scaled = self.rescale_input(input)
 
         # data augmentation
-        x = v2.RandomHorizontalFlip()(x_scaled)
-        x = v2.RandomVerticalFlip()(x)
+        #TODO: CHECK THAT THIS IS OFF DURING INFERENCE
+        x = self.augmentation(x_scaled)
 
         # CNN block
         x = self.conv_block(x)
@@ -168,7 +177,7 @@ class TorchModel(BaseModel):
         x = torch.cat((x, x_scaled_flat), dim=-1)
 
         # dropout layer
-        x = torch.nn.Dropout(p=self.config["dropout"])(x)
+        x = self.dropout(x)
 
         # dense block
         x = self.denseblock(x)
@@ -179,29 +188,35 @@ class TorchModel(BaseModel):
 
         return x
 
-    def predict(self, dataloader=None, batch_size=128, device="cpu"):
+    def predict(self, dataloader, device="cpu"):
 
         self.to(device)
         self.eval()
         with torch.inference_mode():
 
-            start_time = time.time()
-
             output = np.zeros((len(dataloader.dataset.sample_files), 1))
+            start_time = time.time()
             for batch_idx, (data, target) in enumerate(dataloader):
-                input, target = data.to(device), target.to(device)
-                out = self(input).to("cpu")
+
+                data, target = data.to(device), target.to(device)
+                out = self(data).to("cpu")
 
                 batch_size = len(out)
                 output[batch_idx * batch_size : (batch_idx + 1) * batch_size] = out
-                # outputs.extend([result.cpu() for result in results])
 
-                # torch.cuda.empty_cache()
-                # torch.mps.empty_cache()
+                if batch_idx % 100 == 0:
+                    execution_time = time.time() - start_time
+                    print(
+                        f"batch {batch_idx} of {int(np.ceil(output.shape[0] / batch_size))} - "
+                        f"{execution_time:.3f}s - "
+                        f"{execution_time/((batch_idx+1)*batch_size):.7f}s/sample"
+                    )
+
+            output = np.asarray(output)
 
             end_time = time.time()
             execution_time = end_time - start_time
-            print(f"Execution time: {execution_time:.3f}s")
+            print(f"\nExecution time: {execution_time:.3f}s")
             print(f"Number samples: {output.shape[0]}")
             print(f"Time per sample: {execution_time/output.shape[0]:.7f}s")
 

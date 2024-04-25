@@ -47,7 +47,7 @@ class CustomData(torch.utils.data.Dataset):
         self.sample_years = self.tags[0]
         self.sample_lats = self.tags[1]
         self.sample_lons = self.tags[2]
-        self.sample_files = self.tags[3]
+        self.sample_files = np.asarray(self.tags[3])
 
     def __len__(self):
         # return len(self.tags[0])
@@ -56,7 +56,6 @@ class CustomData(torch.utils.data.Dataset):
     def __getitem__(self, id_batch):
 
         # get consecutive indices based on starting index of batch_id
-        # idx = np.arange(idx, idx + self.config["batch_size"])
         idx = np.arange(
             id_batch * self.config["batch_size"],
             (id_batch + 1) * self.config["batch_size"],
@@ -74,20 +73,21 @@ class CustomData(torch.utils.data.Dataset):
             sample_years = self.sample_years[i]
             sample_lats = self.sample_lats[i]
             sample_lons = self.sample_lons[i]
-            sample_files = np.asarray(self.sample_files)[i]
+            sample_files = self.sample_files[i]
 
         elif self.config["mode"] == "inference":
+
             try:
                 sample_years = self.sample_years[idx]
                 sample_lats = self.sample_lats[idx]
                 sample_lons = self.sample_lons[idx]
-                sample_files = np.asarray(self.sample_files)[idx]
+                sample_files = self.sample_files[idx]
             except:
                 idx = np.where(idx < len(self.sample_years))[0]
                 sample_years = self.sample_years[idx]
                 sample_lats = self.sample_lats[idx]
                 sample_lons = self.sample_lons[idx]
-                sample_files = np.asarray(self.sample_files)[idx]
+                sample_files = self.sample_files[idx]
 
         else:
             raise NotImplementedError("no such mode.")
