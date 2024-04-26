@@ -25,7 +25,7 @@ class SMSELoss(torch.nn.Module):
     def forward(self, output, target):
 
         loss = F.mse_loss(output, target)
-        return torch.sqrt(loss).mean()
+        return torch.sqrt(loss)
 
 
 class MSELoss(torch.nn.Module):
@@ -39,4 +39,4 @@ class MSELoss(torch.nn.Module):
     def forward(self, output, target):
 
         loss = F.mse_loss(output, target)
-        return loss.mean()
+        return loss
