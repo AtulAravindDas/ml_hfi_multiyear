@@ -1,33 +1,37 @@
-"""Methods for doing analysis and processing data
+"""
+Data loader modules.
 
 Functions
 ---------
-get_sample_weights(settings, data)
-permute_shuffle_sample_list(settings, sample_years, sample_lats, sample_lons)
+remove_nodata(x, y=None, nodata=255)
+get_tile_indices(hfi_tif, tile)
+remove_nodata(x, y=None, nodata=255)
+Classes
+---------
+
+
 """
+
 import numpy as np
-import matplotlib.pyplot as plt
-import rasterio
 from rasterio.windows import Window
 
 __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
-__date__ = "11 May 2023"
-
-
-def get_directories():
-    dir_dict = {
-        "data_dir": "data/",
-        "landsat_dir": "data/landsat_export_1x1/",
-        "predictions_dir": "predictions/",
-        "figures_dir": "figures/",
-        "save_model_dir": "saved_models/",
-        "mosaics_dir": "mosaics/",
-        "shapefiles_dir": "data/shapefiles/",
-    }
-    return dir_dict
+__date__ = "24 April 2024"
 
 
 def remove_nodata(x, y=None, nodata=255):
+    """
+    Remove nodata values from the input arrays.
+
+    Parameters:
+    - x (ndarray): Input array.
+    - y (ndarray, optional): Second input array. Default is None.
+    - nodata (int, optional): Nodata value to be removed. Default is 255.
+
+    Returns:
+    - If y is None, returns the filtered x array.
+    - If y is not None, returns the filtered x and y arrays.
+    """
     if y is None:
         index = np.where(x != nodata)[0]
         return x[index]
@@ -44,8 +48,16 @@ def remove_nodata(x, y=None, nodata=255):
 
 
 def get_tile_indices(hfi_tif, tile):
-    # tile == lat_s, lat_n, lon_w, lon_e
+    """
+    Get the indices of the tile within the HFI raster.
 
+    Parameters:
+    - hfi_tif (rasterio.DatasetReader): HFI raster dataset.
+    - tile (tuple): Tuple containing the tile boundaries (lat_s, lat_n, lon_w, lon_e).
+
+    Returns:
+    - Tuple containing the indices of the tile within the HFI raster.
+    """
     ilat_n, ilon_w = hfi_tif.index(tile[2], tile[1])
     ilat_s, ilon_e = hfi_tif.index(tile[3], tile[0])
 
@@ -55,6 +67,17 @@ def get_tile_indices(hfi_tif, tile):
 
 
 def trim_hfi_region(indices, hfi_tif, region):
+    """
+    Trim the HFI region based on the given indices and region boundaries.
+
+    Parameters:
+    - indices (tuple): Tuple containing the indices of the HFI region to be trimmed.
+    - hfi_tif (rasterio.DatasetReader): HFI raster dataset.
+    - region (tuple): Tuple containing the region boundaries (lat_s, lat_n, lon_w, lon_e).
+
+    Returns:
+    - Tuple containing the trimmed indices of the HFI region.
+    """
     ilat_s, ilat_n, ilon_w, ilon_e = indices
 
     lat_indices = np.arange(ilat_n, ilat_s + 1)
@@ -77,12 +100,26 @@ def trim_hfi_region(indices, hfi_tif, region):
     return ilat_s, ilat_n, ilon_w, ilon_e
 
 
-def mask_shapefile_region(hfi_tif, mask_tif, shp_dict, country_names, showplot=False):
+def mask_shapefile_region(hfi_tif, mask_tif, shp_dict, country_names):
+    """
+    Mask the HFI raster based on a shapefile region.
+
+    Parameters:
+    - hfi_tif (rasterio.DatasetReader): HFI raster dataset.
+    - mask_tif (rasterio.DatasetReader): Mask raster dataset.
+    - shp_dict (pandas.DataFrame): DataFrame containing shapefile information.
+    - country_names (list): List of country names to be masked.
+
+    Returns:
+    - Masked HFI raster array.
+    """
     # trim the grids to be the same
     lon_w, lat_n = hfi_tif.xy(0, 0, offset="ul")
     lon_e, lat_s = hfi_tif.xy(hfi_tif.height - 1, hfi_tif.width - 1, offset="ul")
 
-    ilat_s, ilat_n, ilon_w, ilon_e = get_tile_indices(mask_tif, (lat_s, lat_n, lon_w, lon_e))
+    ilat_s, ilat_n, ilon_w, ilon_e = get_tile_indices(
+        mask_tif, (lat_s, lat_n, lon_w, lon_e)
+    )
     ilat_s, ilon_e = (
         ilat_s + 1,
         ilon_e + 1,
@@ -98,10 +135,5 @@ def mask_shapefile_region(hfi_tif, mask_tif, shp_dict, country_names, showplot=F
     # mask the hfi
     country_codes = shp_dict.loc[shp_dict["ADMIN"].isin(country_names)].index.to_numpy()
     masked_hfi = np.where(np.isin(shp_mask, country_codes), hfi, 255)
-
-    if showplot:
-        plt.figure()
-        plt.imshow(masked_hfi)
-        plt.show()
 
     return masked_hfi
