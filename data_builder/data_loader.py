@@ -71,7 +71,9 @@ class CustomData(torch.utils.data.Dataset):
         Returns:
             int: The length of the dataset.
         """
-        return np.ceil(len(self.tags[0]) / self.config["trainer"]["batch_size"]).astype(int)
+        return np.ceil(len(self.tags[0]) / self.config["trainer"]["batch_size"]).astype(
+            int
+        )
 
     def __getitem__(self, id_batch):
         """
@@ -89,7 +91,7 @@ class CustomData(torch.utils.data.Dataset):
         )
 
         if self.config["mode"] == "training":
-            tile_key = self.sample_files[idx[0]]
+            tile_key = self.sample_files[self.rng.choice(idx, 1, replace=False)[0]]
 
             i = self.rng.choice(
                 self.tags_dict[tile_key],
