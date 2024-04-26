@@ -8,7 +8,7 @@ This work relies entirely on the efforts of [0] to create a labeled dataset of 2
 ***
 This code was written in python 3.12.0 and pytorch 2.1.2.post3 and can be significantly sped-up using GPUs.
 
-### Python Environment - Tensorflow
+### Python Environment - Pytorch
 The following python environment was used to implement this code.
 ```
 conda create --name env-torch-mlhfi python=3.12.0
