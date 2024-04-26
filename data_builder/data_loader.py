@@ -1,8 +1,14 @@
-"""Data loader modules.
+"""
+Data loader modules.
+
+Functions
+---------
+read_output_data(config, tiff, sample_lon, sample_lat)
 
 Classes
 ---------
 CustomData(torch.utils.data.Dataset)
+    A class representing a custom data.
 
 """
 
@@ -31,7 +37,16 @@ class CustomData(torch.utils.data.Dataset):
     """
 
     def __init__(self, config, tags):
+        """
+        Initialize the CustomData dataset.
 
+        Args:
+            config (dict): Configuration parameters for the dataset.
+            tags (list): List of tags for the dataset.
+
+        Returns:
+            None
+        """
         tags_dict = {}
         for filename in np.unique(tags[-1]):
             isample = [
@@ -50,12 +65,24 @@ class CustomData(torch.utils.data.Dataset):
         self.sample_files = np.asarray(self.tags[3])
 
     def __len__(self):
-        # return len(self.tags[0])
+        """
+        Get the length of the dataset.
+
+        Returns:
+            int: The length of the dataset.
+        """
         return np.ceil(len(self.tags[0]) / self.config["trainer"]["batch_size"]).astype(int)
 
     def __getitem__(self, id_batch):
+        """
+        Get an item from the dataset.
 
-        # get consecutive indices based on starting index of batch_id
+        Args:
+            id_batch (int): The index of the batch.
+
+        Returns:
+            tuple: A tuple containing the input data and the output data.
+        """
         idx = np.arange(
             id_batch * self.config["trainer"]["batch_size"],
             (id_batch + 1) * self.config["trainer"]["batch_size"],
@@ -96,14 +123,11 @@ class CustomData(torch.utils.data.Dataset):
             x == sample_files[0] for x in sample_files
         ), f"these must all be the same files: {sample_files}"
 
-        # GET INPUT DATA
         input_data = self.get_input_data(
             sample_years, sample_lats, sample_lons, sample_files
         )
-        # swap dimensions to make (batch, channels, width, height)
         input_data = np.swapaxes(input_data, 1, 3)
 
-        # GET OUTPUT DATA
         output_data = self.get_output_data(
             sample_years, sample_lats, sample_lons, sample_files
         )
@@ -114,6 +138,18 @@ class CustomData(torch.utils.data.Dataset):
         )
 
     def get_input_data(self, sample_years, sample_lats, sample_lons, sample_files):
+        """
+        Get the input data for a batch.
+
+        Args:
+            sample_years (list): List of sample years.
+            sample_lats (list): List of sample latitudes.
+            sample_lons (list): List of sample longitudes.
+            sample_files (list): List of sample files.
+
+        Returns:
+            np.ndarray: The input data for the batch.
+        """
         batch_input = np.zeros(
             (
                 len(sample_years),
@@ -123,19 +159,16 @@ class CustomData(torch.utils.data.Dataset):
             )
         )
 
-        # read landsat file
         filename = LANDSAT_DIR + sample_files[0] + ".tif"
 
         if not os.path.isfile(filename):
             if self.config["mode"] == "training":
                 raise ValueError("No such input Landsat file: " + filename)
             elif self.config["mode"] == "inference":
-                # return torch.tensor(batch_input, dtype=torch.float32)
                 return batch_input
             else:
                 raise NotImplementedError("no such mode.")
 
-        # intialize tif neighborhood dictionary and loop through samples to get the data
         tif_dict = {}
         tif_dict, flag = read_landsat.fill_tif_dict(
             "central",
@@ -160,18 +193,25 @@ class CustomData(torch.utils.data.Dataset):
 
             batch_input[isample, :, :, :] = sample_out
 
-        # close tifs in the dictionary
         for key in tif_dict.keys():
             if isinstance(tif_dict[key], rasterio.io.DatasetReader):
                 tif_dict[key].close()
 
-        # convert to tensor
-        # dat = torch.tensor(batch_input, dtype=torch.float32)
-
         return batch_input
 
     def get_output_data(self, sample_years, sample_lats, sample_lons, sample_files):
-        # Get HFI file
+        """
+        Get the output data for a batch.
+
+        Args:
+            sample_years (list): List of sample years.
+            sample_lats (list): List of sample latitudes.
+            sample_lons (list): List of sample longitudes.
+            sample_files (list): List of sample files.
+
+        Returns:
+            np.ndarray: The output data for the batch.
+        """
         assert all(
             x == sample_years[0] for x in sample_years
         ), f"these must all be the same years: {sample_years}"
@@ -195,6 +235,18 @@ class CustomData(torch.utils.data.Dataset):
 
 
 def read_output_data(config, tiff, sample_lon, sample_lat):
+    """
+    Read the output data from a TIFF file.
+
+    Args:
+        config (dict): Configuration parameters.
+        tiff (rasterio.io.DatasetReader): The TIFF file.
+        sample_lon (float): The sample longitude.
+        sample_lat (float): The sample latitude.
+
+    Returns:
+        float: The output data value.
+    """
     ilat, ilon = tiff.index(sample_lon, sample_lat)
     window = Window(ilon, ilat, 1, 1)
 
@@ -205,11 +257,5 @@ def read_output_data(config, tiff, sample_lon, sample_lat):
 
     if len(sample_output) == 0:
         sample_output = 0.0
-
-    # TODO: We are trying to make this obsolete, so delete later.
-    # this is where we can force the network to predict zeros or ones
-    # if config["mode"] == "training":
-    #     if sample_output == 0.0:
-    #         sample_output = config["kluge_value_for_zero"]
 
     return sample_output

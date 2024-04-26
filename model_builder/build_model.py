@@ -1,17 +1,27 @@
-"""Network modules for pytorch models.
+"""
+Network modules for pytorch models.
 
 Functions
 ---------
 conv_couplet(in_channels, out_channels, act_fun, *args, **kwargs)
-dense_lazy_couplet(out_features, act_fun, *args, **kwargs)
-conv_block(in_channels, out_channels, act_fun, kernel_size)
-dense_block(out_features, act_fun)
+    Create a sequential module consisting of a convolutional layer, activation function, and max pooling layer.
 
+dense_lazy_couplet(out_features, act_fun, *args, **kwargs)
+    Create a sequential module consisting of a lazy linear layer and activation function.
+
+conv_block(in_channels, out_channels, act_fun, kernel_size)
+    Create a sequential module consisting of multiple conv_couplet modules.
+
+dense_block(out_features, act_fun)
+    Create a sequential module consisting of multiple dense_lazy_couplet modules.
 
 Classes
 ---------
-RescaleLayer()
+RescaleLayer
+    A class representing a rescaling layer.
+
 TorchModel(base.base_model.BaseModel)
+    A class representing a torch model.
 
 """
 
@@ -90,6 +100,30 @@ class RescaleLayer:
 
 
 class TorchModel(BaseModel):
+    """
+    TorchModel class represents a torch-based model for a specific task.
+
+    Args:
+        config (dict): Configuration parameters for the model.
+
+    Attributes:
+        config (dict): Configuration parameters for the model.
+        input_shape (tuple): Shape of the input data.
+        augmentation (torch.nn.Sequential): Augmentation layers.
+        conv_block (torch.nn.Module): CNN block.
+        flat (torch.nn.Flatten): Flat layer.
+        dropout (torch.nn.Dropout): Dropout layer.
+        denseblock (torch.nn.Module): Dense blocks.
+        rescale_input (RescaleLayer): Rescaling layer for input data.
+        rescale_target (RescaleLayer): Rescaling layer for target data.
+        output (torch.nn.Module): Output layers.
+
+    Methods:
+        forward(input): Performs forward pass of the model.
+        predict(dataloader, device): Makes predictions using the model.
+
+    """
+
     def __init__(self, config):
         super().__init__()
 
@@ -146,6 +180,16 @@ class TorchModel(BaseModel):
         )
 
     def forward(self, input):
+        """
+        Performs forward pass of the model.
+
+        Args:
+            input (torch.Tensor): Input data.
+
+        Returns:
+            torch.Tensor: Output of the model.
+
+        """
 
         # rescale input
         input = self.rescale_input(input)
@@ -178,6 +222,17 @@ class TorchModel(BaseModel):
         return x
 
     def predict(self, dataloader, device="cpu"):
+        """
+        Makes predictions using the model.
+
+        Args:
+            dataloader (torch.utils.data.DataLoader): DataLoader for the dataset.
+            device (str): Device to use for predictions. Default is "cpu".
+
+        Returns:
+            numpy.ndarray: Array of predictions.
+
+        """
 
         self.to(device)
         self.eval()

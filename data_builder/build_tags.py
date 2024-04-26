@@ -7,10 +7,15 @@ data_generator
 Functions
 ---------
 get_tags(config)
+    Retrieves the training and validation tags based on the provided configuration.
 build_dataset(config, sample_years, sample_lats, sample_lons)
+    Builds the dataset using the provided configuration and sample years, latitudes, and longitudes.
 make_sample_list(config,)
+    Creates a list of samples based on the provided configuration.
 data_generator.get_input_data(self, years, sample_lats, sample_lons)
+    Retrieves the input data for the data generator based on the provided years, latitudes, and longitudes.
 data_generator.get_output_data(self, years, sample_lats, sample_lons)
+    Retrieves the output data for the data generator based on the provided years, latitudes, and longitudes.
 """
 
 import os
@@ -287,12 +292,6 @@ def get_training_tags(config):
     # Clean the tags
     tags_train, tags_val = clean_tags(
         tags_train, tags_val, config["trainer"]["batch_size"]
-    )
-
-    # PRINT META DATA
-    print(
-        f"total training samples = {len(tagyear_train)}, "
-        f"total validation samples = {len(tagyear_val)}\n"
     )
 
     return tags_train, tags_val

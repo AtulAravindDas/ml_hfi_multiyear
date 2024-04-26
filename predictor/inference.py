@@ -1,13 +1,19 @@
 """
-predictions.py
-
-This module contains functions for creating a mosaic from a list of filenames.
 
 Functions:
 ----------
 create_mosaic(filenames_list: list) -> Tuple[numpy.ndarray, rasterio.Affine]:
+    This function creates a mosaic from a list of filenames. It opens each file, merges them into a mosaic,
+    and then closes each file. The function returns the mosaic and the transformation associated with it.
+
 predict(config, model, tags) -> numpy.ndarray:
-make_predictions(config, model, tags) -> Tuple[numpy.ndarray, numpy.ndarray, Tuple[float, float, float, float]]:
+    Generate predictions for ml-HFI.
+
+make_predictions(config, model, tags, dataloader) -> Tuple[numpy.ndarray, numpy.ndarray, Tuple[float, float, float, float]]:
+    Generate predictions for ml-HFI.
+
+save_predictions_tif(hfi_predict, predictions_filename, trans=None, latlon_bounds=None, nodata=255) -> dict:
+    Save the predictions as a GeoTIFF file.
 
 """
 
@@ -47,18 +53,9 @@ def create_mosaic(filenames_list):
     for fp in filenames_list:
         src = rasterio.open(fp)
         src_files_to_mosaic.append(src)
-        # print(src.meta)
 
     # merge the tif files
     mosaic, out_trans = merge.merge(src_files_to_mosaic)
-
-    # NOTE: alternative if we want every mosaic to cover the entire globe.
-    # This takes up more space though.
-    # with rasterio.open(DATA_DIR + "hii_coastal_buffer_mask.tif") as buffer_tif:
-    #     bb = buffer_tif.bounds
-    #     mosaic, out_trans = merge.merge(src_files_to_mosaic,
-    #                                     bounds=bb,
-    #                                     )
 
     for src in src_files_to_mosaic:
         src.close()
@@ -74,6 +71,7 @@ def make_predictions(config, model, tags, dataloader):
         config (dict): A dictionary containing the config for prediction.
         model: The trained model used for prediction.
         tags: The tags used for prediction.
+        dataloader: The dataloader used for prediction.
 
     Returns:
         tuple: A tuple containing the predicted HFI data, the labels (if available), and the latitude and longitude bounds.

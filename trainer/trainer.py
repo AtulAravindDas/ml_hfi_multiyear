@@ -1,4 +1,5 @@
-"""Trainer modules for pytorch models.
+"""
+Trainer modules for pytorch models.
 
 Classes
 ---------
@@ -15,6 +16,47 @@ from utils.utils import MetricTracker
 class Trainer(BaseTrainer):
     """
     Trainer class
+
+    Parameters
+    ----------
+    model : torch.nn.Module
+        The model to be trained.
+    criterion : torch.nn.Module
+        The loss function.
+    metric_funcs : list of callable
+        List of metric functions to evaluate the model's performance.
+    optimizer : torch.optim.Optimizer
+        The optimizer used for training.
+    max_epochs : int
+        The maximum number of training epochs.
+    data_loader : torch.utils.data.DataLoader
+        The data loader for the training data.
+    validation_data_loader : torch.utils.data.DataLoader
+        The data loader for the validation data.
+    device : torch.device
+        The device to run the training on.
+    config : dict
+        Configuration parameters for the trainer.
+
+    Attributes
+    ----------
+    config : dict
+        Configuration parameters for the trainer.
+    device : torch.device
+        The device to run the training on.
+    data_loader : torch.utils.data.DataLoader
+        The data loader for the training data.
+    validation_data_loader : torch.utils.data.DataLoader
+        The data loader for the validation data.
+    do_validation : bool
+        Flag indicating whether to perform validation during training.
+
+    Methods
+    -------
+    _train_epoch(epoch)
+        Training logic for an epoch.
+    _validation_epoch(epoch)
+        Validation logic after training an epoch.
     """
 
     def __init__(
@@ -49,8 +91,14 @@ class Trainer(BaseTrainer):
         """
         Training logic for an epoch
 
-        :param epoch: Integer, current training epoch.
-        :return: A log that contains average loss and metric in this epoch.
+        Parameters
+        ----------
+        epoch : int
+            Current training epoch.
+
+        Returns
+        -------
+        None.
         """
 
         self.model.train()
@@ -94,8 +142,14 @@ class Trainer(BaseTrainer):
         """
         Validate after training an epoch
 
-        :param epoch: Integer, current training epoch.
-        :return: A log that contains information about validation
+        Parameters
+        ----------
+        epoch : int
+            Current training epoch.
+
+        Returns
+        -------
+        None.
         """
         self.model.eval()
         with torch.no_grad():
