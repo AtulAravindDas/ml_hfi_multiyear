@@ -13,9 +13,11 @@ MetricTracker()
 
 """
 
+import os
 import json
 import torch
 import numpy as np
+import pickle
 
 
 def get_directories():
@@ -24,8 +26,10 @@ def get_directories():
     return directories
 
 
-def get_model_name(expname, seed):
-    return expname + "_seed" + str(seed)
+def get_default_filepaths():
+    with open("utils/default_filepaths.json") as f:
+        filepaths = json.load(f)
+    return filepaths
 
 
 def prepare_device(device="gpu"):
@@ -46,8 +50,55 @@ def prepare_device(device="gpu"):
     return device
 
 
-def save_torch_model(model, filename):
-    torch.save(model.state_dict(), filename)
+def get_model_name(expname, seed):
+    return expname + "_seed" + str(seed)
+
+
+def get_model_dir(exp_name, model_name):
+    directory_paths = get_directories()
+    MODEL_DIR = directory_paths["save_model_dir"]
+
+    dir = MODEL_DIR + "/" + exp_name + "/" + model_name + "/"
+    os.makedirs(dir, exist_ok=True)
+
+    return dir
+
+
+def save_training_tags(config, tags_train, tags_val):
+
+    model_name = get_model_name(config["exp_name"], config["seed"])
+    dir = get_model_dir(config["exp_name"], model_name)
+
+    with open(dir + "tags_train.pkl", "wb") as f:
+        pickle.dump(tags_train, f)
+    with open(dir + "tags_val.pkl", "wb") as f:
+        pickle.dump(tags_val, f)
+
+
+def load_training_tags(config):
+
+    model_name = get_model_name(config["exp_name"], config["seed"])
+    dir = get_model_dir(config["exp_name"], model_name)
+
+    if not os.path.exists(dir + "tags_train.pkl"):
+        return None, None
+    if not os.path.exists(dir + "tags_val.pkl"):
+        return None, None
+
+    with open(dir + "tags_train.pkl", "rb") as f:
+        tags_train = pickle.load(f)
+    with open(dir + "tags_val.pkl", "rb") as f:
+        tags_val = pickle.load(f)
+
+    return tags_train, tags_val
+
+
+def save_torch_model(model, config):
+
+    model_name = get_model_name(config["exp_name"], config["seed"])
+    dir = get_model_dir(config["exp_name"], model_name)
+
+    torch.save(model.state_dict(), dir + "/" + model_name + ".pt")
 
 
 def load_torch_model(model, filename):
@@ -77,8 +128,12 @@ def get_config(exp_name):
     config["landsat_to_hfi_ratio"] = constants["LANDSAT_TO_HII_RATIO"]
 
     # SET SCENE WIDTH
-    assert config["scene_width"] % 2 == 1, "the scene_width must be an odd number in units of hfi pixels"
-    config["scene_width_landsat"] = int(config["scene_width"] * config["landsat_to_hfi_ratio"])
+    assert (
+        config["data"]["scene_width"] % 2 == 1
+    ), "the scene_width must be an odd number in units of hfi pixels"
+    config["scene_width_landsat"] = int(
+        config["data"]["scene_width"] * config["landsat_to_hfi_ratio"]
+    )
 
     return config
 

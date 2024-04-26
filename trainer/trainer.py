@@ -58,7 +58,7 @@ class Trainer(BaseTrainer):
 
         for batch_idx, (data, target) in enumerate(self.data_loader):
 
-            if batch_idx == self.config["batches_per_epoch"]:
+            if batch_idx == self.config["trainer"]["batches_per_epoch"]:
                 break
 
             # Move data to device

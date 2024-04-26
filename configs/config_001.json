@@ -1,35 +1,41 @@
 {
     "exp_name": "exp_001",
-    "device": "gpu",
     "seed": 22,
-
     "mode": null,
-    "training_years": [2020],
-    "inference_years": [2020],
-    "training_region": [33, 34, 71, 72],
-    "inference_region": [-90, 90, -180, 180],
-    "channels": [1, 2, 3, 4, 5, 6],
-    "scene_width": 11,
-    "nbatches": [750, 25],
-    "batches_per_epoch": 100,
-    "inference_chunksize": 5000,
-    "rng_seed": 33,
-    "filters": [64, 128, 128, 128, 128],
-    "cnn_activation": ["ReLU","ReLU","ReLU","ReLU","ReLU"],
-    "kernel_size": [3, 3, 3, 3, 3],
-    "dense_units": [32],
-    "dense_in": [14148],
-    "dense_activations": ["ReLU"],
-    "final_in": 32,
-    "final_activation": "Sigmoid",
-    "aug_randomflip": true,
-    "input_noise": 5,
-    "sample_weights_alpha": 15.0,
-    "subsample": true,
-    "dropout": 0.10,
-    "batch_size": 32,
+    "device": "gpu",
+
     "pickup_where_leftoff": false,
     "save_best_only": true,
+
+    "data": {
+        "training_years": [2015, 2020],
+        "inference_years": [2023],
+        "training_region": [0, 20, 0, 20],
+        "inference_region": [-90, 90, -180, 180],
+
+        "channels": [1, 2, 3, 4, 5, 6],
+        "scene_width": 11,
+
+        "percentage_sampling": 0.003,
+        "val_to_train_ratio": 0.97
+    },
+
+    "architecture": {
+        "input_noise": 5,
+
+        "filters": [64, 128, 128, 128, 128],
+        "cnn_activation": ["ReLU","ReLU","ReLU","ReLU","ReLU"],
+        "kernel_size": [3, 3, 3, 3, 3],
+
+        "dense_units": [32],
+        "dense_in": [14148],
+        "dense_activations": ["ReLU"],
+
+        "dropout": 0.10,
+
+        "final_in": 32,
+        "final_activation": "Sigmoid"
+    },
 
     "inference": {
         "num_workers": 2,
@@ -38,8 +44,12 @@
     },
 
     "trainer": {
-        "max_epochs": 5,
         "loss": "MSELoss",
+
+        "batch_size": 32,
+        "batches_per_epoch": 500,
+        "max_epochs": 5,
+
         "early_stopping":{
             "args":{
                 "patience": 3,

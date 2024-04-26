@@ -19,10 +19,10 @@ from utils import utils
 
 
 directory_paths = utils.get_directories()
-SAVE_MODEL_DIRECTORY = directory_paths["save_model_dir"]
-DATA_DIRECTORY = directory_paths["data_dir"]
-LANDSAT_DIRECTORY = directory_paths["landsat_dir"]
-PREDICTIONS_DIRECTORY = directory_paths["predictions_dir"]
+SAVE_MODEL_DIR = directory_paths["save_model_dir"]
+DATA_DIR = directory_paths["data_dir"]
+LANDSAT_DIR = directory_paths["landsat_dir"]
+PREDICTIONS_DIR = directory_paths["predictions_dir"]
 
 
 class CustomData(torch.utils.data.Dataset):
@@ -42,7 +42,7 @@ class CustomData(torch.utils.data.Dataset):
         self.tags = tags
         self.tags_dict = tags_dict
         self.config = config
-        self.rng = np.random.default_rng(config["rng_seed"])
+        self.rng = np.random.default_rng(config["seed"])
 
         self.sample_years = self.tags[0]
         self.sample_lats = self.tags[1]
@@ -51,14 +51,14 @@ class CustomData(torch.utils.data.Dataset):
 
     def __len__(self):
         # return len(self.tags[0])
-        return np.ceil(len(self.tags[0]) / self.config["batch_size"]).astype(int)
+        return np.ceil(len(self.tags[0]) / self.config["trainer"]["batch_size"]).astype(int)
 
     def __getitem__(self, id_batch):
 
         # get consecutive indices based on starting index of batch_id
         idx = np.arange(
-            id_batch * self.config["batch_size"],
-            (id_batch + 1) * self.config["batch_size"],
+            id_batch * self.config["trainer"]["batch_size"],
+            (id_batch + 1) * self.config["trainer"]["batch_size"],
         )
 
         if self.config["mode"] == "training":
@@ -66,7 +66,7 @@ class CustomData(torch.utils.data.Dataset):
 
             i = self.rng.choice(
                 self.tags_dict[tile_key],
-                self.config["batch_size"],
+                self.config["trainer"]["batch_size"],
                 replace=False,
             )
 
@@ -119,12 +119,12 @@ class CustomData(torch.utils.data.Dataset):
                 len(sample_years),
                 self.config["scene_width_landsat"],
                 self.config["scene_width_landsat"],
-                len(self.config["channels"]),
+                len(self.config["data"]["channels"]),
             )
         )
 
         # read landsat file
-        filename = LANDSAT_DIRECTORY + sample_files[0] + ".tif"
+        filename = LANDSAT_DIR + sample_files[0] + ".tif"
 
         if not os.path.isfile(filename):
             if self.config["mode"] == "training":
@@ -154,8 +154,8 @@ class CustomData(torch.utils.data.Dataset):
                 sample_years[isample],
                 sample_lons[isample],
                 sample_lats[isample],
-                self.config["channels"],
-                self.config["scene_width"],
+                self.config["data"]["channels"],
+                self.config["data"]["scene_width"],
             )
 
             batch_input[isample, :, :, :] = sample_out
@@ -178,7 +178,7 @@ class CustomData(torch.utils.data.Dataset):
 
         batch_output = np.zeros((len(sample_years), 1))
 
-        filename = DATA_DIRECTORY + "hii_" + str(sample_years[0]) + "-01-01_uint8.tif"
+        filename = DATA_DIR + "hii_" + str(sample_years[0]) + "-01-01_uint8.tif"
         if not os.path.isfile(filename):
             return batch_output * 0.0
 

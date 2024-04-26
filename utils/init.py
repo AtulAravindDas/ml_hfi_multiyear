@@ -1,5 +1,6 @@
 import os
 from data_builder import methods
+from utils import utils
 
 dirs = utils.get_directories()
 

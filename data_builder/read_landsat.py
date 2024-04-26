@@ -15,7 +15,7 @@ from utils import utils
 import time
 
 directory_paths = utils.get_directories()
-LANDSAT_DIRECTORY = directory_paths["landsat_dir"]
+LANDSAT_DIR = directory_paths["landsat_dir"]
 
 
 def fill_tif_dict(name, sample_year, sample_lat, sample_lon, tif_dict, config):
@@ -83,7 +83,7 @@ def fill_tif_dict(name, sample_year, sample_lat, sample_lon, tif_dict, config):
         raise NotImplementedError("no such name.")
 
     # check if the file exists, if not, throw flag
-    tif_filename = LANDSAT_DIRECTORY + filename[0] + ".tif"
+    tif_filename = LANDSAT_DIR + filename[0] + ".tif"
     if os.path.isfile(tif_filename) is False:
         # print(tif_filename)
         return tif_dict, True
@@ -572,7 +572,7 @@ def read_input_data(
         rng = np.random.default_rng()
         if config["mode"] == "training":
             random_noise = rng.integers(
-                -config["input_noise"], config["input_noise"] + 1, size=1
+                -config["architecture"]["input_noise"], config["architecture"]["input_noise"] + 1, size=1
             )
             sample_output = sample_output + random_noise
 

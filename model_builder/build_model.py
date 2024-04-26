@@ -26,16 +26,16 @@ import time
 # https://github.com/FrancescoSaverioZuppichini/Pytorch-how-and-when-to-use-Module-Sequential-ModuleList-and-ModuleDict
 
 directory_paths = utils.get_directories()
-SAVE_MODEL_DIRECTORY = directory_paths["save_model_dir"]
+SAVE_MODEL_DIR = directory_paths["save_model_dir"]
 
 
 def get_model(config):
     model = TorchModel(config)
 
-    # checkpoint_dir = SAVE_MODEL_DIRECTORY + config["exp_name"] + "/"
+    # checkpoint_dir = SAVE_MODEL_DIR + config["exp_name"] + "/"
     # model.load_weights(tf.train.latest_checkpoint(checkpoint_dir)).expect_partial()
     model_name = utils.get_model_name(config["exp_name"], config["seed"])
-    return utils.load_torch_model(model, SAVE_MODEL_DIRECTORY + model_name + ".pt")
+    return utils.load_torch_model(model, SAVE_MODEL_DIR + model_name + ".pt")
 
 
 def conv_couplet(in_channels, out_channels, act_fun, *args, **kwargs):
@@ -109,15 +109,15 @@ class TorchModel(BaseModel):
         self.input_shape = (
             config["scene_width_landsat"],
             config["scene_width_landsat"],
-            len(config["channels"]),
+            len(config["data"]["channels"]),
         )
 
         assert (
-            len(self.config["cnn_activation"])
-            == len(self.config["kernel_size"])
-            == len(self.config["filters"])
+            len(self.config["architecture"]["cnn_activation"])
+            == len(self.config["architecture"]["kernel_size"])
+            == len(self.config["architecture"]["filters"])
         )
-        assert len(self.config["dense_units"]) == len(self.config["dense_activations"])
+        assert len(self.config["architecture"]["dense_units"]) == len(self.config["architecture"]["dense_activations"])
 
         # Augmentation layers
         self.augmentation = torch.nn.Sequential(
@@ -127,23 +127,23 @@ class TorchModel(BaseModel):
 
         # CNN block
         self.conv_block = conv_block(
-            [self.input_shape[-1], *config["filters"][:-1]],
-            [*config["filters"]],
-            [*config["cnn_activation"]],
-            [*config["kernel_size"]],
+            [self.input_shape[-1], *config["architecture"]["filters"][:-1]],
+            [*config["architecture"]["filters"]],
+            [*config["architecture"]["cnn_activation"]],
+            [*config["architecture"]["kernel_size"]],
         )
 
         # Flat layer
         self.flat = torch.nn.Flatten(start_dim=1)
 
         # Dropout layer
-        self.dropout = torch.nn.Dropout(p=config["dropout"])
+        self.dropout = torch.nn.Dropout(p=config["architecture"]["dropout"])
 
         # Dense blocks
         self.denseblock = dense_block(
-            config["dense_units"],
-            config["dense_activations"],
-            in_features=config["dense_in"],
+            config["architecture"]["dense_units"],
+            config["architecture"]["dense_activations"],
+            in_features=config["architecture"]["dense_in"],
         )
 
         # Rescaling layers
@@ -152,9 +152,9 @@ class TorchModel(BaseModel):
 
         # Output layers
         self.output = dense_couplet(
-            in_features=config["final_in"],
+            in_features=config["architecture"]["final_in"],
             out_features=1,
-            act_fun=self.config["final_activation"],
+            act_fun=self.config["architecture"]["final_activation"],
         )
 
     def forward(self, input):

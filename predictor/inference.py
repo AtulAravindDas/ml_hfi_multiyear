@@ -25,9 +25,9 @@ import torch
 
 # Get the directory paths from the methods module
 directory_paths = utils.get_directories()
-DATA_DIRECTORY = directory_paths["data_dir"]
-LANDSAT_DIRECTORY = directory_paths["landsat_dir"]
-PREDICTIONS_DIRECTORY = directory_paths["predictions_dir"]
+DATA_DIR = directory_paths["data_dir"]
+LANDSAT_DIR = directory_paths["landsat_dir"]
+PREDICTIONS_DIR = directory_paths["predictions_dir"]
 
 
 def create_mosaic(filenames_list):
@@ -54,7 +54,7 @@ def create_mosaic(filenames_list):
 
     # NOTE: alternative if we want every mosaic to cover the entire globe.
     # This takes up more space though.
-    # with rasterio.open(DATA_DIRECTORY + "hii_coastal_buffer_mask.tif") as buffer_tif:
+    # with rasterio.open(DATA_DIR + "hii_coastal_buffer_mask.tif") as buffer_tif:
     #     bb = buffer_tif.bounds
     #     mosaic, out_trans = merge.merge(src_files_to_mosaic,
     #                                     bounds=bb,
@@ -91,9 +91,9 @@ def make_predictions(config, model, tags, dataloader):
 
     # GET TIFF META DATA
     labels_filename = (
-        DATA_DIRECTORY + "hii_" + str(config["inference_years"][0]) + "-01-01_uint8.tif"
+        DATA_DIR + "hii_" + str(config["data"]["inference_years"][0]) + "-01-01_uint8.tif"
     )
-    filename_mask = DATA_DIRECTORY + "hii_coastal_buffer_mask.tif"
+    filename_mask = DATA_DIR + "hii_coastal_buffer_mask.tif"
 
     lat_s, lat_n, lon_w, lon_e = (
         np.min(tags[1]),
