@@ -258,4 +258,9 @@ def read_output_data(config, tiff, sample_lon, sample_lat):
     if len(sample_output) == 0:
         sample_output = 0.0
 
+    # Force the network to predict zeros or ones
+    # if config["mode"] == "training" and config["data"]["kluge_value_for_zero"] is not None:
+    #     if sample_output == 0.0:
+    #         sample_output = config["data"]["kluge_value_for_zero"]
+
     return sample_output

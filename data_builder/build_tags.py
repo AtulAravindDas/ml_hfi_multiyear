@@ -75,7 +75,7 @@ def get_training_tags(config):
         config, region=config["data"]["training_region"]
     )
     print(
-        f"TRAINING BOUNDS: "
+        f"TRAINING-TILE BOUNDS: "
         f"{lat_s_bound}-{lat_n_bound}, "
         f"{lon_w_bound}-{lon_e_bound}\n"
     )
