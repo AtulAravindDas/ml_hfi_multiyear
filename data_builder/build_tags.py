@@ -40,10 +40,15 @@ DEFAULT_HII_FILEPATH = default_filepaths["hii_filepath"]
 def get_tags(config):
 
     if config["mode"] == "training":
+
         tags_train, tags_val = utils.load_training_tags(config)
+
         if tags_train is None or tags_val is None:
             tags_train, tags_val = get_training_tags(config)
             utils.save_training_tags(config, tags_train, tags_val)
+
+        print(f"# Training Samples:   {len(tags_train[0])}")
+        print(f"# Validation Samples: {len(tags_val[0])}")
 
     elif config["mode"] == "inference":
         tags_train, tags_val = get_inference_tags(config)
@@ -248,9 +253,9 @@ def get_training_tags(config):
 
     # SPLIT INTO TRAINING AND VALIDATION SETS
     nbatches = int(len(sample_lats) // config["trainer"]["batch_size"])
-    p = config["data"]["val_to_train_ratio"]
+    p = config["data"]["val_frac"]
     train_bool = np.repeat(
-        np.random.choice([0, 1], size=nbatches, replace=True, p=[1.0 - p, p]),
+        np.random.choice([0, 1], size=nbatches, replace=True, p=[p, 1.0 - p]),
         config["trainer"]["batch_size"],
     )
 
@@ -353,6 +358,7 @@ def get_inference_tags(config):
             buffer_mask,
             region=config["data"]["inference_region"],
         )
+
         window = Window.from_slices((ilat_n, ilat_s + 1), (ilon_w, ilon_e + 1))
         mask = buffer_mask.read(1, window=window)
         land_pixels = np.sum(mask)

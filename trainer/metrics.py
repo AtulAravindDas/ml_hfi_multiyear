@@ -23,4 +23,3 @@ def custom_mae(output, target):
         assert len(output[:, 0]) == len(target)
 
         return torch.mean(torch.abs(output - target)).item()
-

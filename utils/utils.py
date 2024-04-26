@@ -19,6 +19,8 @@ import torch
 import numpy as np
 import pickle
 
+from model_builder.build_model import TorchModel
+
 
 def get_directories():
     with open("utils/directories.json") as f:
@@ -64,6 +66,22 @@ def get_model_dir(exp_name, model_name):
     return dir
 
 
+def get_predictions_filename(config, landsat_name):
+    model_name = get_model_name(config["exp_name"], config["seed"])
+    dir = get_prediction_dir(config["exp_name"], model_name)
+    return dir + "predictions_" + landsat_name + ".tif"
+
+
+def get_prediction_dir(exp_name, model_name):
+    directory_paths = get_directories()
+    PREDICTION_DIR = directory_paths["predictions_dir"]
+
+    dir = PREDICTION_DIR + "/" + exp_name + "/" + model_name + "/"
+    os.makedirs(dir, exist_ok=True)
+
+    return dir
+
+
 def save_training_tags(config, tags_train, tags_val):
 
     model_name = get_model_name(config["exp_name"], config["seed"])
@@ -98,13 +116,26 @@ def save_torch_model(model, config):
     model_name = get_model_name(config["exp_name"], config["seed"])
     dir = get_model_dir(config["exp_name"], model_name)
 
-    torch.save(model.state_dict(), dir + "/" + model_name + ".pt")
+    torch.save(model.state_dict(), dir + model_name + ".pt")
 
 
 def load_torch_model(model, filename):
     model.load_state_dict(torch.load(filename))
     model.eval()
     return model
+
+
+def load_model(config, clean=True):
+    model = TorchModel(config)
+    if clean:
+        return model
+    else:
+        model_name = get_model_name(config["exp_name"], config["seed"])
+        dir = get_model_dir(config["exp_name"], model_name)
+
+        print("loading model from: ", dir + model_name + ".pt")
+
+        return load_torch_model(model, dir + model_name + ".pt")
 
 
 def get_config(exp_name):

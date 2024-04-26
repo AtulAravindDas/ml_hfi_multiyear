@@ -86,9 +86,6 @@ class BaseTrainer:
 
                 break
 
-            # if epoch % 25 == 0:
-            #     torch.mps.empty_cache()
-
             # Print out progress during training
             end_time = time.time()
             elapsed_time = end_time - start_time

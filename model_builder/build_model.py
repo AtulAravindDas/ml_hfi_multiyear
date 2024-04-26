@@ -25,18 +25,6 @@ import time
 
 # https://github.com/FrancescoSaverioZuppichini/Pytorch-how-and-when-to-use-Module-Sequential-ModuleList-and-ModuleDict
 
-directory_paths = utils.get_directories()
-SAVE_MODEL_DIR = directory_paths["save_model_dir"]
-
-
-def get_model(config):
-    model = TorchModel(config)
-
-    # checkpoint_dir = SAVE_MODEL_DIR + config["exp_name"] + "/"
-    # model.load_weights(tf.train.latest_checkpoint(checkpoint_dir)).expect_partial()
-    model_name = utils.get_model_name(config["exp_name"], config["seed"])
-    return utils.load_torch_model(model, SAVE_MODEL_DIR + model_name + ".pt")
-
 
 def conv_couplet(in_channels, out_channels, act_fun, *args, **kwargs):
     return torch.nn.Sequential(
