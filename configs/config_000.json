@@ -50,13 +50,13 @@
         "loss":{
             "type": "SMSELoss",
             "args": {
-                "zero_weighting": 100.0
+                "zero_weighting": 10000.0
             }
         },
 
         "early_stopping":{
             "args":{
-                "patience": 5,
+                "patience": 3,
                 "min_delta": 0.00
             }
         }
