@@ -6,9 +6,9 @@
 
     "data": {
         "training_years": [2015, 2020],
-        "inference_years": [2020],
+        "inference_years": [2023],
         "training_region": [0, 20, 0, 20],
-        "inference_region": [0, 20, 0, 20],
+        "inference_region": [5, 10, 0, 5],
 
         "channels": [1, 2, 3, 4, 5, 6],
         "scene_width": 11,

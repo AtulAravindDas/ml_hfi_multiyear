@@ -1,6 +1,4 @@
 import os
-import sys
-import importlib as imp
 import numpy as np
 import argparse
 import torch
@@ -20,13 +18,14 @@ def main():
     It loads the model, processes Landsat tiles, makes predictions, and saves the results as TIFF files.
     The predictions are then tiled together to create a mosaic image.
 
-    Usage: python oracle.py <expname>
+    Usage: python oracle.py <expname> <gpu_id>
 
     Arguments:
         expname (str): Experiment name to specify the config file, e.g. exp101
+        gpu_id (int; OPTIONAL): GPU device ID (number)
 
     Example:
-        python oracle.py exp101
+        python oracle.py exp101 0
     """
 
     # print(f"python version = {sys.version}")
@@ -128,12 +127,12 @@ def main():
                 )
 
                 filenames_list.append(predictions_filename)
-                print("\n")
 
         # TILE THE PREDICTIONS TOGETHER
+        model_name = utils.get_model_name(config["expname"], config["seed"])
         mosaic_filename = (
             utils.get_directories()["mosaics_dir"]
-            + config["expname"]
+            + model_name
             + "_"
             + str(config["data"]["inference_years"][0])
             + "_mlhfi_mosaic.tif"

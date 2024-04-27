@@ -1,5 +1,3 @@
-import sys
-import numpy as np
 import argparse
 import matplotlib.pyplot as plt # type: ignore
 import warnings
@@ -22,13 +20,20 @@ def main():
     """
     Main function for training and evaluating a model.
 
+    Usage: python driver.py <expname> <gpu_id>
+
     Args:
         expname (str): Experiment name to specify the config file, e.g. exp101.
-        gpu_id (str): GPU device ID (number), e.g. 1 [default=0].
+        gpu_id (str; OPTIONAL): GPU device ID (number), e.g. 1 [default=0].
 
     Returns:
         None
     """
+
+    # print(f"python version = {sys.version}")
+    # print(f"numpy version = {np.__version__}")
+    # print(f"pytorch version = {torch.__version__}")
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "expname", help="experiment name to specify the config file, e.g. exp101"
