@@ -81,6 +81,11 @@ def get_training_tags(config):
     )
 
     with rasterio.open(DEFAULT_MASK_FILEPATH) as buffer_mask:
+        # TODO: this is possibly slowing things down as we are
+        # appending to a very long list in a loop. Consider
+        # preallocating memory and then filling in the values
+        # Looks like numpy is faster for longer lists/arrays
+        # as they grow in size due to the way memory is allocated
         sample_lats = []
         sample_lons = []
         sample_years = []

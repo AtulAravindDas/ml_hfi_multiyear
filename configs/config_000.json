@@ -1,26 +1,28 @@
 {
-    "exp_name": "exp_000",
+    "expname": "exp000",
     "seed": 22,
     "mode": null,
     "device": "gpu",
 
     "data": {
-        "training_years": [2015, 2020],
+        "training_years": [2015],
         "inference_years": [2020],
-        "training_region": [8, 10, 0, 2],
-        "inference_region": [-90, 90, -180, 180],
+        "training_region": [8, 9, 8, 9],
+        "inference_region": [8, 9, 8, 9],
 
         "channels": [1, 2, 3, 4, 5, 6],
         "scene_width": 11,
 
-        "percentage_sampling": 0.005,
-        "val_frac": 0.05
+        "percentage_sampling": 0.05,
+        "val_frac": 0.05,
+
+        "kluge_value_for_zero": null
     },
 
     "architecture": {
         "input_noise": 5,
 
-        "filters": [64, 128, 128, 128, 128],
+        "filters": [128, 128, 128, 128, 128],
         "cnn_activation": ["ReLU","ReLU","ReLU","ReLU","ReLU"],
         "kernel_size": [3, 3, 3, 3, 3],
 
@@ -44,19 +46,19 @@
 
         "resume_training": false,
         "batch_size": 32,
-        "batches_per_epoch": 500,
-        "max_epochs": 30,
+        "batches_per_epoch": 5,
+        "max_epochs": 2,
 
         "loss":{
             "type": "SMSELoss",
             "args": {
-                "zero_weighting": 10000.0
+                "zero_weighting": null
             }
         },
 
         "early_stopping":{
             "args":{
-                "patience": 3,
+                "patience": 5,
                 "min_delta": 0.00
             }
         }
@@ -65,7 +67,7 @@
     "optimizer": {
         "type": "Adam",
         "args":{
-            "lr": 0.0001,
+            "lr": 0.00005,
             "weight_decay": 0,
             "amsgrad": false
         }

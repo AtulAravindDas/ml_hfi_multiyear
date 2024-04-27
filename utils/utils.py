@@ -14,13 +14,13 @@ prepare_device(device="gpu")
 get_model_name(expname, seed)
     Generate the model name based on the experiment name and seed.
 
-get_model_dir(exp_name, model_name)
+get_model_dir(expname, model_name)
     Get the directory path for saving the model based on the experiment name and model name.
 
 get_predictions_filename(config, landsat_name)
     Get the file name for saving the predictions based on the experiment configuration and Landsat name.
 
-get_prediction_dir(exp_name, model_name)
+get_prediction_dir(expname, model_name)
     Get the directory path for saving the predictions based on the experiment name and model name.
 
 save_training_tags(config, tags_train, tags_val)
@@ -38,7 +38,7 @@ load_torch_model(model, filename)
 load_model(config, clean=True)
     Load the TorchModel based on the experiment configuration and return the loaded model.
 
-get_config(exp_name)
+get_config(expname)
     Get the experiment configuration based on the experiment name.
 
 Classes
@@ -71,7 +71,7 @@ def get_default_filepaths():
     return filepaths
 
 
-def prepare_device(device="gpu"):
+def prepare_device(device="gpu", device_id=0):
     """
     Set up the GPU device if available and return the device.
 
@@ -93,8 +93,12 @@ def prepare_device(device="gpu"):
     if device == "gpu":
         if torch.backends.mps.is_available():
             device = torch.device("mps")
+        elif torch.cuda.is_available():
+            device = torch.device("cuda:" + str(device_id))
         else:
-            print("Warning: MPS device not found. Training will be performed on CPU.")
+            print(
+                "Warning: CUDA and/or MPS devices are not available. Training will be performed on CPU."
+            )
             device = torch.device("cpu")
     elif device == "cpu":
         device = torch.device("cpu")
@@ -123,13 +127,13 @@ def get_model_name(expname, seed):
     return expname + "_seed" + str(seed)
 
 
-def get_model_dir(exp_name, model_name):
+def get_model_dir(expname, model_name):
     """
     Get the directory path for saving the model based on the experiment name and model name.
 
     Parameters
     ----------
-    exp_name : str
+    expname : str
         The experiment name.
     model_name : str
         The model name.
@@ -142,7 +146,7 @@ def get_model_dir(exp_name, model_name):
     directory_paths = get_directories()
     MODEL_DIR = directory_paths["save_model_dir"]
 
-    dir = MODEL_DIR + exp_name + "/" + model_name + "/"
+    dir = MODEL_DIR + expname + "/" + model_name + "/"
     os.makedirs(dir, exist_ok=True)
 
     return dir
@@ -164,18 +168,18 @@ def get_predictions_filename(config, landsat_name):
     str
         The file name for saving the predictions.
     """
-    model_name = get_model_name(config["exp_name"], config["seed"])
-    dir = get_prediction_dir(config["exp_name"], model_name)
+    model_name = get_model_name(config["expname"], config["seed"])
+    dir = get_prediction_dir(config["expname"], model_name)
     return dir + "predictions_" + landsat_name + ".tif"
 
 
-def get_prediction_dir(exp_name, model_name):
+def get_prediction_dir(expname, model_name):
     """
     Get the directory path for saving the predictions based on the experiment name and model name.
 
     Parameters
     ----------
-    exp_name : str
+    expname : str
         The experiment name.
     model_name : str
         The model name.
@@ -188,7 +192,7 @@ def get_prediction_dir(exp_name, model_name):
     directory_paths = get_directories()
     PREDICTION_DIR = directory_paths["predictions_dir"]
 
-    dir = PREDICTION_DIR + "/" + exp_name + "/" + model_name + "/"
+    dir = PREDICTION_DIR + "/" + expname + "/" + model_name + "/"
     os.makedirs(dir, exist_ok=True)
 
     return dir
@@ -207,8 +211,8 @@ def save_training_tags(config, tags_train, tags_val):
     tags_val : list
         The validation tags.
     """
-    model_name = get_model_name(config["exp_name"], config["seed"])
-    dir = get_model_dir(config["exp_name"], model_name)
+    model_name = get_model_name(config["expname"], config["seed"])
+    dir = get_model_dir(config["expname"], model_name)
 
     with open(dir + "tags_train.pkl", "wb") as f:
         pickle.dump(tags_train, f)
@@ -230,8 +234,8 @@ def load_training_tags(config):
     tuple
         A tuple containing the loaded training tags and validation tags.
     """
-    model_name = get_model_name(config["exp_name"], config["seed"])
-    dir = get_model_dir(config["exp_name"], model_name)
+    model_name = get_model_name(config["expname"], config["seed"])
+    dir = get_model_dir(config["expname"], model_name)
 
     if not os.path.exists(dir + "tags_train.pkl"):
         return None, None
@@ -257,8 +261,8 @@ def save_torch_model(model, config):
     config : dict
         The experiment configuration.
     """
-    model_name = get_model_name(config["exp_name"], config["seed"])
-    dir = get_model_dir(config["exp_name"], model_name)
+    model_name = get_model_name(config["expname"], config["seed"])
+    dir = get_model_dir(config["expname"], model_name)
 
     torch.save(model.state_dict(), dir + model_name + ".pt")
 
@@ -304,21 +308,21 @@ def load_model(config, clean=True):
     if clean:
         return model
     else:
-        model_name = get_model_name(config["exp_name"], config["seed"])
-        dir = get_model_dir(config["exp_name"], model_name)
+        model_name = get_model_name(config["expname"], config["seed"])
+        dir = get_model_dir(config["expname"], model_name)
 
         print("loading model from: ", dir + model_name + ".pt")
 
         return load_torch_model(model, dir + model_name + ".pt")
 
 
-def get_config(exp_name):
+def get_config(expname):
     """
     Get the experiment configuration based on the experiment name.
 
     Parameters
     ----------
-    exp_name : str
+    expname : str
         The experiment name.
 
     Returns
@@ -326,15 +330,15 @@ def get_config(exp_name):
     dict
         The experiment configuration.
     """
-    basename = "exp_"
+    basename = "exp"
 
     # GET CONFIG
-    with open("configs/config_" + exp_name[len(basename) :] + ".json") as f:
+    with open("configs/config_" + expname[len(basename) :] + ".json") as f:
         config = json.load(f)
 
     assert (
-        config["exp_name"] == basename + exp_name[len(basename) :]
-    ), "Exp_Name must be equal to config[exp_name]"
+        config["expname"] == basename + expname[len(basename) :]
+    ), "Exp_Name must be equal to config[expname]"
 
     # GET CONSTANTS
     with open("utils/constants.json") as f:

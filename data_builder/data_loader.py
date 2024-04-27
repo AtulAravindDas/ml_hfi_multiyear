@@ -36,7 +36,7 @@ class CustomData(torch.utils.data.Dataset):
     Custom dataset for data loading.
     """
 
-    def __init__(self, config, tags):
+    def __init__(self, config, tags, batch_size=32):
         """
         Initialize the CustomData dataset.
 
@@ -57,6 +57,7 @@ class CustomData(torch.utils.data.Dataset):
         self.tags = tags
         self.tags_dict = tags_dict
         self.config = config
+        self.batch_size = batch_size
         self.rng = np.random.default_rng(config["seed"])
 
         self.sample_years = self.tags[0]
@@ -71,7 +72,7 @@ class CustomData(torch.utils.data.Dataset):
         Returns:
             int: The length of the dataset.
         """
-        return np.ceil(len(self.tags[0]) / self.config["trainer"]["batch_size"]).astype(
+        return np.ceil(len(self.tags[0]) / self.batch_size).astype(
             int
         )
 
@@ -86,8 +87,8 @@ class CustomData(torch.utils.data.Dataset):
             tuple: A tuple containing the input data and the output data.
         """
         idx = np.arange(
-            id_batch * self.config["trainer"]["batch_size"],
-            (id_batch + 1) * self.config["trainer"]["batch_size"],
+            id_batch * self.batch_size,
+            (id_batch + 1) * self.batch_size,
         )
 
         if self.config["mode"] == "training":
@@ -95,7 +96,7 @@ class CustomData(torch.utils.data.Dataset):
 
             i = self.rng.choice(
                 self.tags_dict[tile_key],
-                self.config["trainer"]["batch_size"],
+                self.batch_size,
                 replace=False,
             )
 
@@ -261,8 +262,9 @@ def read_output_data(config, tiff, sample_lon, sample_lat):
         sample_output = 0.0
 
     # Force the network to predict zeros or ones
-    # if config["mode"] == "training" and config["data"]["kluge_value_for_zero"] is not None:
-    #     if sample_output == 0.0:
-    #         sample_output = config["data"]["kluge_value_for_zero"]
+    if config["mode"] == "training":
+        if config["data"].get("kluge_value_for_zero", None) is not None:
+            if sample_output == 0.0:
+                sample_output = config["data"]["kluge_value_for_zero"]
 
     return sample_output

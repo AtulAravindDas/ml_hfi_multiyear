@@ -80,7 +80,7 @@ def make_predictions(config, model, tags, dataloader):
         FileNotFoundError: If the labels file is not found.
 
     """
-    device = utils.prepare_device(config["device"])
+    device = utils.prepare_device(config["device"], config["device_id"])
     with torch.inference_mode():
         hfi_predict = model.predict(
             dataloader=dataloader,

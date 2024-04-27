@@ -1,5 +1,5 @@
 {
-    "expname": "exp001",
+    "expname": "exp002",
     "seed": 22,
     "mode": null,
     "device": "gpu",
@@ -16,7 +16,7 @@
         "percentage_sampling": 0.05,
         "val_frac": 0.05,
 
-        "kluge_value_for_zero": null
+        "kluge_value_for_zero": -0.2
     },
 
     "architecture": {
@@ -52,7 +52,7 @@
         "loss":{
             "type": "SMSELoss",
             "args": {
-                "zero_weighting": 100.0
+                "zero_weighting": null
             }
         },
 
