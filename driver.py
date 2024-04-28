@@ -52,6 +52,8 @@ def main():
     config["mode"] = "training"
     config["device_id"] = args.gpu_id
 
+    print("Running on Machine: " + config["machine"])
+
     # SET RANDOM SEEDS
     utils.set_random_seeds(config["seed"])
 
@@ -67,8 +69,8 @@ def main():
         batch_sampler=None,
         shuffle=True,
         drop_last=False,
-        # num_workers=1,
-        # pin_memory=True,
+        num_workers=config["trainer"]["num_workers"],
+        pin_memory=config["trainer"]["pin_memory"],
     )
 
     ds_val = data_loader.CustomData(config, tags_val, config["trainer"]["batch_size"])
@@ -78,10 +80,12 @@ def main():
         batch_sampler=None,
         shuffle=False,
         drop_last=False,
+        num_workers=config["trainer"]["num_workers"],
+        pin_memory=config["trainer"]["pin_memory"],
     )
 
     # BUILD THE MODEL
-    verbose = False
+    verbose = True
     model = utils.load_model(config, clean=not config["trainer"]["resume_training"])
 
     if verbose:

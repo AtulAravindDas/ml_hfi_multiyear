@@ -94,6 +94,8 @@ class BaseTrainer:
                 f"  {elapsed_time:.1f}s"
                 f" - train_loss: {self.log.history['loss'][epoch]:.5f}"
                 f" - val_loss: {self.log.history['val_loss'][epoch]:.5f}"
+                f" - train_mae: {self.log.history['custom_mae'][epoch]:.5f}"
+                f" - val_mae: {self.log.history['val_custom_mae'][epoch]:.5f}"
             )
 
         # reset the batch_log

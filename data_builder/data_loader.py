@@ -54,7 +54,7 @@ class CustomData(torch.utils.data.Dataset):
         self.tags_dict = tags_dict
         self.config = config
         self.batch_size = batch_size
-        self.rng = np.random.default_rng(config["seed"])
+        self.rng = np.random.default_rng(config["seed"] + 55)
 
         self.sample_years = self.tags[0]
         self.sample_lats = self.tags[1]
@@ -186,6 +186,7 @@ class CustomData(torch.utils.data.Dataset):
                 sample_lats[isample],
                 self.config["data"]["channels"],
                 self.config["data"]["scene_width"],
+                rng=self.rng,
             )
 
             batch_input[isample, :, :, :] = sample_out

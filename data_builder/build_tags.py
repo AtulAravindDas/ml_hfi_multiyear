@@ -60,7 +60,7 @@ def get_tags(config):
 def get_training_tags(config):
 
     directory_paths = utils.get_directories(config["machine"])
-    rng = np.random.default_rng(config["seed"])
+    rng = np.random.default_rng(config["seed"] + 33)
 
     (
         lat_s_bound,
@@ -71,9 +71,9 @@ def get_training_tags(config):
         config, region=config["data"]["training_region"]
     )
     print(
-        f"TRAINING-TILE BOUNDS: "
+        f"\nTraining Tile Bounds: "
         f"{lat_s_bound}-{lat_n_bound}, "
-        f"{lon_w_bound}-{lon_e_bound}\n"
+        f"{lon_w_bound}-{lon_e_bound}"
     )
 
     with rasterio.open(DEFAULT_MASK_FILEPATH) as buffer_mask:
@@ -208,22 +208,30 @@ def get_training_tags(config):
                     bin_end = bins[i + 1]
                     bin_indices = np.where((array >= bin_start) & (array < bin_end))[0]
 
-                    # Ensure not to exceed the number of available samples
-                    num_samples_to_keep = min(max_samples_per_bin, len(bin_indices))
-
-                    indices_to_keep.extend(
-                        rng.choice(bin_indices, num_samples_to_keep, replace=False)
-                    )
+                    # Pull samples from each bin to create balanced decile bins
+                    if (
+                        len(bin_indices) < max_samples_per_bin
+                        and config["data"]["oversample_rare_bins"]
+                    ):
+                        # If the number of samples in the bin is less than the minimum threshold,
+                        # we sample more.
+                        num_samples_to_keep = max_samples_per_bin
+                        indices_to_keep.extend(
+                            rng.choice(bin_indices, num_samples_to_keep, replace=True)
+                        )
+                    else:
+                        # Do not to exceed the number of available samples and sample what is available
+                        num_samples_to_keep = min(max_samples_per_bin, len(bin_indices))
+                        indices_to_keep.extend(
+                            rng.choice(bin_indices, num_samples_to_keep, replace=False)
+                        )
 
                     print(
                         f"   {bin_start:<3}- {bin_end:<3}: n_total={len(bin_indices):<10}"
                         f"n_keep={num_samples_to_keep:<10}"
                     )
 
-                # this already takes into acc how many non water pixel there are
-                # since indices to keep f(#samples grabbed)
-                nsamples = len(indices_to_keep)
-                # nbatches = int(nsamples / int(config["trainer"]["batch_size"]))
+                # indices to keep f(#samples grabbed)
                 subsample_lats, subsample_lons = (
                     subsample_lats[
                         indices_to_keep
@@ -234,7 +242,9 @@ def get_training_tags(config):
                 )
 
                 subsample_years = rng.choice(
-                    config["data"]["training_years"], size=nsamples, replace=True
+                    config["data"]["training_years"],
+                    size=len(indices_to_keep),
+                    replace=True,
                 )
 
                 assert len(subsample_years) == len(
