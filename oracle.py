@@ -18,7 +18,8 @@ def main():
     It loads the model, processes Landsat tiles, makes predictions, and saves the results as TIFF files.
     The predictions are then tiled together to create a mosaic image.
 
-    Usage: python oracle.py <expname> <gpu_id>
+    Usage on CUDA: CUDA_VISIBLE_DEVICES=1, python oracle.py <expname> <gpu_id=0>
+    Usage on MPS: python oracle.py <expname>
 
     Arguments:
         expname (str): Experiment name to specify the config file, e.g. exp101

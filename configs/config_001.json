@@ -38,9 +38,9 @@
     },
 
     "inference": {
-        "num_workers": 1,
+        "num_workers": 2,
         "pin_memory": true,
-        "batch_size": 3072
+        "batch_size": 3000
     },
 
     "trainer": {
