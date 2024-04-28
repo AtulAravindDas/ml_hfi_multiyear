@@ -24,13 +24,6 @@ from data_builder import read_landsat
 from utils import utils
 
 
-directory_paths = utils.get_directories()
-SAVE_MODEL_DIR = directory_paths["save_model_dir"]
-DATA_DIR = directory_paths["data_dir"]
-LANDSAT_DIR = directory_paths["landsat_dir"]
-PREDICTIONS_DIR = directory_paths["predictions_dir"]
-
-
 class CustomData(torch.utils.data.Dataset):
     """
     Custom dataset for data loading.
@@ -47,6 +40,9 @@ class CustomData(torch.utils.data.Dataset):
         Returns:
             None
         """
+        self.data_dir = utils.get_directories(config["machine"])["data_dir"]
+        self.landsat_dir = utils.get_directories(config["machine"])["landsat_dir"]
+
         tags_dict = {}
         for filename in np.unique(tags[-1]):
             isample = [
@@ -72,9 +68,7 @@ class CustomData(torch.utils.data.Dataset):
         Returns:
             int: The length of the dataset.
         """
-        return np.ceil(len(self.tags[0]) / self.batch_size).astype(
-            int
-        )
+        return np.ceil(len(self.tags[0]) / self.batch_size).astype(int)
 
     def __getitem__(self, id_batch):
         """
@@ -162,7 +156,7 @@ class CustomData(torch.utils.data.Dataset):
             )
         )
 
-        filename = LANDSAT_DIR + sample_files[0] + ".tif"
+        filename = self.landsat_dir + sample_files[0] + ".tif"
 
         if not os.path.isfile(filename):
             if self.config["mode"] == "training":
@@ -221,7 +215,7 @@ class CustomData(torch.utils.data.Dataset):
 
         batch_output = np.zeros((len(sample_years), 1))
 
-        filename = DATA_DIR + "hii_" + str(sample_years[0]) + "-01-01_uint8.tif"
+        filename = self.data_dir + "hii_" + str(sample_years[0]) + "-01-01_uint8.tif"
         if not os.path.isfile(filename):
             return batch_output * 0.0
 

@@ -253,7 +253,7 @@ class TorchModel(BaseModel):
                     print(
                         f"batch {batch_idx} of {int(np.ceil(output.shape[0] / batch_size))} - "
                         f"{execution_time:.3f}s - "
-                        f"{execution_time/((batch_idx+1)*batch_size):.7f}s/sample"
+                        f"{execution_time/((batch_idx+1)*batch_size):.9f}s/sample"
                     )
 
             output = np.asarray(output)

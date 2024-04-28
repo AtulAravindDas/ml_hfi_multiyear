@@ -29,13 +29,6 @@ import utils.utils as utils
 import torch
 
 
-# Get the directory paths from the methods module
-directory_paths = utils.get_directories()
-DATA_DIR = directory_paths["data_dir"]
-LANDSAT_DIR = directory_paths["landsat_dir"]
-PREDICTIONS_DIR = directory_paths["predictions_dir"]
-
-
 def create_mosaic(filenames_list):
     """
     This function creates a mosaic from a list of filenames. It opens each file, merges them into a mosaic,
@@ -88,6 +81,7 @@ def make_predictions(config, model, tags, dataloader):
         )
 
     # GET TIFF META DATA
+    DATA_DIR = utils.get_directories(config["machine"])["data_dir"]
     labels_filename = (
         DATA_DIR + "hii_" + str(config["data"]["inference_years"][0]) + "-01-01_uint8.tif"
     )

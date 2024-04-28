@@ -31,12 +31,6 @@ from data_builder import read_landsat
 from data_builder import data_methods
 
 
-directory_paths = utils.get_directories()
-SAVE_MODEL_DIR = directory_paths["save_model_dir"]
-DATA_DIR = directory_paths["data_dir"]
-LANDSAT_DIR = directory_paths["landsat_dir"]
-PREDICTIONS_DIR = directory_paths["predictions_dir"]
-
 default_filepaths = utils.get_default_filepaths()
 DEFAULT_MASK_FILEPATH = default_filepaths["mask_filepath"]
 DEFAULT_HII_FILEPATH = default_filepaths["hii_filepath"]
@@ -64,6 +58,8 @@ def get_tags(config):
 
 
 def get_training_tags(config):
+
+    directory_paths = utils.get_directories(config["machine"])
     rng = np.random.default_rng(config["seed"])
 
     (
@@ -105,7 +101,10 @@ def get_training_tags(config):
                 )
                 file_flag = False
                 for file in landsat_filenames:
-                    if os.path.isfile(LANDSAT_DIR + file + ".tif") is False:
+                    if (
+                        os.path.isfile(directory_paths["landsat_dir"] + file + ".tif")
+                        is False
+                    ):
                         file_flag = True
                         break
                 if file_flag:
@@ -228,10 +227,10 @@ def get_training_tags(config):
                 subsample_lats, subsample_lons = (
                     subsample_lats[
                         indices_to_keep
-                    ],  ####### indices_to_keep instead of isamples
+                    ],  # indices_to_keep instead of isamples
                     subsample_lons[
                         indices_to_keep
-                    ],  ####### indices_to_keep instead of isamples
+                    ],  # indices_to_keep instead of isamples
                 )
 
                 subsample_years = rng.choice(

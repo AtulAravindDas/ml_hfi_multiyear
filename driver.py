@@ -1,15 +1,15 @@
 import argparse
-import matplotlib.pyplot as plt # type: ignore
 import warnings
+
+import matplotlib.pyplot as plt  # type: ignore
 import torch
 import torchinfo
 
-from utils import utils
-from data_builder import build_tags
-from data_builder import data_loader
-import trainer.metrics as metrics_module
 import trainer.losses as loss_module
+import trainer.metrics as metrics_module
+from data_builder import build_tags, data_loader
 from trainer.trainer import Trainer
+from utils import utils
 from visualizer import plots
 
 warnings.filterwarnings("ignore")
@@ -39,9 +39,10 @@ def main():
         "expname", help="experiment name to specify the config file, e.g. exp101"
     )
     parser.add_argument(
-        "gpu_id", help="GPU device ID (number), e.g. 1 [default=0]",
-         nargs='?',
-         default="0"
+        "gpu_id",
+        help="GPU device ID (number), e.g. 1 [default=0]",
+        nargs="?",
+        default="0",
     )
     args = parser.parse_args()
 
@@ -56,13 +57,17 @@ def main():
     # LOAD THE DATA
     tags_train, tags_val = build_tags.get_tags(config)
 
-    ds_train = data_loader.CustomData(config, tags_train, config["trainer"]["batch_size"])
+    ds_train = data_loader.CustomData(
+        config, tags_train, config["trainer"]["batch_size"]
+    )
     train_loader = torch.utils.data.DataLoader(
         ds_train,
         batch_size=None,
         batch_sampler=None,
         shuffle=True,
         drop_last=False,
+        # num_workers=1,
+        # pin_memory=True,
     )
 
     ds_val = data_loader.CustomData(config, tags_val, config["trainer"]["batch_size"])
@@ -154,6 +159,7 @@ def main():
     plt.close()
 
     print("Completed.")
+
 
 if __name__ == "__main__":
     main()

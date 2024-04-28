@@ -37,9 +37,10 @@ def main():
         "expname", help="experiment name to specify the config file, e.g. exp101"
     )
     parser.add_argument(
-        "gpu_id", help="GPU device ID (number), e.g. 1 [default=0]",
-        nargs='?',
-        default="0"
+        "gpu_id",
+        help="GPU device ID (number), e.g. 1 [default=0]",
+        nargs="?",
+        default="0",
     )
     args = parser.parse_args()
 
@@ -82,7 +83,7 @@ def main():
 
                 if (
                     os.path.isfile(
-                        utils.get_directories()["landsat_dir"]
+                        utils.get_directories(config["machine"])["landsat_dir"]
                         + landsat_file[0]
                         + ".tif"
                     )
@@ -106,7 +107,9 @@ def main():
                     continue
 
                 # MAKE PREDICTIONS and SAVE AS TIFF
-                ds_inf = data_loader.CustomData(config, tags, config["inference"]["batch_size"])
+                ds_inf = data_loader.CustomData(
+                    config, tags, config["inference"]["batch_size"]
+                )
                 inf_loader = torch.utils.data.DataLoader(
                     ds_inf,
                     batch_size=None,
@@ -114,13 +117,13 @@ def main():
                     shuffle=False,
                     drop_last=False,
                     pin_memory=config["inference"]["pin_memory"],
-                    num_workers=config["inference"]["num_workers"],
+                    num_workers=config["inference"]["num_workers"]
                 )
                 hfi_predict, hfi_labels, latlon_bounds = inference.make_predictions(
                     config, model, tags, inf_loader
                 )
 
-                meta_data = inference.save_predictions_tif(
+                _ = inference.save_predictions_tif(
                     hfi_predict,
                     predictions_filename,
                     latlon_bounds=latlon_bounds,
@@ -131,14 +134,14 @@ def main():
         # TILE THE PREDICTIONS TOGETHER
         model_name = utils.get_model_name(config["expname"], config["seed"])
         mosaic_filename = (
-            utils.get_directories()["mosaics_dir"]
+            utils.get_directories(config["machine"])["mosaics_dir"]
             + model_name
             + "_"
             + str(config["data"]["inference_years"][0])
             + "_mlhfi_mosaic.tif"
         )
         mosaic, mosaic_trans = inference.create_mosaic(filenames_list)
-        meta_data = inference.save_predictions_tif(
+        _ = inference.save_predictions_tif(
             mosaic, mosaic_filename, trans=mosaic_trans
         )
         print("mosaic saved.")

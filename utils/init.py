@@ -1,13 +1,12 @@
 import os
-from data_builder import methods
-from utils import utils
+import utils
 
-dirs = utils.get_directories()
+dirs = utils.get_directories(config["machine"])
 
 for key in dirs:
 
     mkdir_folder = dirs[key]
-    os.system('mkdir ' + mkdir_folder)
+    os.system("mkdir " + mkdir_folder)
 
     if key == "data_dir":
         print(key)

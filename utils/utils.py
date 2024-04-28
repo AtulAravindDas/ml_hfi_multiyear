@@ -2,7 +2,7 @@
 
 Functions
 ---------
-get_directories()
+get_directories(config["machine"])
     Get the directory paths from the "utils/directories.json" file.
 
 get_default_filepaths()
@@ -14,7 +14,7 @@ prepare_device(device="gpu")
 get_model_name(expname, seed)
     Generate the model name based on the experiment name and seed.
 
-get_model_dir(expname, model_name)
+get_model_dir(expname, model_name, machine)
     Get the directory path for saving the model based on the experiment name and model name.
 
 get_predictions_filename(config, landsat_name)
@@ -57,11 +57,11 @@ import pickle
 from model_builder.build_model import TorchModel
 
 
-def get_directories():
+def get_directories(machine):
     """Get the directory paths from the "utils/directories.json" file."""
     with open("utils/directories.json") as f:
         directories = json.load(f)
-    return directories
+    return directories[machine]
 
 
 def get_default_filepaths():
@@ -127,7 +127,7 @@ def get_model_name(expname, seed):
     return expname + "_seed" + str(seed)
 
 
-def get_model_dir(expname, model_name):
+def get_model_dir(expname, model_name, machine="falco"):
     """
     Get the directory path for saving the model based on the experiment name and model name.
 
@@ -143,7 +143,7 @@ def get_model_dir(expname, model_name):
     str
         The directory path for saving the model.
     """
-    directory_paths = get_directories()
+    directory_paths = get_directories(machine)
     MODEL_DIR = directory_paths["save_model_dir"]
 
     dir = MODEL_DIR + expname + "/" + model_name + "/"
@@ -169,11 +169,11 @@ def get_predictions_filename(config, landsat_name):
         The file name for saving the predictions.
     """
     model_name = get_model_name(config["expname"], config["seed"])
-    dir = get_prediction_dir(config["expname"], model_name)
+    dir = get_prediction_dir(config["expname"], model_name, machine=config["machine"])
     return dir + "predictions_" + landsat_name + ".tif"
 
 
-def get_prediction_dir(expname, model_name):
+def get_prediction_dir(expname, model_name, machine="falco"):
     """
     Get the directory path for saving the predictions based on the experiment name and model name.
 
@@ -189,7 +189,7 @@ def get_prediction_dir(expname, model_name):
     str
         The directory path for saving the predictions.
     """
-    directory_paths = get_directories()
+    directory_paths = get_directories(machine)
     PREDICTION_DIR = directory_paths["predictions_dir"]
 
     dir = PREDICTION_DIR + "/" + expname + "/" + model_name + "/"
@@ -212,12 +212,14 @@ def save_training_tags(config, tags_train, tags_val):
         The validation tags.
     """
     model_name = get_model_name(config["expname"], config["seed"])
-    dir = get_model_dir(config["expname"], model_name)
+    dir = get_model_dir(config["expname"], model_name, machine=config["machine"])
 
     with open(dir + "tags_train.pkl", "wb") as f:
         pickle.dump(tags_train, f)
     with open(dir + "tags_val.pkl", "wb") as f:
         pickle.dump(tags_val, f)
+
+    print("saved training tags.")
 
 
 def load_training_tags(config):
@@ -235,7 +237,7 @@ def load_training_tags(config):
         A tuple containing the loaded training tags and validation tags.
     """
     model_name = get_model_name(config["expname"], config["seed"])
-    dir = get_model_dir(config["expname"], model_name)
+    dir = get_model_dir(config["expname"], model_name, machine=config["machine"])
 
     if not os.path.exists(dir + "tags_train.pkl"):
         return None, None
@@ -262,7 +264,7 @@ def save_torch_model(model, config):
         The experiment configuration.
     """
     model_name = get_model_name(config["expname"], config["seed"])
-    dir = get_model_dir(config["expname"], model_name)
+    dir = get_model_dir(config["expname"], model_name, machine=config["machine"])
 
     torch.save(model.state_dict(), dir + model_name + ".pt")
 
@@ -283,7 +285,7 @@ def load_torch_model(model, filename):
     TorchModel
         The loaded PyTorch model.
     """
-    model.load_state_dict(torch.load(filename))
+    model.load_state_dict(torch.load(filename, map_location=torch.device("cpu")))
     model.eval()
     return model
 
@@ -309,7 +311,7 @@ def load_model(config, clean=True):
         return model
     else:
         model_name = get_model_name(config["expname"], config["seed"])
-        dir = get_model_dir(config["expname"], model_name)
+        dir = get_model_dir(config["expname"], model_name, machine=config["machine"])
 
         print("loading model from: ", dir + model_name + ".pt")
 

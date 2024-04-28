@@ -7,13 +7,10 @@ plot_hfi_tile(xplot, extent)
 """
 
 import numpy as np
-import matplotlib.pyplot as plt # type: ignore
-import matplotlib as mpl # type: ignore
+import matplotlib.pyplot as plt  # type: ignore
+import matplotlib as mpl  # type: ignore
 from utils import utils
 
-
-directory_paths = utils.get_directories()
-FIGURES_DIR = directory_paths["figures_dir"]
 
 mpl.rcParams["figure.facecolor"] = "white"
 mpl.rcParams["figure.dpi"] = 150
@@ -30,8 +27,11 @@ plt.rc("ytick", color="dimgrey")
 
 
 def savefig(config, filename, format=".png", dpi=300):
+
     model_name = utils.get_model_name(config["expname"], config["seed"])
-    pathname = FIGURES_DIR + model_name + "_" + filename
+    directory_paths = utils.get_directories(config["machine"])
+    pathname = directory_paths["figures_dir"] + model_name + "_" + filename
+
     plt.savefig(pathname + format, bbox_inches="tight", dpi=dpi)
 
 

@@ -14,9 +14,6 @@ from rasterio.windows import Window
 from utils import utils
 import time
 
-directory_paths = utils.get_directories()
-LANDSAT_DIR = directory_paths["landsat_dir"]
-
 
 def fill_tif_dict(name, sample_year, sample_lat, sample_lon, tif_dict, config):
     if name == "central":
@@ -83,7 +80,8 @@ def fill_tif_dict(name, sample_year, sample_lat, sample_lon, tif_dict, config):
         raise NotImplementedError("no such name.")
 
     # check if the file exists, if not, throw flag
-    tif_filename = LANDSAT_DIR + filename[0] + ".tif"
+    directory_paths = utils.get_directories(config["machine"])
+    tif_filename = directory_paths["landsat_dir"] + filename[0] + ".tif"
     if os.path.isfile(tif_filename) is False:
         # print(tif_filename)
         return tif_dict, True

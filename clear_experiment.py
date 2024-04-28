@@ -31,7 +31,7 @@ def main():
     config = utils.get_config(args.expname)
 
     model_name = utils.get_model_name(config["expname"], config["seed"])
-    directory_paths = utils.get_directories()
+    directory_paths = utils.get_directories(config["machine"])
 
     for key in ("save_model_dir", "predictions_dir"):
         dir = directory_paths[key] + config["expname"] + "/" + model_name + "/"
