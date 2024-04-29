@@ -178,7 +178,7 @@ class CustomData(torch.utils.data.Dataset):
 
         for isample in np.arange(0, len(sample_years)):
 
-            sample_out, tif_dict, usecase = read_landsat.read_input_data(
+            sample_input, tif_dict, usecase = read_landsat.read_input_data(
                 self.config,
                 tif_dict,
                 sample_years[isample],
@@ -189,7 +189,7 @@ class CustomData(torch.utils.data.Dataset):
                 rng=self.rng,
             )
 
-            batch_input[isample, :, :, :] = sample_out
+            batch_input[isample, :, :, :] = sample_input
 
         for key in tif_dict.keys():
             if isinstance(tif_dict[key], rasterio.io.DatasetReader):

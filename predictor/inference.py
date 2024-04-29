@@ -73,11 +73,13 @@ def make_predictions(config, model, tags, dataloader):
         FileNotFoundError: If the labels file is not found.
 
     """
+
     device = utils.prepare_device(config["device"], config["device_id"])
     with torch.inference_mode():
         hfi_predict = model.predict(
             dataloader=dataloader,
             device=device,
+            quicklook=config["inference"]["quicklook"],
         )
 
     # GET TIFF META DATA
@@ -85,7 +87,9 @@ def make_predictions(config, model, tags, dataloader):
     labels_filename = (
         DATA_DIR + "hii_" + str(config["data"]["inference_years"][0]) + "-01-01_uint8.tif"
     )
-    filename_mask = DATA_DIR + "hii_coastal_buffer_mask.tif"
+
+    default_filepaths = utils.get_default_filepaths()
+    filename_mask = default_filepaths["mask_filepath"]
 
     lat_s, lat_n, lon_w, lon_e = (
         np.min(tags[1]),

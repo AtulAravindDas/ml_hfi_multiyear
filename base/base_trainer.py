@@ -7,12 +7,9 @@ EarlyStopping()
 
 """
 
-import torch
 from abc import abstractmethod
-from numpy import inf
 import time
 import copy
-import numpy as np
 from utils.utils import MetricTracker
 
 

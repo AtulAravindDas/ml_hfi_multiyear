@@ -77,11 +77,11 @@ def get_training_tags(config):
     )
 
     with rasterio.open(DEFAULT_MASK_FILEPATH) as buffer_mask:
-        # TODO: this is possibly slowing things down as we are
-        # appending to a very long list in a loop. Consider
-        # preallocating memory and then filling in the values
-        # Looks like numpy is faster for longer lists/arrays
-        # as they grow in size due to the way memory is allocated
+        print(
+            f"Creating mask from {DEFAULT_MASK_FILEPATH} "
+            f"and class bins from {DEFAULT_HII_FILEPATH}"
+        )
+
         sample_lats = []
         sample_lons = []
         sample_years = []
@@ -111,7 +111,7 @@ def get_training_tags(config):
                     # print(f"skipping landsat file that does not exist: {file}")
                     continue
 
-                print(landsat_filenames[0])
+                print(f"Building tags for {landsat_filenames}")
 
                 # get indices for region and tile
                 tile_bounds = (
@@ -212,10 +212,21 @@ def get_training_tags(config):
                     if (
                         len(bin_indices) < max_samples_per_bin
                         and config["data"]["oversample_rare_bins"]
+                        and len(bin_indices) > 0
                     ):
                         # If the number of samples in the bin is less than the minimum threshold,
                         # we sample more.
-                        num_samples_to_keep = max_samples_per_bin
+                        assert config["data"]["oversample_rate"] > 1, "oversample_rate must be > 1"
+
+                        num_samples_to_keep = int(
+                            np.min(
+                                [
+                                    max_samples_per_bin,
+                                    len(bin_indices)
+                                    * config["data"]["oversample_rate"],
+                                ]
+                            )
+                        )
                         indices_to_keep.extend(
                             rng.choice(bin_indices, num_samples_to_keep, replace=True)
                         )
@@ -252,9 +263,9 @@ def get_training_tags(config):
                 ), "sample years and locations must be the same length"
 
                 # append to list across tiles
-                sample_lats = sample_lats + subsample_lats.tolist()
-                sample_lons = sample_lons + subsample_lons.tolist()
-                sample_years = sample_years + subsample_years.tolist()
+                sample_lats.extend(subsample_lats.tolist())
+                sample_lons.extend(subsample_lons.tolist())
+                sample_years.extend(subsample_years.tolist())
 
                 # print meta data
                 print(

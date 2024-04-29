@@ -28,10 +28,12 @@ TorchModel(base.base_model.BaseModel)
 import torch
 import numpy as np
 from torchvision.transforms import v2
+from itertools import islice
+import time
+
 from base.base_model import BaseModel
 import utils.utils as utils
 
-import time
 
 # https://github.com/FrancescoSaverioZuppichini/Pytorch-how-and-when-to-use-Module-Sequential-ModuleList-and-ModuleDict
 
@@ -139,7 +141,9 @@ class TorchModel(BaseModel):
             == len(self.config["architecture"]["kernel_size"])
             == len(self.config["architecture"]["filters"])
         )
-        assert len(self.config["architecture"]["dense_units"]) == len(self.config["architecture"]["dense_activations"])
+        assert len(self.config["architecture"]["dense_units"]) == len(
+            self.config["architecture"]["dense_activations"]
+        )
 
         # Augmentation layers
         self.augmentation = torch.nn.Sequential(
@@ -221,7 +225,7 @@ class TorchModel(BaseModel):
 
         return x
 
-    def predict(self, dataloader, device="cpu"):
+    def predict(self, dataloader, device="cpu", quicklook=False):
         """
         Makes predictions using the model.
 
@@ -234,13 +238,20 @@ class TorchModel(BaseModel):
 
         """
 
+        dataloader_iter = iter(enumerate(dataloader))
+
         self.to(device)
         self.eval()
         with torch.inference_mode():
 
             output = np.zeros((len(dataloader.dataset.sample_files), 1))
             start_time = time.time()
-            for batch_idx, (data, target) in enumerate(dataloader):
+
+            for batch_idx, (data, target) in dataloader_iter:
+
+                # skip some batches if this is just a quicklook at the predictions
+                if quicklook and np.random.binomial(1, 0.75) == 1:
+                    next(islice(dataloader_iter, 2, 2), None)
 
                 data, target = data.to(device), target.to(device)
                 out = self(data).to("cpu")

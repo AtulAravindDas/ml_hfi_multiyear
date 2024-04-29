@@ -58,6 +58,8 @@ def main():
     utils.set_random_seeds(config["seed"])
 
     # LOAD THE DATA
+    torch.multiprocessing.set_sharing_strategy("file_system")
+
     tags_train, tags_val = build_tags.get_tags(config)
 
     ds_train = data_loader.CustomData(
@@ -71,6 +73,7 @@ def main():
         drop_last=False,
         num_workers=config["trainer"]["num_workers"],
         pin_memory=config["trainer"]["pin_memory"],
+        # worker_init_fn=set_worker_sharing_strategy
     )
 
     ds_val = data_loader.CustomData(config, tags_val, config["trainer"]["batch_size"])
@@ -78,10 +81,11 @@ def main():
         ds_val,
         batch_size=None,
         batch_sampler=None,
-        shuffle=False,
+        shuffle=True,
         drop_last=False,
         num_workers=config["trainer"]["num_workers"],
         pin_memory=config["trainer"]["pin_memory"],
+        # worker_init_fn=set_worker_sharing_strategy
     )
 
     # BUILD THE MODEL

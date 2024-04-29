@@ -10,7 +10,7 @@ Trainer(base.base_trainer.BaseTrainer)
 import numpy as np
 import torch
 from base.base_trainer import BaseTrainer
-from utils.utils import MetricTracker
+from utils import utils
 
 
 class Trainer(BaseTrainer):
@@ -134,6 +134,10 @@ class Trainer(BaseTrainer):
             for met in self.metric_funcs:
                 self.batch_log.update(met.__name__, met(output, target))
 
+        # Save the model at the end of the epoch
+        # Early stopping will over-write this model if it is better (as it should)
+        utils.save_torch_model(self.model, self.config)
+
         # Run validation
         if self.do_validation:
             self._validation_epoch(epoch)
@@ -168,3 +172,7 @@ class Trainer(BaseTrainer):
                 self.batch_log.update("val_loss", loss.item())
                 for met in self.metric_funcs:
                     self.batch_log.update("val_" + met.__name__, met(output, target))
+
+                # TODO: set max number of batches for validation
+                if batch_idx >= self.config["trainer"]["max_val_batches"]:
+                    break
