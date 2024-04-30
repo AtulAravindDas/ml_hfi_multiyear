@@ -7,9 +7,9 @@
 
     "data": {
         "training_years": [2015, 2019],
-        "inference_years": [2020, 2023],
+        "inference_years": [2020],
         "training_region": [0, 20, 0, 20],
-        "inference_region": [0, 20, 0, 20],
+        "inference_region": [5, 6, 5, 7],
 
         "channels": [1, 2, 3, 4, 5, 6],
         "scene_width": 11,
@@ -77,7 +77,7 @@
     "optimizer": {
         "type": "Adam",
         "args":{
-            "lr": 0.00006,
+            "lr": 0.00005,
             "weight_decay": 0,
             "amsgrad": false
         }

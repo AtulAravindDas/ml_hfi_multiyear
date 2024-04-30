@@ -36,7 +36,7 @@ def remove_nodata(x, y=None, nodata=255):
         index = np.where(x != nodata)[0]
         return x[index]
     else:
-        assert np.shape(x) == np.shape(y)
+        assert np.shape(x) == np.shape(y), f"{np.shape(x)} != {np.shape(y)}"
 
         index = np.where(x != nodata)[0]
         x, y = x[index], y[index]

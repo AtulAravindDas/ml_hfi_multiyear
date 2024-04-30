@@ -225,7 +225,7 @@ class TorchModel(BaseModel):
 
         return x
 
-    def predict(self, dataloader, device="cpu", quicklook=False):
+    def predict(self, dataloader, device="cpu"):
         """
         Makes predictions using the model.
 
@@ -238,8 +238,6 @@ class TorchModel(BaseModel):
 
         """
 
-        dataloader_iter = iter(enumerate(dataloader))
-
         self.to(device)
         self.eval()
         with torch.inference_mode():
@@ -247,19 +245,21 @@ class TorchModel(BaseModel):
             output = np.zeros((len(dataloader.dataset.sample_files), 1))
             start_time = time.time()
 
-            for batch_idx, (data, target) in dataloader_iter:
-
-                # skip some batches if this is just a quicklook at the predictions
-                if quicklook and np.random.binomial(1, 0.75) == 1:
-                    next(islice(dataloader_iter, 2, 2), None)
+            for batch_idx, (data, target) in enumerate(dataloader):
 
                 data, target = data.to(device), target.to(device)
                 out = self(data).to("cpu")
 
-                batch_size = len(out)
-                output[batch_idx * batch_size : (batch_idx + 1) * batch_size] = out
+                # save predictions to output
+                # cannot used batch_size = len(out) because of quicklook settings
+                batch_size = self.config["inference"]["batch_size"]
 
-                if batch_idx % 100 == 0:
+                if self.config["inference"]["quicklook"]:
+                    output[batch_idx * batch_size : (batch_idx + 1) * batch_size : self.config["inference"]["quicklook_skiplen"]] = out
+                else:
+                    output[batch_idx * batch_size : (batch_idx + 1) * batch_size] = out
+
+                if batch_idx % 1000 == 0:
                     execution_time = time.time() - start_time
                     print(
                         f"batch {batch_idx} of {int(np.ceil(output.shape[0] / batch_size))} - "

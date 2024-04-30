@@ -173,6 +173,6 @@ class Trainer(BaseTrainer):
                 for met in self.metric_funcs:
                     self.batch_log.update("val_" + met.__name__, met(output, target))
 
-                # TODO: set max number of batches for validation
+                # break if have reached the max number of batches for validation
                 if batch_idx >= self.config["trainer"]["max_val_batches"]:
                     break

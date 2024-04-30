@@ -350,6 +350,12 @@ def get_config(expname):
     config["landsat_pixel_to_deg"] = constants["LANDSAT_PIXEL_TO_DEG"]
     config["landsat_to_hfi_ratio"] = constants["LANDSAT_TO_HII_RATIO"]
 
+    # CHECK IF QUICKLOOK and CHANGE BATCH SIZE
+    if config["inference"]["quicklook"]:
+        config["inference"]["batch_size"] = (
+            config["inference"]["batch_size"] * (config["inference"]["quicklook_skiplen"] - 1)
+        )
+
     # SET SCENE WIDTH
     assert (
         config["data"]["scene_width"] % 2 == 1

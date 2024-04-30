@@ -78,8 +78,7 @@ def make_predictions(config, model, tags, dataloader):
     with torch.inference_mode():
         hfi_predict = model.predict(
             dataloader=dataloader,
-            device=device,
-            quicklook=config["inference"]["quicklook"],
+            device=device
         )
 
     # GET TIFF META DATA

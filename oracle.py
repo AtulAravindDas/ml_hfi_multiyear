@@ -108,6 +108,7 @@ def main():
                     continue
 
                 # MAKE PREDICTIONS and SAVE AS TIFF
+                torch.multiprocessing.set_sharing_strategy("file_system")
                 ds_inf = data_loader.CustomData(
                     config, tags, config["inference"]["batch_size"]
                 )
