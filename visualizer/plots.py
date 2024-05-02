@@ -17,7 +17,7 @@ mpl.rcParams["figure.dpi"] = 150
 
 FS = 10
 plt.rc("text", usetex=False)
-plt.rc("font", **{"family": "sans-serif", "sans-serif": ["Helvetica"]})
+# plt.rc("font", **{"family": "sans-serif", "sans-serif": ["Helvetica"]})
 plt.rc("savefig", facecolor="white")
 plt.rc("axes", facecolor="white")
 plt.rc("axes", labelcolor="dimgrey")

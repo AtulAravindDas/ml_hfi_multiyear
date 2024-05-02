@@ -16,11 +16,14 @@ warnings.filterwarnings("ignore")
 torch.set_warn_always(False)
 
 
+# TODO: add option for grabbing only certain tiles
+
+
 def main():
     """
     Main function for training and evaluating a model.
 
-    Usage on CUDA: CUDA_VISIBLE_DEVICES=1, python oracle.py <expname> <gpu_id=0>
+    Usage on CUDA: CUDA_VISIBLE_DEVICES=1, python driver.py <expname> <gpu_id=0>
     Usage on MPS: python oracle.py <expname>
 
     Args:

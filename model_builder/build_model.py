@@ -210,8 +210,9 @@ class TorchModel(BaseModel):
         x = self.flat(x)
 
         # skip connection
-        input_flat = self.flat(input[:, 2, :, :])
-        x = torch.cat((x, input_flat), dim=-1)
+        input_flat_chA = self.flat(input[:, 2, :, :])
+        input_flat_chB = self.flat(input[:, -1, :, :])
+        x = torch.cat((x, input_flat_chA, input_flat_chB), dim=-1)
 
         # dropout layer
         x = self.dropout(x)

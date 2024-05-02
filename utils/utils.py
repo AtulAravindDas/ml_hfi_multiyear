@@ -192,7 +192,7 @@ def get_prediction_dir(expname, model_name, machine="falco"):
     directory_paths = get_directories(machine)
     PREDICTION_DIR = directory_paths["predictions_dir"]
 
-    dir = PREDICTION_DIR + "/" + expname + "/" + model_name + "/"
+    dir = PREDICTION_DIR + expname + "/" + model_name + "/"
     os.makedirs(dir, exist_ok=True)
 
     return dir

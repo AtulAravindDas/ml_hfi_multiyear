@@ -86,7 +86,11 @@ class CustomData(torch.utils.data.Dataset):
         )
 
         if self.config["mode"] == "training":
-            tile_key = self.sample_files[self.rng.choice(idx, 1, replace=False)[0]]
+            try:
+                tile_key = self.sample_files[self.rng.choice(idx, 1, replace=False)[0]]
+            except:
+                idx = np.where(idx < len(self.sample_files))[0]
+                tile_key = self.sample_files[self.rng.choice(idx, 1, replace=False)[0]]
 
             i = self.rng.choice(
                 self.tags_dict[tile_key],

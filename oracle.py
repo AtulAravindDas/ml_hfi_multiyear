@@ -9,7 +9,7 @@ from data_builder import data_loader
 from predictor import inference
 from data_builder import read_landsat
 
-REWRITE = True
+REWRITE = False
 
 
 def main():
@@ -98,6 +98,7 @@ def main():
                 )
                 filenames_list.append(predictions_filename)
                 if os.path.isfile(predictions_filename) and REWRITE is False:
+                    print("prediction file already exists: ", predictions_filename)
                     continue
                 print(landsat_file[0])
 

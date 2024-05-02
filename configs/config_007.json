@@ -1,6 +1,6 @@
 {
     "expname": "exp007",
-    "machine": "blackforest",
+    "machine": "falco",
     "seed": 22,
     "mode": null,
     "device": "gpu",
@@ -8,7 +8,7 @@
     "data": {
         "training_years": [2015, 2019],
         "inference_years": [2020],
-        "training_region": [0, 20, 0, 20],
+        "training_region": [10, 20, 0, 10],
         "inference_region": [5, 10, 0, 5],
 
         "channels": [1, 2, 3, 4, 5, 6],
@@ -29,13 +29,13 @@
         "cnn_activation": ["ReLU","ReLU","ReLU","ReLU","ReLU"],
         "kernel_size": [3, 3, 3, 3, 3],
 
-        "dense_in": [14148],
-        "dense_units": [64],
+        "dense_in": [26248],
+        "dense_units": [128],
         "dense_activations": ["ReLU"],
 
         "dropout": 0.10,
 
-        "final_in": 64,
+        "final_in": 128,
         "final_activation": "Sigmoid"
     },
 
@@ -78,7 +78,7 @@
     "optimizer": {
         "type": "Adam",
         "args":{
-            "lr": 0.00005,
+            "lr": 0.0005,
             "weight_decay": 0,
             "amsgrad": false
         }

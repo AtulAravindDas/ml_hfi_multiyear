@@ -72,8 +72,8 @@ def get_training_tags(config):
     )
     print(
         f"\nTraining Tile Bounds: "
-        f"{lat_s_bound}-{lat_n_bound}, "
-        f"{lon_w_bound}-{lon_e_bound}"
+        f"{lat_s_bound} to {lat_n_bound}, "
+        f"{lon_w_bound} to {lon_e_bound}"
     )
 
     with rasterio.open(DEFAULT_MASK_FILEPATH) as buffer_mask:
@@ -216,7 +216,9 @@ def get_training_tags(config):
                     ):
                         # If the number of samples in the bin is less than the minimum threshold,
                         # we sample more.
-                        assert config["data"]["oversample_rate"] > 1, "oversample_rate must be > 1"
+                        assert (
+                            config["data"]["oversample_rate"] > 1
+                        ), "oversample_rate must be > 1"
 
                         num_samples_to_keep = int(
                             np.min(
@@ -272,7 +274,9 @@ def get_training_tags(config):
                     f"frac_land={frac_land.round(3)}, #samples = {len(subsample_years)}\n"
                 )
 
-    assert len(sample_lats) > 0, "you have no training data."
+    assert (
+        len(sample_lats) > 0
+    ), "You have no training data. Is config['machine'] set correctly? This is a common error."
 
     # Turn into numpy arrays
     sample_lats, sample_lons, sample_years = (
