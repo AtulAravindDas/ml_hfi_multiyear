@@ -28,10 +28,12 @@ TorchModel(base.base_model.BaseModel)
 import torch
 import numpy as np
 from torchvision.transforms import v2
+from itertools import islice
+import time
+
 from base.base_model import BaseModel
 import utils.utils as utils
 
-import time
 
 # https://github.com/FrancescoSaverioZuppichini/Pytorch-how-and-when-to-use-Module-Sequential-ModuleList-and-ModuleDict
 
@@ -139,7 +141,9 @@ class TorchModel(BaseModel):
             == len(self.config["architecture"]["kernel_size"])
             == len(self.config["architecture"]["filters"])
         )
-        assert len(self.config["architecture"]["dense_units"]) == len(self.config["architecture"]["dense_activations"])
+        assert len(self.config["architecture"]["dense_units"]) == len(
+            self.config["architecture"]["dense_activations"]
+        )
 
         # Augmentation layers
         self.augmentation = torch.nn.Sequential(
@@ -206,8 +210,9 @@ class TorchModel(BaseModel):
         x = self.flat(x)
 
         # skip connection
-        input_flat = self.flat(input[:, 2, :, :])
-        x = torch.cat((x, input_flat), dim=-1)
+        input_flat_chA = self.flat(input[:, 2, :, :])
+        input_flat_chB = self.flat(input[:, -1, :, :])
+        x = torch.cat((x, input_flat_chA, input_flat_chB), dim=-1)
 
         # dropout layer
         x = self.dropout(x)
@@ -240,20 +245,27 @@ class TorchModel(BaseModel):
 
             output = np.zeros((len(dataloader.dataset.sample_files), 1))
             start_time = time.time()
+
             for batch_idx, (data, target) in enumerate(dataloader):
 
                 data, target = data.to(device), target.to(device)
                 out = self(data).to("cpu")
 
-                batch_size = len(out)
-                output[batch_idx * batch_size : (batch_idx + 1) * batch_size] = out
+                # save predictions to output
+                # cannot used batch_size = len(out) because of quicklook settings
+                batch_size = self.config["inference"]["batch_size"]
 
-                if batch_idx % 100 == 0:
+                if self.config["inference"]["quicklook"]:
+                    output[batch_idx * batch_size : (batch_idx + 1) * batch_size : self.config["inference"]["quicklook_skiplen"]] = out
+                else:
+                    output[batch_idx * batch_size : (batch_idx + 1) * batch_size] = out
+
+                if batch_idx % 1000 == 0:
                     execution_time = time.time() - start_time
                     print(
                         f"batch {batch_idx} of {int(np.ceil(output.shape[0] / batch_size))} - "
                         f"{execution_time:.3f}s - "
-                        f"{execution_time/((batch_idx+1)*batch_size):.7f}s/sample"
+                        f"{execution_time/((batch_idx+1)*batch_size):.9f}s/sample"
                     )
 
             output = np.asarray(output)

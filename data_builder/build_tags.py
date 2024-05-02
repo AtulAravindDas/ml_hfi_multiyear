@@ -31,12 +31,6 @@ from data_builder import read_landsat
 from data_builder import data_methods
 
 
-directory_paths = utils.get_directories()
-SAVE_MODEL_DIR = directory_paths["save_model_dir"]
-DATA_DIR = directory_paths["data_dir"]
-LANDSAT_DIR = directory_paths["landsat_dir"]
-PREDICTIONS_DIR = directory_paths["predictions_dir"]
-
 default_filepaths = utils.get_default_filepaths()
 DEFAULT_MASK_FILEPATH = default_filepaths["mask_filepath"]
 DEFAULT_HII_FILEPATH = default_filepaths["hii_filepath"]
@@ -64,7 +58,9 @@ def get_tags(config):
 
 
 def get_training_tags(config):
-    rng = np.random.default_rng(config["seed"])
+
+    directory_paths = utils.get_directories(config["machine"])
+    rng = np.random.default_rng(config["seed"] + 33)
 
     (
         lat_s_bound,
@@ -75,12 +71,17 @@ def get_training_tags(config):
         config, region=config["data"]["training_region"]
     )
     print(
-        f"TRAINING-TILE BOUNDS: "
-        f"{lat_s_bound}-{lat_n_bound}, "
-        f"{lon_w_bound}-{lon_e_bound}\n"
+        f"\nTraining Tile Bounds: "
+        f"{lat_s_bound} to {lat_n_bound}, "
+        f"{lon_w_bound} to {lon_e_bound}"
     )
 
     with rasterio.open(DEFAULT_MASK_FILEPATH) as buffer_mask:
+        print(
+            f"Creating mask from {DEFAULT_MASK_FILEPATH} "
+            f"and class bins from {DEFAULT_HII_FILEPATH}"
+        )
+
         sample_lats = []
         sample_lons = []
         sample_years = []
@@ -100,14 +101,17 @@ def get_training_tags(config):
                 )
                 file_flag = False
                 for file in landsat_filenames:
-                    if os.path.isfile(LANDSAT_DIR + file + ".tif") is False:
+                    if (
+                        os.path.isfile(directory_paths["landsat_dir"] + file + ".tif")
+                        is False
+                    ):
                         file_flag = True
                         break
                 if file_flag:
                     # print(f"skipping landsat file that does not exist: {file}")
                     continue
 
-                print(landsat_filenames[0])
+                print(f"Building tags for {landsat_filenames}")
 
                 # get indices for region and tile
                 tile_bounds = (
@@ -204,33 +208,56 @@ def get_training_tags(config):
                     bin_end = bins[i + 1]
                     bin_indices = np.where((array >= bin_start) & (array < bin_end))[0]
 
-                    # Ensure not to exceed the number of available samples
-                    num_samples_to_keep = min(max_samples_per_bin, len(bin_indices))
+                    # Pull samples from each bin to create balanced decile bins
+                    if (
+                        len(bin_indices) < max_samples_per_bin
+                        and config["data"]["oversample_rare_bins"]
+                        and len(bin_indices) > 0
+                    ):
+                        # If the number of samples in the bin is less than the minimum threshold,
+                        # we sample more.
+                        assert (
+                            config["data"]["oversample_rate"] > 1
+                        ), "oversample_rate must be > 1"
 
-                    indices_to_keep.extend(
-                        rng.choice(bin_indices, num_samples_to_keep, replace=False)
-                    )
+                        num_samples_to_keep = int(
+                            np.min(
+                                [
+                                    max_samples_per_bin,
+                                    len(bin_indices)
+                                    * config["data"]["oversample_rate"],
+                                ]
+                            )
+                        )
+                        indices_to_keep.extend(
+                            rng.choice(bin_indices, num_samples_to_keep, replace=True)
+                        )
+                    else:
+                        # Do not to exceed the number of available samples and sample what is available
+                        num_samples_to_keep = min(max_samples_per_bin, len(bin_indices))
+                        indices_to_keep.extend(
+                            rng.choice(bin_indices, num_samples_to_keep, replace=False)
+                        )
 
                     print(
                         f"   {bin_start:<3}- {bin_end:<3}: n_total={len(bin_indices):<10}"
                         f"n_keep={num_samples_to_keep:<10}"
                     )
 
-                # this already takes into acc how many non water pixel there are
-                # since indices to keep f(#samples grabbed)
-                nsamples = len(indices_to_keep)
-                # nbatches = int(nsamples / int(config["trainer"]["batch_size"]))
+                # indices to keep f(#samples grabbed)
                 subsample_lats, subsample_lons = (
                     subsample_lats[
                         indices_to_keep
-                    ],  ####### indices_to_keep instead of isamples
+                    ],  # indices_to_keep instead of isamples
                     subsample_lons[
                         indices_to_keep
-                    ],  ####### indices_to_keep instead of isamples
+                    ],  # indices_to_keep instead of isamples
                 )
 
                 subsample_years = rng.choice(
-                    config["data"]["training_years"], size=nsamples, replace=True
+                    config["data"]["training_years"],
+                    size=len(indices_to_keep),
+                    replace=True,
                 )
 
                 assert len(subsample_years) == len(
@@ -238,16 +265,18 @@ def get_training_tags(config):
                 ), "sample years and locations must be the same length"
 
                 # append to list across tiles
-                sample_lats = sample_lats + subsample_lats.tolist()
-                sample_lons = sample_lons + subsample_lons.tolist()
-                sample_years = sample_years + subsample_years.tolist()
+                sample_lats.extend(subsample_lats.tolist())
+                sample_lons.extend(subsample_lons.tolist())
+                sample_years.extend(subsample_years.tolist())
 
                 # print meta data
                 print(
                     f"frac_land={frac_land.round(3)}, #samples = {len(subsample_years)}\n"
                 )
 
-    assert len(sample_lats) > 0, "you have no training data."
+    assert (
+        len(sample_lats) > 0
+    ), "You have no training data. Is config['machine'] set correctly? This is a common error."
 
     # Turn into numpy arrays
     sample_lats, sample_lons, sample_years = (

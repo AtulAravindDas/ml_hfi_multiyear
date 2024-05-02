@@ -29,8 +29,8 @@ pip install seaborn
     * at minimum you will need ``shapefile_mosaic.tif`` and ``shapefile_dataframe.pkl`` (_you will not need the rest of the shapefiles unless you want to recreate the shapefile masks_)
 * Set ``config_[###].py`` as desired.
 * Order to run major scripts.
-  * _driver.ipynb
-  * _oracle.ipynb
+  * driver.py
+  * oracle.py
   * _assesor.ipynb
 
 ## Credits

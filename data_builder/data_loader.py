@@ -24,19 +24,12 @@ from data_builder import read_landsat
 from utils import utils
 
 
-directory_paths = utils.get_directories()
-SAVE_MODEL_DIR = directory_paths["save_model_dir"]
-DATA_DIR = directory_paths["data_dir"]
-LANDSAT_DIR = directory_paths["landsat_dir"]
-PREDICTIONS_DIR = directory_paths["predictions_dir"]
-
-
 class CustomData(torch.utils.data.Dataset):
     """
     Custom dataset for data loading.
     """
 
-    def __init__(self, config, tags):
+    def __init__(self, config, tags, batch_size=32):
         """
         Initialize the CustomData dataset.
 
@@ -47,6 +40,9 @@ class CustomData(torch.utils.data.Dataset):
         Returns:
             None
         """
+        self.data_dir = utils.get_directories(config["machine"])["data_dir"]
+        self.landsat_dir = utils.get_directories(config["machine"])["landsat_dir"]
+
         tags_dict = {}
         for filename in np.unique(tags[-1]):
             isample = [
@@ -57,7 +53,8 @@ class CustomData(torch.utils.data.Dataset):
         self.tags = tags
         self.tags_dict = tags_dict
         self.config = config
-        self.rng = np.random.default_rng(config["seed"])
+        self.batch_size = batch_size
+        self.rng = np.random.default_rng(config["seed"] + 55)
 
         self.sample_years = self.tags[0]
         self.sample_lats = self.tags[1]
@@ -71,9 +68,7 @@ class CustomData(torch.utils.data.Dataset):
         Returns:
             int: The length of the dataset.
         """
-        return np.ceil(len(self.tags[0]) / self.config["trainer"]["batch_size"]).astype(
-            int
-        )
+        return np.ceil(len(self.tags[0]) / self.batch_size).astype(int)
 
     def __getitem__(self, id_batch):
         """
@@ -86,16 +81,20 @@ class CustomData(torch.utils.data.Dataset):
             tuple: A tuple containing the input data and the output data.
         """
         idx = np.arange(
-            id_batch * self.config["trainer"]["batch_size"],
-            (id_batch + 1) * self.config["trainer"]["batch_size"],
+            id_batch * self.batch_size,
+            (id_batch + 1) * self.batch_size,
         )
 
         if self.config["mode"] == "training":
-            tile_key = self.sample_files[self.rng.choice(idx, 1, replace=False)[0]]
+            try:
+                tile_key = self.sample_files[self.rng.choice(idx, 1, replace=False)[0]]
+            except:
+                idx = np.where(idx < len(self.sample_files))[0]
+                tile_key = self.sample_files[self.rng.choice(idx, 1, replace=False)[0]]
 
             i = self.rng.choice(
                 self.tags_dict[tile_key],
-                self.config["trainer"]["batch_size"],
+                self.batch_size,
                 replace=False,
             )
 
@@ -105,6 +104,14 @@ class CustomData(torch.utils.data.Dataset):
             sample_files = self.sample_files[i]
 
         elif self.config["mode"] == "inference":
+
+            # quicklook option to only grab every "quicklook_skiplen" index for inference
+            if self.config["inference"]["quicklook"]:
+                idx = np.arange(
+                    id_batch * self.batch_size,
+                    (id_batch + 1) * self.batch_size,
+                    self.config["inference"]["quicklook_skiplen"],
+                )
 
             try:
                 sample_years = self.sample_years[idx]
@@ -161,7 +168,7 @@ class CustomData(torch.utils.data.Dataset):
             )
         )
 
-        filename = LANDSAT_DIR + sample_files[0] + ".tif"
+        filename = self.landsat_dir + sample_files[0] + ".tif"
 
         if not os.path.isfile(filename):
             if self.config["mode"] == "training":
@@ -183,7 +190,7 @@ class CustomData(torch.utils.data.Dataset):
 
         for isample in np.arange(0, len(sample_years)):
 
-            sample_out, tif_dict, usecase = read_landsat.read_input_data(
+            sample_input, tif_dict, usecase = read_landsat.read_input_data(
                 self.config,
                 tif_dict,
                 sample_years[isample],
@@ -191,9 +198,10 @@ class CustomData(torch.utils.data.Dataset):
                 sample_lats[isample],
                 self.config["data"]["channels"],
                 self.config["data"]["scene_width"],
+                rng=self.rng,
             )
 
-            batch_input[isample, :, :, :] = sample_out
+            batch_input[isample, :, :, :] = sample_input
 
         for key in tif_dict.keys():
             if isinstance(tif_dict[key], rasterio.io.DatasetReader):
@@ -220,7 +228,7 @@ class CustomData(torch.utils.data.Dataset):
 
         batch_output = np.zeros((len(sample_years), 1))
 
-        filename = DATA_DIR + "hii_" + str(sample_years[0]) + "-01-01_uint8.tif"
+        filename = self.data_dir + "hii_" + str(sample_years[0]) + "-01-01_uint8.tif"
         if not os.path.isfile(filename):
             return batch_output * 0.0
 
@@ -261,8 +269,9 @@ def read_output_data(config, tiff, sample_lon, sample_lat):
         sample_output = 0.0
 
     # Force the network to predict zeros or ones
-    # if config["mode"] == "training" and config["data"]["kluge_value_for_zero"] is not None:
-    #     if sample_output == 0.0:
-    #         sample_output = config["data"]["kluge_value_for_zero"]
+    if config["mode"] == "training":
+        if config["data"].get("kluge_value_for_zero", None) is not None:
+            if sample_output == 0.0:
+                sample_output = config["data"]["kluge_value_for_zero"]
 
     return sample_output

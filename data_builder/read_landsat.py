@@ -14,9 +14,6 @@ from rasterio.windows import Window
 from utils import utils
 import time
 
-directory_paths = utils.get_directories()
-LANDSAT_DIR = directory_paths["landsat_dir"]
-
 
 def fill_tif_dict(name, sample_year, sample_lat, sample_lon, tif_dict, config):
     if name == "central":
@@ -83,7 +80,8 @@ def fill_tif_dict(name, sample_year, sample_lat, sample_lon, tif_dict, config):
         raise NotImplementedError("no such name.")
 
     # check if the file exists, if not, throw flag
-    tif_filename = LANDSAT_DIR + filename[0] + ".tif"
+    directory_paths = utils.get_directories(config["machine"])
+    tif_filename = directory_paths["landsat_dir"] + filename[0] + ".tif"
     if os.path.isfile(tif_filename) is False:
         # print(tif_filename)
         return tif_dict, True
@@ -117,8 +115,7 @@ def get_input_filename(years, lats, lons, config):
             np.ceil(lats[isample] / config["tile_len_deg"]) * config["tile_len_deg"]
         )
         file_lon = int(
-            np.floor(lons[isample] / config["tile_len_deg"])
-            * config["tile_len_deg"]
+            np.floor(lons[isample] / config["tile_len_deg"]) * config["tile_len_deg"]
         )
         filenames.append(f"landsat_{file_lat}lat_{file_lon}lon_{file_year}")
 
@@ -126,7 +123,14 @@ def get_input_filename(years, lats, lons, config):
 
 
 def read_input_data(
-    config, tif_dict, sample_year, sample_lon, sample_lat, channels, scene_width
+    config,
+    tif_dict,
+    sample_year,
+    sample_lon,
+    sample_lat,
+    channels,
+    scene_width,
+    rng=np.random.default_rng(42),
 ):
     ilat, ilon = tif_dict["central"].index(sample_lon, sample_lat)
 
@@ -184,7 +188,7 @@ def read_input_data(
             channels,
             window=Window.from_slices((ilat_n, ilat_s + 1), (ilon_w, ilon_e + 1)),
         )
-        sample_output = central_output
+        sample_input = central_output
 
     # USECASE 1 - northwest corner
     elif usecase == "usecase_northwest":
@@ -210,7 +214,7 @@ def read_input_data(
             flag_west = False
 
         if any([flag_north, flag_northwest, flag_west]):
-            sample_output = 0.0
+            sample_input = 0.0
         else:
             central_output = read_tif(
                 tif_dict["central"],
@@ -237,11 +241,14 @@ def read_input_data(
                 tif_dict["northwest"],
                 channels,
                 window=Window.from_slices(
-                    (tif_dict["northwest_height"] + ilat_n, tif_dict["northwest_height"]),
+                    (
+                        tif_dict["northwest_height"] + ilat_n,
+                        tif_dict["northwest_height"],
+                    ),
                     (tif_dict["northwest_width"] + ilon_w, tif_dict["northwest_width"]),
                 ),
             )
-            sample_output = np.vstack(
+            sample_input = np.vstack(
                 (
                     np.hstack((northwest_output, north_output)),
                     np.hstack((west_output, central_output)),
@@ -258,7 +265,7 @@ def read_input_data(
             flag_north = False
 
         if flag_north:
-            sample_output = 0.0
+            sample_input = 0.0
         else:
             central_output = read_tif(
                 tif_dict["central"],
@@ -274,7 +281,7 @@ def read_input_data(
                 ),
             )
 
-            sample_output = np.vstack((north_output, central_output))
+            sample_input = np.vstack((north_output, central_output))
 
     # USECASE 3 - northeast corner
     elif usecase == "usecase_northeast":
@@ -300,7 +307,7 @@ def read_input_data(
             flag_east = False
 
         if any([flag_north, flag_northeast, flag_east]):
-            sample_output = 0.0
+            sample_input = 0.0
         else:
             central_output = read_tif(
                 tif_dict["central"],
@@ -333,7 +340,7 @@ def read_input_data(
                 ),
             )
 
-            sample_output = np.vstack(
+            sample_input = np.vstack(
                 (
                     np.hstack((north_output, northeast_output)),
                     np.hstack((central_output, east_output)),
@@ -350,7 +357,7 @@ def read_input_data(
             flag_east = False
 
         if flag_east:
-            sample_output = 0.0
+            sample_input = 0.0
         else:
             central_output = read_tif(
                 tif_dict["central"],
@@ -367,7 +374,7 @@ def read_input_data(
                 ),
             )
 
-            sample_output = np.hstack((central_output, east_output))
+            sample_input = np.hstack((central_output, east_output))
 
     # USECASE 5 - southeast corner
     elif usecase == "usecase_southeast":
@@ -393,7 +400,7 @@ def read_input_data(
             flag_east = False
 
         if any([flag_south, flag_southeast, flag_east]):
-            sample_output = 0.0
+            sample_input = 0.0
         else:
             central_output = read_tif(
                 tif_dict["central"],
@@ -428,7 +435,7 @@ def read_input_data(
                 ),
             )
 
-            sample_output = np.vstack(
+            sample_input = np.vstack(
                 (
                     np.hstack((central_output, east_output)),
                     np.hstack((south_output, southeast_output)),
@@ -445,7 +452,7 @@ def read_input_data(
             flag_south = False
 
         if flag_south:
-            sample_output = 0.0
+            sample_input = 0.0
         else:
             central_output = read_tif(
                 tif_dict["central"],
@@ -462,7 +469,7 @@ def read_input_data(
                 ),
             )
 
-            sample_output = np.vstack((central_output, south_output))
+            sample_input = np.vstack((central_output, south_output))
 
     # USECASE 7 - southwest corner
     elif usecase == "usecase_southwest":
@@ -488,7 +495,7 @@ def read_input_data(
             flag_west = False
 
         if any([flag_south, flag_southwest, flag_west]):
-            sample_output = 0.0
+            sample_input = 0.0
         else:
             central_output = read_tif(
                 tif_dict["central"],
@@ -521,7 +528,7 @@ def read_input_data(
                 ),
             )
 
-            sample_output = np.vstack(
+            sample_input = np.vstack(
                 (
                     np.hstack((west_output, central_output)),
                     np.hstack((southwest_output, south_output)),
@@ -538,7 +545,7 @@ def read_input_data(
             flag_west = False
 
         if flag_west:
-            sample_output = 0.0
+            sample_input = 0.0
         else:
             central_output = read_tif(
                 tif_dict["central"],
@@ -554,26 +561,27 @@ def read_input_data(
                 ),
             )
 
-            sample_output = np.hstack((west_output, central_output))
+            sample_input = np.hstack((west_output, central_output))
     else:
         raise NotImplementedError("such a case does not exist. something is wrong.")
 
-    if isinstance(sample_output, float):
+    if isinstance(sample_input, float):
         return 0.0, tif_dict, usecase
     else:
         assert (
-            sample_output.shape[0] == config["scene_width_landsat"]
-        ), f"{sample_output.shape[0] = }, {usecase = }"
+            sample_input.shape[0] == config["scene_width_landsat"]
+        ), f"{sample_input.shape[0] = }, {usecase = }"
         assert (
-            sample_output.shape[1] == config["scene_width_landsat"]
-        ), f"{sample_output.shape[1] = }, {usecase = }"
+            sample_input.shape[1] == config["scene_width_landsat"]
+        ), f"{sample_input.shape[1] = }, {usecase = }"
 
         # add noise to de-noise
-        rng = np.random.default_rng()
         if config["mode"] == "training":
             random_noise = rng.integers(
-                -config["architecture"]["input_noise"], config["architecture"]["input_noise"] + 1, size=1
+                -config["architecture"]["input_noise"],
+                config["architecture"]["input_noise"] + 1,
+                size=sample_input.shape[-1],
             )
-            sample_output = sample_output + random_noise
+            sample_input = sample_input + random_noise
 
-        return sample_output, tif_dict, usecase
+        return sample_input, tif_dict, usecase
