@@ -7,7 +7,7 @@ from utils import utils
 from data_builder import build_tags
 from data_builder import data_loader
 from predictor import inference
-from data_builder import read_landsat
+from data_builder import read_landsat, data_methods
 
 REWRITE = False
 
@@ -51,10 +51,13 @@ def main():
     config["device_id"] = args.gpu_id
 
     # GET THE DATA
-    (lat_s_bound, lat_n_bound, lon_w_bound, lon_e_bound) = (
-        read_landsat.get_landsat_bounds(
-            config, region=config["data"]["inference_region"]
-        )
+    lats_lons_dict = data_methods.get_lats_lons_list(
+        region=config["data"]["inference_region"], tile_len_deg=config["tile_len_deg"]
+    )
+    print(
+        f"\nInference Tile Bounds: \n"
+        f"  {lats_lons_dict['lats'] = } \n"
+        f"  {lats_lons_dict['lons'] = } "
     )
 
     # load the model
@@ -65,74 +68,76 @@ def main():
         config["data"]["inference_years"] = (year,)
         filenames_list = []
 
-        for latfile in np.arange(
-            lat_s_bound + config["tile_len_deg"],
-            lat_n_bound + config["tile_len_deg"],
-            config["tile_len_deg"],
-        ):
-            for lonfile in np.arange(lon_w_bound, lon_e_bound, config["tile_len_deg"]):
-                # check if landsat tile exists, if so, get it.
-                config["tile"] = (
-                    latfile - config["tile_len_deg"],
-                    latfile,
-                    lonfile,
-                    lonfile + config["tile_len_deg"],
-                )
-                landsat_file = read_landsat.get_input_filename(
-                    config["data"]["inference_years"], (latfile,), (lonfile,), config
-                )
+        for lats_list, lons_list in zip(lats_lons_dict["lats"], lats_lons_dict["lons"]):
 
-                if (
-                    os.path.isfile(
-                        utils.get_directories(config["machine"])["landsat_dir"]
-                        + landsat_file[0]
-                        + ".tif"
+            for latfile in lats_list:
+                for lonfile in lons_list:
+
+                    # check if landsat tile exists, if so, get it.
+                    config["tile"] = (
+                        latfile - config["tile_len_deg"],
+                        latfile,
+                        lonfile,
+                        lonfile + config["tile_len_deg"],
                     )
-                    is False
-                ):
-                    continue
+                    landsat_file = read_landsat.get_input_filename(
+                        config["data"]["inference_years"],
+                        (latfile,),
+                        (lonfile,),
+                        config,
+                    )
 
-                # check if prediction file already exists
-                predictions_filename = utils.get_predictions_filename(
-                    config, landsat_file[0]
-                )
-                filenames_list.append(predictions_filename)
-                if os.path.isfile(predictions_filename) and REWRITE is False:
-                    print("prediction file already exists: ", predictions_filename)
-                    continue
-                print(landsat_file[0])
+                    if (
+                        os.path.isfile(
+                            utils.get_directories(config["machine"])["landsat_dir"]
+                            + landsat_file[0]
+                            + ".tif"
+                        )
+                        is False
+                    ):
+                        continue
 
-                # GET THE SAMPLE TAGS
-                tags, __ = build_tags.get_tags(config)
-                if len(tags[0]) == 0:
-                    # all water, so skip
-                    continue
+                    # check if prediction file already exists
+                    predictions_filename = utils.get_predictions_filename(
+                        config, landsat_file[0]
+                    )
+                    filenames_list.append(predictions_filename)
+                    if os.path.isfile(predictions_filename) and REWRITE is False:
+                        print("prediction file already exists: ", predictions_filename)
+                        continue
+                    print(landsat_file[0])
 
-                # MAKE PREDICTIONS and SAVE AS TIFF
-                torch.multiprocessing.set_sharing_strategy("file_system")
-                ds_inf = data_loader.CustomData(
-                    config, tags, config["inference"]["batch_size"]
-                )
-                inf_loader = torch.utils.data.DataLoader(
-                    ds_inf,
-                    batch_size=None,
-                    batch_sampler=None,
-                    shuffle=False,
-                    drop_last=False,
-                    pin_memory=config["inference"]["pin_memory"],
-                    num_workers=config["inference"]["num_workers"]
-                )
-                hfi_predict, hfi_labels, latlon_bounds = inference.make_predictions(
-                    config, model, tags, inf_loader
-                )
+                    # GET THE SAMPLE TAGS
+                    tags, __ = build_tags.get_tags(config)
+                    if len(tags[0]) == 0:
+                        # all water, so skip
+                        continue
 
-                _ = inference.save_predictions_tif(
-                    hfi_predict,
-                    predictions_filename,
-                    latlon_bounds=latlon_bounds,
-                )
+                    # MAKE PREDICTIONS and SAVE AS TIFF
+                    torch.multiprocessing.set_sharing_strategy("file_system")
+                    ds_inf = data_loader.CustomData(
+                        config, tags, config["inference"]["batch_size"]
+                    )
+                    inf_loader = torch.utils.data.DataLoader(
+                        ds_inf,
+                        batch_size=None,
+                        batch_sampler=None,
+                        shuffle=False,
+                        drop_last=False,
+                        pin_memory=config["inference"]["pin_memory"],
+                        num_workers=config["inference"]["num_workers"],
+                    )
+                    hfi_predict, hfi_labels, latlon_bounds = inference.make_predictions(
+                        config, model, tags, inf_loader
+                    )
 
-                filenames_list.append(predictions_filename)
+                    _ = inference.save_predictions_tif(
+                        hfi_predict,
+                        predictions_filename,
+                        latlon_bounds=latlon_bounds,
+                    )
+
+                    filenames_list.append(predictions_filename)
 
         # TILE THE PREDICTIONS TOGETHER
         model_name = utils.get_model_name(config["expname"], config["seed"])
@@ -144,9 +149,7 @@ def main():
             + "_mlhfi_mosaic.tif"
         )
         mosaic, mosaic_trans = inference.create_mosaic(filenames_list)
-        _ = inference.save_predictions_tif(
-            mosaic, mosaic_filename, trans=mosaic_trans
-        )
+        _ = inference.save_predictions_tif(mosaic, mosaic_filename, trans=mosaic_trans)
         print("mosaic saved.")
 
 

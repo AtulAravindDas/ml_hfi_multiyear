@@ -62,18 +62,14 @@ def get_training_tags(config):
     directory_paths = utils.get_directories(config["machine"])
     rng = np.random.default_rng(config["seed"] + 33)
 
-    (
-        lat_s_bound,
-        lat_n_bound,
-        lon_w_bound,
-        lon_e_bound,
-    ) = read_landsat.get_landsat_bounds(
-        config, region=config["data"]["training_region"]
+    lats_lons_dict = data_methods.get_lats_lons_list(
+        region=config["data"]["training_region"], tile_len_deg=config["tile_len_deg"]
     )
+
     print(
-        f"\nTraining Tile Bounds: "
-        f"{lat_s_bound} to {lat_n_bound}, "
-        f"{lon_w_bound} to {lon_e_bound}"
+        f"\nTraining Tile Bounds: \n"
+        f"  {lats_lons_dict['lats'] = } \n"
+        f"  {lats_lons_dict['lons'] = } "
     )
 
     with rasterio.open(DEFAULT_MASK_FILEPATH) as buffer_mask:
@@ -86,193 +82,211 @@ def get_training_tags(config):
         sample_lons = []
         sample_years = []
 
-        for latfile in np.arange(
-            lat_s_bound + config["tile_len_deg"],
-            lat_n_bound + config["tile_len_deg"],
-            config["tile_len_deg"],
-        ):
-            for lonfile in np.arange(lon_w_bound, lon_e_bound, config["tile_len_deg"]):
-                # check that landsat file even exists
-                landsat_filenames = read_landsat.get_input_filename(
-                    config["data"]["training_years"],
-                    np.ones(len(config["data"]["training_years"])) * latfile,
-                    np.ones(len(config["data"]["training_years"])) * lonfile,
-                    config,
-                )
-                file_flag = False
-                for file in landsat_filenames:
-                    if (
-                        os.path.isfile(directory_paths["landsat_dir"] + file + ".tif")
-                        is False
-                    ):
-                        file_flag = True
-                        break
-                if file_flag:
-                    # print(f"skipping landsat file that does not exist: {file}")
-                    continue
+        for lats_list, lons_list in zip(lats_lons_dict["lats"], lats_lons_dict["lons"]):
+            print(lats_list, lons_list)
 
-                print(f"Building tags for {landsat_filenames}")
+            for latfile in lats_list:
+                for lonfile in lons_list:
 
-                # get indices for region and tile
-                tile_bounds = (
-                    latfile - config["tile_len_deg"],
-                    latfile,
-                    lonfile,
-                    lonfile + config["tile_len_deg"],
-                )
-                ilat_s, ilat_n, ilon_w, ilon_e = data_methods.get_tile_indices(
-                    buffer_mask, tile_bounds
-                )
-                ilat_s, ilat_n, ilon_w, ilon_e = data_methods.trim_hfi_region(
-                    (ilat_s, ilat_n, ilon_w, ilon_e),
-                    buffer_mask,
-                    region=config["data"]["training_region"],
-                )
-
-                # get tag indices that are not water or on edges
-                window = Window.from_slices((ilat_n, ilat_s + 1), (ilon_w, ilon_e + 1))
-                mask = buffer_mask.read(1, window=window)
-                land_pixels = np.sum(mask)
-                frac_land = land_pixels / (mask.shape[0] * mask.shape[1])
-
-                land_indices = np.argwhere(mask)
-                ilat_grid, ilon_grid = (
-                    land_indices[:, 0] + window.row_off,
-                    land_indices[:, 1] + window.col_off,
-                )
-
-                subsample_lons, subsample_lats = buffer_mask.xy(
-                    ilat_grid, ilon_grid, offset="ul"
-                )
-                subsample_lons, subsample_lats = np.asarray(subsample_lons), np.asarray(
-                    subsample_lats
-                )
-
-                # Remove all possibilities of edges and corners
-                edge_width = (
-                    (np.ceil((config["data"]["scene_width"] - 1) / 2) + 1)
-                    * config["landsat_to_hfi_ratio"]
-                    * config["landsat_pixel_to_deg"]
-                )
-
-                i_nonedge = np.flatnonzero(
-                    np.logical_and(
-                        np.abs(
-                            np.abs(subsample_lons)
-                            - np.rint(np.abs(subsample_lons) / config["tile_len_deg"])
-                            * config["tile_len_deg"]
-                        )
-                        > edge_width,
-                        np.abs(
-                            np.abs(subsample_lats)
-                            - np.rint(np.abs(subsample_lats) / config["tile_len_deg"])
-                            * config["tile_len_deg"]
-                        )
-                        > edge_width,
+                    # check that landsat file even exists
+                    landsat_filenames = read_landsat.get_input_filename(
+                        config["data"]["training_years"],
+                        np.ones(len(config["data"]["training_years"])) * latfile,
+                        np.ones(len(config["data"]["training_years"])) * lonfile,
+                        config,
                     )
-                )
-                subsample_lats = subsample_lats[i_nonedge]
-                subsample_lons = subsample_lons[i_nonedge]
-
-                if len(subsample_lats) < config["trainer"]["batch_size"]:
-                    continue
-
-                # SUBSAMPLE FOR EQUAL SAMPLING ACROSS VALUES
-
-                # Subsample to deal with imbalanced data
-                with rasterio.open(DEFAULT_HII_FILEPATH) as tif:
-                    array = tif.sample(
-                        [*zip(subsample_lons, subsample_lats)], indexes=1
-                    )
-                    array = np.ndarray.flatten(np.asarray(list(array)))
-                percentage_sampling = config["data"]["percentage_sampling"]
-
-                # Calculate the histogram of the array to determine the distribution
-                hist, bins = np.histogram(array, bins=np.arange(11) * 10)
-
-                # Calculate the total number of samples
-                total_samples = len(array)
-
-                # Calculate the minimum number of samples per bin based on the minimum percentage
-                min_samples_threshold = int(total_samples * percentage_sampling)
-
-                # this ensures that the max is 'percentage_sampling'%, if there are not, we just take what is available but no more than 'percentage_sampling'% equally divided in the number of bins
-                max_samples_per_bin = int(min_samples_threshold // len(bins))
-
-                # Initialize list to store indices to keep
-                indices_to_keep = []
-
-                # Iterate over each bin
-                for i in range(len(bins) - 1):
-                    bin_start = bins[i]
-                    bin_end = bins[i + 1]
-                    bin_indices = np.where((array >= bin_start) & (array < bin_end))[0]
-
-                    # Pull samples from each bin to create balanced decile bins
-                    if (
-                        len(bin_indices) < max_samples_per_bin
-                        and config["data"]["oversample_rare_bins"]
-                        and len(bin_indices) > 0
-                    ):
-                        # If the number of samples in the bin is less than the minimum threshold,
-                        # we sample more.
-                        assert (
-                            config["data"]["oversample_rate"] > 1
-                        ), "oversample_rate must be > 1"
-
-                        num_samples_to_keep = int(
-                            np.min(
-                                [
-                                    max_samples_per_bin,
-                                    len(bin_indices)
-                                    * config["data"]["oversample_rate"],
-                                ]
+                    file_flag = False
+                    for file in landsat_filenames:
+                        if (
+                            os.path.isfile(
+                                directory_paths["landsat_dir"] + file + ".tif"
                             )
-                        )
-                        indices_to_keep.extend(
-                            rng.choice(bin_indices, num_samples_to_keep, replace=True)
-                        )
-                    else:
-                        # Do not to exceed the number of available samples and sample what is available
-                        num_samples_to_keep = min(max_samples_per_bin, len(bin_indices))
-                        indices_to_keep.extend(
-                            rng.choice(bin_indices, num_samples_to_keep, replace=False)
+                            is False
+                        ):
+                            file_flag = True
+                            break
+                    if file_flag:
+                        # print(f"skipping landsat file that does not exist: {file}")
+                        continue
+
+                    print(f"Building tags for {landsat_filenames}")
+
+                    # get indices for region and tile
+                    tile_bounds = (
+                        latfile - config["tile_len_deg"],
+                        latfile,
+                        lonfile,
+                        lonfile + config["tile_len_deg"],
+                    )
+                    ilat_s, ilat_n, ilon_w, ilon_e = data_methods.get_tile_indices(
+                        buffer_mask, tile_bounds
+                    )
+                    # BUG: need to update this to work with new method
+                    if isinstance(config["data"]["training_region"], list):
+                        ilat_s, ilat_n, ilon_w, ilon_e = data_methods.trim_hfi_region(
+                            (ilat_s, ilat_n, ilon_w, ilon_e),
+                            buffer_mask,
+                            region=config["data"]["training_region"],
                         )
 
-                    print(
-                        f"   {bin_start:<3}- {bin_end:<3}: n_total={len(bin_indices):<10}"
-                        f"n_keep={num_samples_to_keep:<10}"
+                    # get tag indices that are not water or on edges
+                    window = Window.from_slices(
+                        (ilat_n, ilat_s + 1), (ilon_w, ilon_e + 1)
+                    )
+                    mask = buffer_mask.read(1, window=window)
+                    land_pixels = np.sum(mask)
+                    frac_land = land_pixels / (mask.shape[0] * mask.shape[1])
+
+                    land_indices = np.argwhere(mask)
+                    ilat_grid, ilon_grid = (
+                        land_indices[:, 0] + window.row_off,
+                        land_indices[:, 1] + window.col_off,
                     )
 
-                # indices to keep f(#samples grabbed)
-                subsample_lats, subsample_lons = (
-                    subsample_lats[
-                        indices_to_keep
-                    ],  # indices_to_keep instead of isamples
-                    subsample_lons[
-                        indices_to_keep
-                    ],  # indices_to_keep instead of isamples
-                )
+                    subsample_lons, subsample_lats = buffer_mask.xy(
+                        ilat_grid, ilon_grid, offset="ul"
+                    )
+                    subsample_lons, subsample_lats = np.asarray(
+                        subsample_lons
+                    ), np.asarray(subsample_lats)
 
-                subsample_years = rng.choice(
-                    config["data"]["training_years"],
-                    size=len(indices_to_keep),
-                    replace=True,
-                )
+                    # Remove all possibilities of edges and corners
+                    edge_width = (
+                        (np.ceil((config["data"]["scene_width"] - 1) / 2) + 1)
+                        * config["landsat_to_hfi_ratio"]
+                        * config["landsat_pixel_to_deg"]
+                    )
 
-                assert len(subsample_years) == len(
-                    subsample_lats
-                ), "sample years and locations must be the same length"
+                    i_nonedge = np.flatnonzero(
+                        np.logical_and(
+                            np.abs(
+                                np.abs(subsample_lons)
+                                - np.rint(
+                                    np.abs(subsample_lons) / config["tile_len_deg"]
+                                )
+                                * config["tile_len_deg"]
+                            )
+                            > edge_width,
+                            np.abs(
+                                np.abs(subsample_lats)
+                                - np.rint(
+                                    np.abs(subsample_lats) / config["tile_len_deg"]
+                                )
+                                * config["tile_len_deg"]
+                            )
+                            > edge_width,
+                        )
+                    )
+                    subsample_lats = subsample_lats[i_nonedge]
+                    subsample_lons = subsample_lons[i_nonedge]
 
-                # append to list across tiles
-                sample_lats.extend(subsample_lats.tolist())
-                sample_lons.extend(subsample_lons.tolist())
-                sample_years.extend(subsample_years.tolist())
+                    if len(subsample_lats) < config["trainer"]["batch_size"]:
+                        continue
 
-                # print meta data
-                print(
-                    f"frac_land={frac_land.round(3)}, #samples = {len(subsample_years)}\n"
-                )
+                    # SUBSAMPLE FOR EQUAL SAMPLING ACROSS VALUES
+
+                    # Subsample to deal with imbalanced data
+                    with rasterio.open(DEFAULT_HII_FILEPATH) as tif:
+                        array = tif.sample(
+                            [*zip(subsample_lons, subsample_lats)], indexes=1
+                        )
+                        array = np.ndarray.flatten(np.asarray(list(array)))
+                    percentage_sampling = config["data"]["percentage_sampling"]
+
+                    # Calculate the histogram of the array to determine the distribution
+                    hist, bins = np.histogram(array, bins=np.arange(11) * 10)
+
+                    # Calculate the total number of samples
+                    total_samples = len(array)
+
+                    # Calculate the minimum number of samples per bin based on the minimum percentage
+                    min_samples_threshold = int(total_samples * percentage_sampling)
+
+                    # this ensures that the max is 'percentage_sampling'%, if there are not, we just take what is available but no more than 'percentage_sampling'% equally divided in the number of bins
+                    max_samples_per_bin = int(min_samples_threshold // len(bins))
+
+                    # Initialize list to store indices to keep
+                    indices_to_keep = []
+
+                    # Iterate over each bin
+                    for i in range(len(bins) - 1):
+                        bin_start = bins[i]
+                        bin_end = bins[i + 1]
+                        bin_indices = np.where(
+                            (array >= bin_start) & (array < bin_end)
+                        )[0]
+
+                        # Pull samples from each bin to create balanced decile bins
+                        if (
+                            len(bin_indices) < max_samples_per_bin
+                            and config["data"]["oversample_rare_bins"]
+                            and len(bin_indices) > 0
+                        ):
+                            # If the number of samples in the bin is less than the minimum threshold,
+                            # we sample more.
+                            assert (
+                                config["data"]["oversample_rate"] > 1
+                            ), "oversample_rate must be > 1"
+
+                            num_samples_to_keep = int(
+                                np.min(
+                                    [
+                                        max_samples_per_bin,
+                                        len(bin_indices)
+                                        * config["data"]["oversample_rate"],
+                                    ]
+                                )
+                            )
+                            indices_to_keep.extend(
+                                rng.choice(
+                                    bin_indices, num_samples_to_keep, replace=True
+                                )
+                            )
+                        else:
+                            # Do not to exceed the number of available samples and sample what is available
+                            num_samples_to_keep = min(
+                                max_samples_per_bin, len(bin_indices)
+                            )
+                            indices_to_keep.extend(
+                                rng.choice(
+                                    bin_indices, num_samples_to_keep, replace=False
+                                )
+                            )
+
+                        print(
+                            f"   {bin_start:<3}- {bin_end:<3}: n_total={len(bin_indices):<10}"
+                            f"n_keep={num_samples_to_keep:<10}"
+                        )
+
+                    # indices to keep f(#samples grabbed)
+                    subsample_lats, subsample_lons = (
+                        subsample_lats[
+                            indices_to_keep
+                        ],  # indices_to_keep instead of isamples
+                        subsample_lons[
+                            indices_to_keep
+                        ],  # indices_to_keep instead of isamples
+                    )
+
+                    subsample_years = rng.choice(
+                        config["data"]["training_years"],
+                        size=len(indices_to_keep),
+                        replace=True,
+                    )
+
+                    assert len(subsample_years) == len(
+                        subsample_lats
+                    ), "sample years and locations must be the same length"
+
+                    # append to list across tiles
+                    sample_lats.extend(subsample_lats.tolist())
+                    sample_lons.extend(subsample_lons.tolist())
+                    sample_years.extend(subsample_years.tolist())
+
+                    # print meta data
+                    print(
+                        f"frac_land={frac_land.round(3)}, #samples = {len(subsample_years)}\n"
+                    )
 
     assert (
         len(sample_lats) > 0
@@ -381,11 +395,12 @@ def get_inference_tags(config):
         ilat_s, ilat_n, ilon_w, ilon_e = data_methods.get_tile_indices(
             buffer_mask, config["tile"]
         )
-        ilat_s, ilat_n, ilon_w, ilon_e = data_methods.trim_hfi_region(
-            (ilat_s, ilat_n, ilon_w, ilon_e),
-            buffer_mask,
-            region=config["data"]["inference_region"],
-        )
+        if isinstance(config["data"]["inference_region"], list):
+            ilat_s, ilat_n, ilon_w, ilon_e = data_methods.trim_hfi_region(
+                (ilat_s, ilat_n, ilon_w, ilon_e),
+                buffer_mask,
+                region=config["data"]["inference_region"],
+            )
 
         window = Window.from_slices((ilat_n, ilat_s + 1), (ilon_w, ilon_e + 1))
         mask = buffer_mask.read(1, window=window)
