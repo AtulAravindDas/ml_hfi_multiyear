@@ -103,6 +103,18 @@ def get_lats_lons_list(region, tile_len_deg):
     return {"lats": lats_list, "lons": lons_list}
 
 
+def get_region_bounds(region, tile_len_deg):
+    lats_lons_dict = get_lats_lons_list(region, tile_len_deg)
+
+    lat_s = np.min(lats_lons_dict["lats"]) - tile_len_deg
+    lat_n = np.max(lats_lons_dict["lats"])
+
+    lon_w = np.min(lats_lons_dict["lons"])
+    lon_e = np.max(lats_lons_dict["lons"]) + tile_len_deg
+
+    return lat_s, lat_n, lon_w, lon_e
+
+
 def get_tile_indices(hfi_tif, tile):
     """
     Get the indices of the tile within the HFI raster.

@@ -88,25 +88,27 @@ def get_training_tags(config):
             for latfile in lats_list:
                 for lonfile in lons_list:
 
-                    # check that landsat file even exists
+                    # Get list of landsat file names
                     landsat_filenames = read_landsat.get_input_filename(
                         config["data"]["training_years"],
                         np.ones(len(config["data"]["training_years"])) * latfile,
                         np.ones(len(config["data"]["training_years"])) * lonfile,
                         config,
                     )
-                    file_flag = False
+
+                    # Check that at least one of years' files exists
+                    file_exists = False
                     for file in landsat_filenames:
                         if (
                             os.path.isfile(
                                 directory_paths["landsat_dir"] + file + ".tif"
                             )
-                            is False
+                            is True
                         ):
-                            file_flag = True
-                            break
-                    if file_flag:
-                        # print(f"skipping landsat file that does not exist: {file}")
+                            file_exists = True
+
+                    if not file_exists:
+                        print(f"skipping these landsat tiles that do not exist for any year: {landsat_filenames}")
                         continue
 
                     print(f"Building tags for {landsat_filenames}")
@@ -121,7 +123,7 @@ def get_training_tags(config):
                     ilat_s, ilat_n, ilon_w, ilon_e = data_methods.get_tile_indices(
                         buffer_mask, tile_bounds
                     )
-                    # BUG: need to update this to work with new method
+
                     if isinstance(config["data"]["training_region"], list):
                         ilat_s, ilat_n, ilon_w, ilon_e = data_methods.trim_hfi_region(
                             (ilat_s, ilat_n, ilon_w, ilon_e),
@@ -202,7 +204,9 @@ def get_training_tags(config):
                     # Calculate the minimum number of samples per bin based on the minimum percentage
                     min_samples_threshold = int(total_samples * percentage_sampling)
 
-                    # this ensures that the max is 'percentage_sampling'%, if there are not, we just take what is available but no more than 'percentage_sampling'% equally divided in the number of bins
+                    # this ensures that the max is 'percentage_sampling'%, if there are not,
+                    # we just take what is available but no more than 'percentage_sampling'%
+                    # equally divided in the number of bins
                     max_samples_per_bin = int(min_samples_threshold // len(bins))
 
                     # Initialize list to store indices to keep

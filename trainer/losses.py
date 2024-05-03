@@ -11,7 +11,7 @@ import numpy as np
 from torch.nn import functional as F
 
 
-class SMSELoss(torch.nn.Module):
+class WeightedSMSELoss(torch.nn.Module):
     """
     Square root of the mean squared error loss with optional
     zero-weighting and one-weighting.
@@ -48,14 +48,14 @@ class SMSELoss(torch.nn.Module):
         return torch.sqrt(loss)
 
 
-class MSELoss(torch.nn.Module):
-    """
-    Square root of the mean squared error loss.
-    """
+# class MSELoss(torch.nn.Module):
+#     """
+#     Square root of the mean squared error loss.
+#     """
 
-    def __init__(self):
-        super().__init__()
+#     def __init__(self):
+#         super().__init__()
 
-    def forward(self, output, target):
+#     def forward(self, output, target):
 
-        return F.mse_loss(output, target)
+#         return F.mse_loss(output, target)

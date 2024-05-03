@@ -166,10 +166,15 @@ class TorchModel(BaseModel):
         self.dropout = torch.nn.Dropout(p=config["architecture"]["dropout"])
 
         # Dense blocks
-        self.denseblock = dense_block(
+        self.denseblockA = dense_block(
             config["architecture"]["dense_units"],
             config["architecture"]["dense_activations"],
             in_features=config["architecture"]["dense_in"],
+        )
+        self.denseblockB = dense_block(
+            config["architecture"]["dense_units"],
+            config["architecture"]["dense_activations"],
+            in_features=config["architecture"]["dense_units"],
         )
 
         # Rescaling layers
@@ -217,8 +222,9 @@ class TorchModel(BaseModel):
         # dropout layer
         x = self.dropout(x)
 
-        # dense block
-        x = self.denseblock(x)
+        # dense blocks
+        x = self.denseblockA(x)
+        x = self.denseblockB(x)
 
         # output layer
         x = self.output(x)

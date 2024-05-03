@@ -310,12 +310,16 @@ def load_model(config, clean=True):
     if clean:
         return model
     else:
-        model_name = get_model_name(config["expname"], config["seed"])
-        dir = get_model_dir(config["expname"], model_name, machine=config["machine"])
+        try:
+            model_name = get_model_name(config["expname"], config["seed"])
+            dir = get_model_dir(config["expname"], model_name, machine=config["machine"])
 
-        print("loading model from: ", dir + model_name + ".pt")
+            print("\nLoading model from: ", dir + model_name + ".pt")
 
-        return load_torch_model(model, dir + model_name + ".pt")
+            return load_torch_model(model, dir + model_name + ".pt")
+        except:
+            print("Saved model not found.")
+            return model
 
 
 def get_config(expname):
