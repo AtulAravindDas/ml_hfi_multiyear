@@ -8,11 +8,7 @@
     "data": {
         "training_years": [2015, 2019],
         "inference_years": [2020],
-<<<<<<< Updated upstream
         "training_region": [-40, 20, -20, 50],
-=======
-        "training_region": [0, 20, 0, 20],
->>>>>>> Stashed changes
         "inference_region": [0, 20, 0, 20],
 
         "channels": [1, 2, 3, 4, 5, 6],

@@ -121,11 +121,13 @@ def get_training_tags(config):
                     ilat_s, ilat_n, ilon_w, ilon_e = data_methods.get_tile_indices(
                         buffer_mask, tile_bounds
                     )
-                    ilat_s, ilat_n, ilon_w, ilon_e = data_methods.trim_hfi_region(
-                        (ilat_s, ilat_n, ilon_w, ilon_e),
-                        buffer_mask,
-                        region=config["data"]["training_region"],
-                    )
+                    # BUG: need to update this to work with new method
+                    if isinstance(config["data"]["training_region"], list):
+                        ilat_s, ilat_n, ilon_w, ilon_e = data_methods.trim_hfi_region(
+                            (ilat_s, ilat_n, ilon_w, ilon_e),
+                            buffer_mask,
+                            region=config["data"]["training_region"],
+                        )
 
                     # get tag indices that are not water or on edges
                     window = Window.from_slices(
@@ -393,11 +395,12 @@ def get_inference_tags(config):
         ilat_s, ilat_n, ilon_w, ilon_e = data_methods.get_tile_indices(
             buffer_mask, config["tile"]
         )
-        ilat_s, ilat_n, ilon_w, ilon_e = data_methods.trim_hfi_region(
-            (ilat_s, ilat_n, ilon_w, ilon_e),
-            buffer_mask,
-            region=config["data"]["inference_region"],
-        )
+        if isinstance(config["data"]["inference_region"], list):
+            ilat_s, ilat_n, ilon_w, ilon_e = data_methods.trim_hfi_region(
+                (ilat_s, ilat_n, ilon_w, ilon_e),
+                buffer_mask,
+                region=config["data"]["inference_region"],
+            )
 
         window = Window.from_slices((ilat_n, ilat_s + 1), (ilon_w, ilon_e + 1))
         mask = buffer_mask.read(1, window=window)
