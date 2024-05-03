@@ -14,6 +14,7 @@ Classes
 
 import numpy as np
 from rasterio.windows import Window
+from data_builder import read_landsat
 
 __author__ = "Elizabeth A. Barnes and Randal J. Barnes"
 __date__ = "24 April 2024"
@@ -45,6 +46,61 @@ def remove_nodata(x, y=None, nodata=255):
         x, y = x[index], y[index]
 
         return x, y
+
+
+def get_lats_lons_list(region, tile_len_deg):
+    """
+    Get a list of latitude and longitude values based on the given region and tile length.
+
+    Parameters:
+        region (list or dict): The region of interest. If it's a list, it should contain the
+            coordinates of the bounding box in the order [lat_s, lat_n, lon_w, lon_e]. If it's
+            a dict, it should contain the keys 'lats' and 'lons' which represent the latitude
+            and longitude values respectively.
+        tile_len_deg (float): The length of each tile in degrees.
+
+        Example Usage in Config:
+        "training_region": {"tilelats": [[0], [10], [30], [40], [50]],
+                            "tilelons": [[0, 10], [0, 10, -30], [0, 50, 20], [0, 10], [0]]},
+        "inference_region": [0, 20, 0, 20],
+
+    Returns:
+        dict: A dictionary containing the latitude and longitude lists.
+
+    Raises:
+        NotImplementedError: If the region type is not supported.
+
+    """
+
+    if isinstance(region, list):
+
+        (lat_s, lat_n, lon_w, lon_e) = read_landsat.get_landsat_bounds(
+            region=region, tile_len_deg=tile_len_deg
+        )
+
+        lats_list = [
+            np.arange(lat_s + tile_len_deg, lat_n + tile_len_deg, tile_len_deg),
+        ]
+        lons_list = [np.arange(lon_w, lon_e, tile_len_deg)]
+
+    elif isinstance(region, dict):
+        lats_list = region["tilelats"]
+        lons_list = region["tilelons"]
+
+        if len(lats_list) != len(lons_list):
+
+            assert len(lons_list) == 1 or len(lats_list) == 1
+
+            if len(lons_list) == 1:
+                lons_list = np.repeat(lons_list, len(lats_list), axis=0)
+
+            if len(lats_list) == 1:
+                lats_list = np.repeat(lats_list, len(lons_list), axis=0)
+
+    else:
+        raise NotImplementedError
+
+    return {"lats": lats_list, "lons": lons_list}
 
 
 def get_tile_indices(hfi_tif, tile):

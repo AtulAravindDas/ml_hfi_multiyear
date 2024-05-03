@@ -98,11 +98,11 @@ def read_tif(tif, channels, window):
     return np.transpose(tif.read(channels, window=window), axes=(1, 2, 0))
 
 
-def get_landsat_bounds(config, region):
-    lat_s = np.floor(region[0] / config["tile_len_deg"]) * config["tile_len_deg"]
-    lat_n = np.ceil(region[1] / config["tile_len_deg"]) * config["tile_len_deg"]
-    lon_w = np.floor(region[2] / config["tile_len_deg"]) * config["tile_len_deg"]
-    lon_e = np.ceil(region[3] / config["tile_len_deg"]) * config["tile_len_deg"]
+def get_landsat_bounds(region, tile_len_deg):
+    lat_s = np.floor(region[0] / tile_len_deg) * tile_len_deg
+    lat_n = np.ceil(region[1] / tile_len_deg) * tile_len_deg
+    lon_w = np.floor(region[2] / tile_len_deg) * tile_len_deg
+    lon_e = np.ceil(region[3] / tile_len_deg) * tile_len_deg
 
     return lat_s, lat_n, lon_w, lon_e
 
