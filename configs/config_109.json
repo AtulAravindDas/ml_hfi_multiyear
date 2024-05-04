@@ -1,5 +1,5 @@
 {
-    "expname": "exp102",
+    "expname": "exp109",
     "machine": "blackforest",
     "seed": 22,
     "mode": null,
@@ -23,19 +23,24 @@
     },
 
     "architecture": {
+        "resnet": false,
+        "resnet_pretrained": true,
+        "resnet_trainable": false,
+        "resnet_drop_layer": -4,
+
         "input_noise": 5,
 
         "filters": [128, 128, 128, 128, 128],
         "cnn_activation": ["ReLU","ReLU","ReLU","ReLU","ReLU"],
         "kernel_size": [3, 3, 3, 3, 3],
 
-        "dense_in": [10952],
-        "dense_units": [64],
+        "dense_in": [26248],
+        "dense_units": [128],
         "dense_activations": ["ReLU"],
 
-        "dropout": 0.10,
+        "dropout": 0.1,
 
-        "final_in": 64,
+        "final_in": 128,
         "final_activation": "Sigmoid"
     },
 
@@ -54,7 +59,7 @@
         "pin_memory": true,
 
         "batch_size": 128,
-        "batches_per_epoch": 250,
+        "batches_per_epoch": 500,
         "max_epochs": 100000,
         "max_val_batches": 250,
 
@@ -69,7 +74,7 @@
 
         "early_stopping":{
             "args":{
-                "patience": 10,
+                "patience": 5,
                 "min_delta": 0.00
             }
         }

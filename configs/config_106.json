@@ -1,5 +1,5 @@
 {
-    "expname": "exp102",
+    "expname": "exp106",
     "machine": "blackforest",
     "seed": 22,
     "mode": null,
@@ -11,10 +11,10 @@
         "training_region": [0, 20, 0, 20],
         "inference_region": [0, 20, 0, 20],
 
-        "channels": [1, 2, 3, 4, 5, 6],
+        "channels": [1, 3, 6],
         "scene_width": 11,
 
-        "percentage_sampling": 0.05,
+        "percentage_sampling": 0.1,
         "val_frac": 0.05,
 
         "oversample_rare_bins": true,
@@ -23,19 +23,24 @@
     },
 
     "architecture": {
+        "resnet": true,
+        "resnet_pretrained": true,
+        "resnet_trainable": false,
+        "resnet_drop_layer": -4,
+
         "input_noise": 5,
 
         "filters": [128, 128, 128, 128, 128],
         "cnn_activation": ["ReLU","ReLU","ReLU","ReLU","ReLU"],
         "kernel_size": [3, 3, 3, 3, 3],
 
-        "dense_in": [26248],
-        "dense_units": [128],
+        "dense_in": [49288],
+        "dense_units": [32],
         "dense_activations": ["ReLU"],
 
-        "dropout": 0.10,
+        "dropout": 0.1,
 
-        "final_in": 128,
+        "final_in": 32,
         "final_activation": "Sigmoid"
     },
 
@@ -49,14 +54,14 @@
 
     "trainer": {
 
-        "resume_training": true,
+        "resume_training": false,
         "num_workers": 2,
         "pin_memory": true,
 
-        "batch_size": 32,
-        "batches_per_epoch": 1000,
+        "batch_size": 128,
+        "batches_per_epoch": 500,
         "max_epochs": 100000,
-        "max_val_batches": 1000,
+        "max_val_batches": 250,
 
         "loss":{
             "type": "WeightedSMSELoss",
@@ -69,7 +74,7 @@
 
         "early_stopping":{
             "args":{
-                "patience": 10,
+                "patience": 5,
                 "min_delta": 0.00
             }
         }
@@ -78,7 +83,7 @@
     "optimizer": {
         "type": "Adam",
         "args":{
-            "lr": 0.00005,
+            "lr": 0.0001,
             "weight_decay": 0,
             "amsgrad": false
         }

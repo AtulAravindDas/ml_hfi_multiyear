@@ -34,6 +34,10 @@ import time
 from base.base_model import BaseModel
 import utils.utils as utils
 
+import torchvision.models as models
+import torch.nn as nn
+from torchinfo import summary
+
 
 # https://github.com/FrancescoSaverioZuppichini/Pytorch-how-and-when-to-use-Module-Sequential-ModuleList-and-ModuleDict
 
@@ -127,6 +131,13 @@ class TorchModel(BaseModel):
     """
 
     def __init__(self, config):
+        """
+        Initializes the TorchModel.
+
+        Args:
+            config (dict): Configuration parameters for the model.
+
+        """
         super().__init__()
 
         self.config = config
@@ -135,6 +146,7 @@ class TorchModel(BaseModel):
             config["scene_width_landsat"],
             len(config["data"]["channels"]),
         )
+        self.isresnet = self.config["architecture"].get("resnet", False)
 
         assert (
             len(self.config["architecture"]["cnn_activation"])
@@ -145,19 +157,44 @@ class TorchModel(BaseModel):
             self.config["architecture"]["dense_activations"]
         )
 
+        # DEFINE MODEL LAYERS
+
         # Augmentation layers
         self.augmentation = torch.nn.Sequential(
             v2.RandomHorizontalFlip(p=0.5),
             v2.RandomVerticalFlip(p=0.5),
         )
 
-        # CNN block
-        self.conv_block = conv_block(
-            [self.input_shape[-1], *config["architecture"]["filters"][:-1]],
-            [*config["architecture"]["filters"]],
-            [*config["architecture"]["cnn_activation"]],
-            [*config["architecture"]["kernel_size"]],
-        )
+        # DEFINE CNN BLOCKS and RESCALE LAYERS
+        # Decide whether to build custom CNN blocks or use ResNet18
+        if self.isresnet:
+            # Build ResNet18 block
+            # scaling specific to resnet and torchvision
+            self.rescale_input = RescaleLayer((1.0 / (255.0 * 0.22)), -0.44)
+            self.skip_channels = (1, -1)
+
+            layers = list(
+                models.resnet18(
+                    pretrained=config["architecture"].get("resnet_pretrained", True)
+                ).children()
+            )[: config["architecture"]["resnet_drop_layer"]]
+            self.base_cnn_block = nn.Sequential(*layers)
+
+            # Set trainable Resnet layers
+            for param in self.base_cnn_block.parameters():
+                param.requires_grad = config["architecture"]["resnet_trainable"]
+        else:
+            # Build custom CNN block
+            self.rescale_input = RescaleLayer((1.0 / 255.0), 0.0)
+            self.skip_channels = (2, -1)
+
+            # CNN block
+            self.base_cnn_block = conv_block(
+                [self.input_shape[-1], *config["architecture"]["filters"][:-1]],
+                [*config["architecture"]["filters"]],
+                [*config["architecture"]["cnn_activation"]],
+                [*config["architecture"]["kernel_size"]],
+            )
 
         # Flat layer
         self.flat = torch.nn.Flatten(start_dim=1)
@@ -166,6 +203,7 @@ class TorchModel(BaseModel):
         self.dropout = torch.nn.Dropout(p=config["architecture"]["dropout"])
 
         # Dense blocks
+        # TODO: make it a choice how many final dense blocks to use
         self.denseblockA = dense_block(
             config["architecture"]["dense_units"],
             config["architecture"]["dense_activations"],
@@ -177,8 +215,7 @@ class TorchModel(BaseModel):
             in_features=config["architecture"]["dense_units"],
         )
 
-        # Rescaling layers
-        self.rescale_input = RescaleLayer(1.0 / 255.0, 0.0)
+        # Output scaling layer
         self.rescale_target = RescaleLayer(100.0, 0.0)
 
         # Output layers
@@ -199,24 +236,22 @@ class TorchModel(BaseModel):
             torch.Tensor: Output of the model.
 
         """
+        # data augmentation
+        if self.training:
+            input = self.augmentation(input)
 
         # rescale input
         input = self.rescale_input(input)
-        x = input
 
-        # data augmentation
-        if self.training:
-            x = self.augmentation(x)
-
-        # CNN block
-        x = self.conv_block(x)
+        # Base CNN Block
+        x = self.base_cnn_block(input)
 
         # flat layer
         x = self.flat(x)
 
         # skip connection
-        input_flat_chA = self.flat(input[:, 2, :, :])
-        input_flat_chB = self.flat(input[:, -1, :, :])
+        input_flat_chA = self.flat(input[:, self.skip_channels[0], :, :])
+        input_flat_chB = self.flat(input[:, self.skip_channels[1], :, :])
         x = torch.cat((x, input_flat_chA, input_flat_chB), dim=-1)
 
         # dropout layer
@@ -244,7 +279,6 @@ class TorchModel(BaseModel):
             numpy.ndarray: Array of predictions.
 
         """
-
         self.to(device)
         self.eval()
         with torch.inference_mode():
@@ -262,7 +296,11 @@ class TorchModel(BaseModel):
                 batch_size = self.config["inference"]["batch_size"]
 
                 if self.config["inference"]["quicklook"]:
-                    output[batch_idx * batch_size : (batch_idx + 1) * batch_size : self.config["inference"]["quicklook_skiplen"]] = out
+                    output[
+                        batch_idx
+                        * batch_size : (batch_idx + 1)
+                        * batch_size : self.config["inference"]["quicklook_skiplen"]
+                    ] = out
                 else:
                     output[batch_idx * batch_size : (batch_idx + 1) * batch_size] = out
 
@@ -280,6 +318,6 @@ class TorchModel(BaseModel):
             execution_time = end_time - start_time
             print(f"\nExecution time: {execution_time:.3f}s")
             print(f"Number samples: {output.shape[0]}")
-            print(f"Time per sample: {execution_time/output.shape[0]:.7f}s")
+            print(f"Time per sample: {execution_time/output.shape[0]:.7f}s \n")
 
         return output
