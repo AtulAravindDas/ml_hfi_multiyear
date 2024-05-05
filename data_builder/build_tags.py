@@ -68,8 +68,8 @@ def get_training_tags(config):
 
     print(
         f"\nTraining Tile Bounds: \n"
-        f"  {lats_lons_dict['lats'] = } \n"
-        f"  {lats_lons_dict['lons'] = } "
+        f"  {lats_lons_dict['lats']=} \n"
+        f"  {lats_lons_dict['lons']=} "
     )
 
     with rasterio.open(DEFAULT_MASK_FILEPATH) as buffer_mask:
@@ -108,7 +108,9 @@ def get_training_tags(config):
                             file_exists = True
 
                     if not file_exists:
-                        print(f"skipping these landsat tiles that do not exist for any year: {landsat_filenames}")
+                        print(
+                            f"skipping these landsat tiles that do not exist for any year: {landsat_filenames}"
+                        )
                         continue
 
                     print(f"Building tags for {landsat_filenames}")
@@ -435,7 +437,7 @@ def get_inference_tags(config):
 
     # PRINT SIZES
     n_inference = tagyear_inf.shape
-    print(f"{n_inference = }")
+    print(f"{n_inference=}")
     assert len(n_inference) > 0, "you have no data to predict."
 
     # Put into a nice package

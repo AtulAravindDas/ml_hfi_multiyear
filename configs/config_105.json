@@ -6,6 +6,7 @@
     "device": "gpu",
 
     "data": {
+        "globaltags_loadname": "exp109_seed22",
         "training_years": [2015, 2019],
         "inference_years": [2020],
         "training_region": [0, 20, 0, 20],
@@ -38,7 +39,7 @@
         "dense_units": [32],
         "dense_activations": ["ReLU"],
 
-        "dropout": 0.1,
+        "dropout": 0.2,
 
         "final_in": 32,
         "final_activation": "Sigmoid"
@@ -83,7 +84,7 @@
     "optimizer": {
         "type": "Adam",
         "args":{
-            "lr": 0.0001,
+            "lr": 0.00005,
             "weight_decay": 0,
             "amsgrad": false
         }

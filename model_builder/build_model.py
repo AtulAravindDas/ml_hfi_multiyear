@@ -173,16 +173,24 @@ class TorchModel(BaseModel):
             self.rescale_input = RescaleLayer((1.0 / (255.0 * 0.22)), -0.44)
             self.skip_channels = (1, -1)
 
-            layers = list(
-                models.resnet18(
-                    pretrained=config["architecture"].get("resnet_pretrained", True)
-                ).children()
-            )[: config["architecture"]["resnet_drop_layer"]]
+            if config["architecture"].get("resnet_pretrained", True):
+                layers = list(
+                    models.resnet18(
+                        weights="ResNet18_Weights.IMAGENET1K_V1"
+                    ).children()
+                )[: config["architecture"]["resnet_drop_layer"]]
+            else:
+                layers = list(
+                    models.resnet18(
+                        weights=None,
+                    ).children()
+                )[: config["architecture"]["resnet_drop_layer"]]
             self.base_cnn_block = nn.Sequential(*layers)
 
             # Set trainable Resnet layers
             for param in self.base_cnn_block.parameters():
                 param.requires_grad = config["architecture"]["resnet_trainable"]
+
         else:
             # Build custom CNN block
             self.rescale_input = RescaleLayer((1.0 / 255.0), 0.0)
@@ -209,11 +217,11 @@ class TorchModel(BaseModel):
             config["architecture"]["dense_activations"],
             in_features=config["architecture"]["dense_in"],
         )
-        self.denseblockB = dense_block(
-            config["architecture"]["dense_units"],
-            config["architecture"]["dense_activations"],
-            in_features=config["architecture"]["dense_units"],
-        )
+        # self.denseblockB = dense_block(
+        #     config["architecture"]["dense_units"],
+        #     config["architecture"]["dense_activations"],
+        #     in_features=config["architecture"]["dense_units"],
+        # )
 
         # Output scaling layer
         self.rescale_target = RescaleLayer(100.0, 0.0)
@@ -259,7 +267,7 @@ class TorchModel(BaseModel):
 
         # dense blocks
         x = self.denseblockA(x)
-        x = self.denseblockB(x)
+        # x = self.denseblockB(x)
 
         # output layer
         x = self.output(x)
@@ -309,7 +317,7 @@ class TorchModel(BaseModel):
                     print(
                         f"batch {batch_idx} of {int(np.ceil(output.shape[0] / batch_size))} - "
                         f"{execution_time:.3f}s - "
-                        f"{execution_time/((batch_idx+1)*batch_size):.9f}s/sample"
+                        f"{execution_time / ((batch_idx + 1) * batch_size):.9f}s/sample"
                     )
 
             output = np.asarray(output)
@@ -318,6 +326,6 @@ class TorchModel(BaseModel):
             execution_time = end_time - start_time
             print(f"\nExecution time: {execution_time:.3f}s")
             print(f"Number samples: {output.shape[0]}")
-            print(f"Time per sample: {execution_time/output.shape[0]:.7f}s \n")
+            print(f"Time per sample: {execution_time / output.shape[0]:.7f}s \n")
 
         return output

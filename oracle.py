@@ -9,7 +9,7 @@ from data_builder import data_loader
 from predictor import inference
 from data_builder import read_landsat, data_methods
 
-REWRITE = False
+REWRITE = True
 
 
 def main():
@@ -56,8 +56,8 @@ def main():
     )
     print(
         f"\nInference Tile Bounds: \n"
-        f"  {lats_lons_dict['lats'] = } \n"
-        f"  {lats_lons_dict['lons'] = } "
+        f"  {lats_lons_dict['lats']=} \n"
+        f"  {lats_lons_dict['lons']=} "
     )
 
     # load the model

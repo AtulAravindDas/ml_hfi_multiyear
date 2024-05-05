@@ -16,7 +16,7 @@ warnings.filterwarnings("ignore")
 torch.set_warn_always(False)
 
 
-# TODO: add option for grabbing only certain tiles
+# TODO: add option to load tags from a shared source...too much copying of the same tags
 
 
 def main():

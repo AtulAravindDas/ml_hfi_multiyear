@@ -236,18 +236,44 @@ def load_training_tags(config):
     tuple
         A tuple containing the loaded training tags and validation tags.
     """
-    model_name = get_model_name(config["expname"], config["seed"])
-    dir = get_model_dir(config["expname"], model_name, machine=config["machine"])
+    def load_local_tags(config):
+        model_name = get_model_name(config["expname"], config["seed"])
+        dir = get_model_dir(config["expname"], model_name, machine=config["machine"])
 
-    if not os.path.exists(dir + "tags_train.pkl"):
-        return None, None
-    if not os.path.exists(dir + "tags_val.pkl"):
-        return None, None
+        if not os.path.exists(dir + "tags_train.pkl"):
+            return None, None
+        if not os.path.exists(dir + "tags_val.pkl"):
+            return None, None
 
-    with open(dir + "tags_train.pkl", "rb") as f:
-        tags_train = pickle.load(f)
-    with open(dir + "tags_val.pkl", "rb") as f:
-        tags_val = pickle.load(f)
+        with open(dir + "tags_train.pkl", "rb") as f:
+            tags_train = pickle.load(f)
+        with open(dir + "tags_val.pkl", "rb") as f:
+            tags_val = pickle.load(f)
+
+        return tags_train, tags_val
+
+    def load_global_tags(config):
+        global_name = config["data"].get("globaltags_loadname", None)
+
+        if global_name is None:
+            return None, None
+        else:
+            import utils
+
+            directory_paths = utils.utils.get_directories(config["machine"])
+            global_filename = directory_paths["globaltags_dir"] + global_name
+
+            with open(global_filename + "_tags_train.pkl", "rb") as f:
+                tags_train = pickle.load(f)
+            with open(global_filename + "_tags_val.pkl", "rb") as f:
+                tags_val = pickle.load(f)
+
+            return tags_train, tags_val
+
+    # Load local and/or global tags
+    tags_train, tags_val = load_local_tags(config)
+    if tags_train is None:
+        tags_train, tags_val = load_global_tags(config)
 
     return tags_train, tags_val
 
@@ -315,11 +341,14 @@ def load_model(config, clean=True):
             dir = get_model_dir(config["expname"], model_name, machine=config["machine"])
 
             print("\nLoading model from: ", dir + model_name + ".pt")
-
             return load_torch_model(model, dir + model_name + ".pt")
         except:
             print("Saved model not found.")
-            return model
+            if config["mode"] == "inference":
+                raise FileNotFoundError
+            else:
+                print("Using a clean model.")
+                return model
 
 
 def get_config(expname):
