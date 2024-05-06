@@ -16,9 +16,6 @@ warnings.filterwarnings("ignore")
 torch.set_warn_always(False)
 
 
-# TODO: add option to load tags from a shared source...too much copying of the same tags
-
-
 def main():
     """
     Main function for training and evaluating a model.

@@ -217,6 +217,13 @@ class TorchModel(BaseModel):
             config["architecture"]["dense_activations"],
             in_features=config["architecture"]["dense_in"],
         )
+
+        # self.denseblockA = dense_block(
+        #     *config["architecture"]["dense_units"],
+        #     *config["architecture"]["dense_activations"],
+        #     in_features=*config["architecture"]["dense_in"],
+        # )
+
         # self.denseblockB = dense_block(
         #     config["architecture"]["dense_units"],
         #     config["architecture"]["dense_activations"],
