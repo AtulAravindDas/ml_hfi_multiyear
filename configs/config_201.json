@@ -1,5 +1,5 @@
 {
-    "expname": "exp114",
+    "expname": "exp201",
     "machine": "blackforest",
     "seed": 22,
     "mode": null,
@@ -11,7 +11,7 @@
         "training_years": [2015, 2019],
         "inference_years": [2020],
         "training_region": [0, 20, 0, 20],
-        "inference_region": [10, 20, 0, 20],
+        "inference_region": [5, 6, 5, 6],
 
         "channels": [1, 2, 3, 4, 5, 6],
         "scene_width": 11,
@@ -25,20 +25,16 @@
     },
 
     "architecture": {
-        "input_noise": 5,
+        "type": "vit",
 
-        "filters": [128, 128, 128, 128, 128],
-        "cnn_activation": ["ReLU","ReLU","ReLU","ReLU","ReLU"],
-        "kernel_size": [3, 3, 3, 3, 3],
+        "channels": 6,
+        "patch_size": 11,
+        "dim": 512,
+        "depth": 4,
+        "heads": 16,
+        "mlp_dim": 512,
 
-        "dense_in": [26248],
-        "dense_units": [128],
-        "dense_activations": ["ReLU"],
-
-        "dropout": 0.10,
-
-        "final_in": 128,
-        "final_activation": "Sigmoid"
+        "input_noise": 5
     },
 
     "inference": {
@@ -80,7 +76,7 @@
     "optimizer": {
         "type": "Adam",
         "args":{
-            "lr": 0.00005,
+            "lr": 0.0001,
             "weight_decay": 0,
             "amsgrad": false
         }

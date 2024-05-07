@@ -10,7 +10,7 @@
         "training_years": [2015, 2019],
         "inference_years": [2020],
         "training_region": [0, 20, 0, 20],
-        "inference_region": [0, 20, 0, 20],
+        "inference_region": [10, 20, 0, 20],
 
         "channels": [1, 3, 6],
         "scene_width": 11,
@@ -24,16 +24,12 @@
     },
 
     "architecture": {
-        "resnet": true,
+        "type": "resnet",
         "resnet_pretrained": true,
         "resnet_trainable": true,
         "resnet_drop_layer": -4,
 
         "input_noise": 5,
-
-        "filters": [128, 128, 128, 128, 128],
-        "cnn_activation": ["ReLU","ReLU","ReLU","ReLU","ReLU"],
-        "kernel_size": [3, 3, 3, 3, 3],
 
         "dense_in": [49288],
         "dense_units": [64],

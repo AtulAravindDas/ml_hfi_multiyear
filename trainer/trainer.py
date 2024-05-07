@@ -114,6 +114,8 @@ class Trainer(BaseTrainer):
                 data.to(self.device),
                 target.to(self.device),
             )
+            # input = data
+            # target = target.to(self.device)
 
             # Zero your gradients for every batch!
             self.optimizer.zero_grad()

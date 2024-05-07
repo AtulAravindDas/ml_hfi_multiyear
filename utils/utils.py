@@ -54,8 +54,6 @@ import torch
 import numpy as np
 import pickle
 
-from model_builder.build_model import TorchModel
-
 
 def get_directories(machine):
     """Get the directory paths from the "utils/directories.json" file."""
@@ -332,7 +330,9 @@ def load_model(config, clean=True):
     TorchModel
         The loaded TorchModel.
     """
-    model = TorchModel(config)
+    from model_builder.build_model import ModelBuilder
+    model = ModelBuilder(config)
+
     if clean:
         return model
     else:
