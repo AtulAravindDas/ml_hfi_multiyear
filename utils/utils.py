@@ -244,9 +244,9 @@ def load_training_tags(config):
     if config_tags_name is None:
         config_tags_name = get_model_name(config["expname"], config["seed"])
 
-    if not os.path.exists(dir + config_tags_name + "tags_train.pkl"):
+    if not os.path.exists(dir + config_tags_name + "_tags_train.pkl"):
         return None, None
-    if not os.path.exists(dir + config_tags_name + "tags_val.pkl"):
+    if not os.path.exists(dir + config_tags_name + "_tags_val.pkl"):
         return None, None
 
     with open(dir + config_tags_name + "_tags_train.pkl", "rb") as f:
