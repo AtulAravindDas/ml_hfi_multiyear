@@ -51,7 +51,8 @@ def main():
                 if not args.dry_run:
                     os.system("rm -r " + dir)
 
-    for key in ("figures_dir", "mosaics_dir"):
+    # TODO: add deleting tags here
+    for key in ("figures_dir", "mosaics_dir", "tags_dir"):
         dir = directory_paths[key]
         if os.path.exists(dir):
             print("rm " + dir + model_name + "_*")

@@ -16,9 +16,6 @@ warnings.filterwarnings("ignore")
 torch.set_warn_always(False)
 
 
-# TODO: add option for grabbing only certain tiles
-
-
 def main():
     """
     Main function for training and evaluating a model.
