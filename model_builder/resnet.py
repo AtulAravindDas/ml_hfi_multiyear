@@ -64,11 +64,6 @@ class ResNetModel(BaseModel):
             len(config["data"]["channels"]),
         )
 
-        assert (
-            len(self.config["architecture"]["cnn_activation"])
-            == len(self.config["architecture"]["kernel_size"])
-            == len(self.config["architecture"]["filters"])
-        )
         assert len(self.config["architecture"]["dense_units"]) == len(
             self.config["architecture"]["dense_activations"]
         )

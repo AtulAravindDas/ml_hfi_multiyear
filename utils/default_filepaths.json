@@ -1,4 +1,4 @@
 {
     "mask_filepath": "data/hii_coastal_buffer_mask.tif",
-    "hii_filepath": "data/hii_2019-01-01_uint8.tif"
+    "hii_filepath": "data/hii_2015-01-01_uint8.tif"
 }

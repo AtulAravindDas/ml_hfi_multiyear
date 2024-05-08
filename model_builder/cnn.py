@@ -98,7 +98,7 @@ class CNNModel(BaseModel):
         # DEFINE CNN BLOCKS and RESCALE LAYERS
         # Build custom CNN block
         self.rescale_input = RescaleLayer((1.0 / 255.0), 0.0)
-        self.skip_channels = (2, -1)
+        self.skip_channels = (2,)
 
         # CNN block
         self.base_cnn_block = conv_block(
@@ -157,9 +157,11 @@ class CNNModel(BaseModel):
         x = self.flat(x)
 
         # skip connection
+        # input_flat_chA = self.flat(input[:, self.skip_channels[0], :, :])
+        # input_flat_chB = self.flat(input[:, self.skip_channels[1], :, :])
+        # x = torch.cat((x, input_flat_chA, input_flat_chB), dim=-1)
         input_flat_chA = self.flat(input[:, self.skip_channels[0], :, :])
-        input_flat_chB = self.flat(input[:, self.skip_channels[1], :, :])
-        x = torch.cat((x, input_flat_chA, input_flat_chB), dim=-1)
+        x = torch.cat((x, input_flat_chA), dim=-1)
 
         # dropout layer
         x = self.dropout(x)

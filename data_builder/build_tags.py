@@ -88,6 +88,8 @@ def get_training_tags(config):
             for latfile in lats_list:
                 for lonfile in lons_list:
 
+                    start_time = time.time()
+
                     # Get list of landsat file names
                     landsat_filenames = read_landsat.get_input_filename(
                         config["data"]["training_years"],
@@ -291,8 +293,9 @@ def get_training_tags(config):
 
                     # print meta data
                     print(
-                        f"frac_land={frac_land.round(3)}, #samples = {len(subsample_years)}\n"
+                        f"frac_land={frac_land.round(3)}, #samples = {len(subsample_years)}"
                     )
+                    print(f"Time to build tags: {time.time() - start_time:.2f} seconds\n")
 
     assert (
         len(sample_lats) > 0
