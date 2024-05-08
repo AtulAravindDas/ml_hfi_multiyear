@@ -7,7 +7,7 @@
         "save_model_dir": "saved/models/",
         "mosaics_dir": "saved/mosaics/",
         "shapefiles_dir": "data/shapefiles/",
-        "globaltags_dir": "saved/globaltags/"
+        "tags_dir": "saved/tags/"
     },
 
     "blackforest": {
@@ -18,7 +18,7 @@
         "save_model_dir": "saved/models/",
         "mosaics_dir": "saved/mosaics/",
         "shapefiles_dir": "data/shapefiles/",
-        "globaltags_dir": "saved/globaltags/"
+        "tags_dir": "saved/tags/"
     }
 
 }

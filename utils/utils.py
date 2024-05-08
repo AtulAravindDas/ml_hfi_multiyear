@@ -209,12 +209,14 @@ def save_training_tags(config, tags_train, tags_val):
     tags_val : list
         The validation tags.
     """
-    model_name = get_model_name(config["expname"], config["seed"])
-    dir = get_model_dir(config["expname"], model_name, machine=config["machine"])
+    import utils
 
-    with open(dir + "tags_train.pkl", "wb") as f:
+    dir = utils.utils.get_directories(config["machine"])["tags_dir"]
+    model_name = get_model_name(config["expname"], config["seed"])
+
+    with open(dir + model_name + "_tags_train.pkl", "wb") as f:
         pickle.dump(tags_train, f)
-    with open(dir + "tags_val.pkl", "wb") as f:
+    with open(dir + model_name + "_tags_val.pkl", "wb") as f:
         pickle.dump(tags_val, f)
 
     print("saved training tags.")
@@ -234,44 +236,23 @@ def load_training_tags(config):
     tuple
         A tuple containing the loaded training tags and validation tags.
     """
-    def load_local_tags(config):
-        model_name = get_model_name(config["expname"], config["seed"])
-        dir = get_model_dir(config["expname"], model_name, machine=config["machine"])
+    import utils
 
-        if not os.path.exists(dir + "tags_train.pkl"):
-            return None, None
-        if not os.path.exists(dir + "tags_val.pkl"):
-            return None, None
+    dir = utils.utils.get_directories(config["machine"])["tags_dir"]
 
-        with open(dir + "tags_train.pkl", "rb") as f:
-            tags_train = pickle.load(f)
-        with open(dir + "tags_val.pkl", "rb") as f:
-            tags_val = pickle.load(f)
+    config_tags_name = config["data"].get("tags_loadname", None)
+    if config_tags_name is None:
+        config_tags_name = get_model_name(config["expname"], config["seed"])
 
-        return tags_train, tags_val
+    if not os.path.exists(dir + config_tags_name + "tags_train.pkl"):
+        return None, None
+    if not os.path.exists(dir + config_tags_name + "tags_val.pkl"):
+        return None, None
 
-    def load_global_tags(config):
-        global_name = config["data"].get("globaltags_loadname", None)
-
-        if global_name is None:
-            return None, None
-        else:
-            import utils
-
-            directory_paths = utils.utils.get_directories(config["machine"])
-            global_filename = directory_paths["globaltags_dir"] + global_name
-
-            with open(global_filename + "_tags_train.pkl", "rb") as f:
-                tags_train = pickle.load(f)
-            with open(global_filename + "_tags_val.pkl", "rb") as f:
-                tags_val = pickle.load(f)
-
-            return tags_train, tags_val
-
-    # Load local and/or global tags
-    tags_train, tags_val = load_local_tags(config)
-    if tags_train is None:
-        tags_train, tags_val = load_global_tags(config)
+    with open(dir + config_tags_name + "_tags_train.pkl", "rb") as f:
+        tags_train = pickle.load(f)
+    with open(dir + config_tags_name + "_tags_val.pkl", "rb") as f:
+        tags_val = pickle.load(f)
 
     return tags_train, tags_val
 
@@ -331,6 +312,7 @@ def load_model(config, clean=True):
         The loaded TorchModel.
     """
     from model_builder.build_model import ModelBuilder
+
     model = ModelBuilder(config)
 
     if clean:
@@ -338,7 +320,9 @@ def load_model(config, clean=True):
     else:
         try:
             model_name = get_model_name(config["expname"], config["seed"])
-            dir = get_model_dir(config["expname"], model_name, machine=config["machine"])
+            dir = get_model_dir(
+                config["expname"], model_name, machine=config["machine"]
+            )
 
             model = load_torch_model(model, dir + model_name + ".pt")
             print("\nLoading model from: ", dir + model_name + ".pt")
@@ -386,8 +370,8 @@ def get_config(expname):
 
     # CHECK IF QUICKLOOK and CHANGE BATCH SIZE
     if config["inference"]["quicklook"]:
-        config["inference"]["batch_size"] = (
-            config["inference"]["batch_size"] * (config["inference"]["quicklook_skiplen"] - 1)
+        config["inference"]["batch_size"] = config["inference"]["batch_size"] * (
+            config["inference"]["quicklook_skiplen"] - 1
         )
 
     # SET SCENE WIDTH

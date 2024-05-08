@@ -43,26 +43,66 @@ class WeightedSMSELoss(torch.nn.Module):
 
         if self.zero_weighting is not None and self.one_weighting is None:
             weights = torch.where(
-                target <= self.zero_threshold, self.zero_weighting, self.non_weighting
+                torch.logical_or(
+                    target <= self.zero_threshold, output <= self.zero_threshold
+                ),
+                self.zero_weighting,
+                self.non_weighting,
             )
             loss = torch.mean(weights * torch.square(error))
 
         elif self.zero_weighting is None and self.one_weighting is not None:
             weights = torch.where(
-                target > self.one_threshold, self.one_weighting, self.non_weighting
+                torch.logical_or(
+                    target >= self.one_threshold, output >= self.one_threshold
+                ),
+                self.one_weighting,
+                self.non_weighting
             )
             loss = torch.mean(weights * torch.square(error))
 
         elif self.zero_weighting is not None and self.one_weighting is not None:
             weights = torch.where(
-                target <= self.zero_threshold, self.zero_weighting, self.non_weighting
+                torch.logical_or(
+                    target <= self.zero_threshold, output <= self.zero_threshold
+                ),
+                self.zero_weighting,
+                self.non_weighting
             )
             weights = torch.where(
-                target > self.one_threshold, self.one_weighting, weights
+                torch.logical_or(
+                    target >= self.one_threshold, output >= self.one_threshold
+                ),
+                self.one_weighting,
+                weights
             )
             loss = torch.mean(weights * torch.square(error))
 
         else:
             loss = torch.mean(torch.square(error))
+
+        # if self.zero_weighting is not None and self.one_weighting is None:
+        #     weights = torch.where(
+        #         target <= self.zero_threshold, self.zero_weighting, self.non_weighting
+        #     )
+        #     loss = torch.mean(weights * torch.square(error))
+
+        # elif self.zero_weighting is None and self.one_weighting is not None:
+        #     weights = torch.where(
+        #         target > self.one_threshold, self.one_weighting, self.non_weighting
+        #     )
+        #     loss = torch.mean(weights * torch.square(error))
+
+        # elif self.zero_weighting is not None and self.one_weighting is not None:
+        #     weights = torch.where(
+        #         target <= self.zero_threshold, self.zero_weighting, self.non_weighting
+        #     )
+        #     weights = torch.where(
+        #         target > self.one_threshold, self.one_weighting, weights
+        #     )
+        #     loss = torch.mean(weights * torch.square(error))
+
+        # else:
+        #     loss = torch.mean(torch.square(error))
 
         return torch.sqrt(loss)
