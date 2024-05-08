@@ -19,6 +19,7 @@ conda install -c conda-forge dask
 pip install ipython-autotime cmocean cmasher cmaps torchinfo rasterio rioxarray
 conda install torchvision
 pip install seaborn
+pip install vit-pytorch
 ```
 
 ## Get Started
