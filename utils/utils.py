@@ -340,8 +340,9 @@ def load_model(config, clean=True):
             model_name = get_model_name(config["expname"], config["seed"])
             dir = get_model_dir(config["expname"], model_name, machine=config["machine"])
 
+            model = load_torch_model(model, dir + model_name + ".pt")
             print("\nLoading model from: ", dir + model_name + ".pt")
-            return load_torch_model(model, dir + model_name + ".pt")
+            return model
         except:
             print("Saved model not found.")
             if config["mode"] == "inference":

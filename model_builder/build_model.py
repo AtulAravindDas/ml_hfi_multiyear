@@ -23,17 +23,17 @@ def ModelBuilder(config):
     """
     if config["architecture"]["type"] == "cnn":
         from model_builder.cnn import CNNModel
-        print("Buidling CNNModel model.")
+        print("Building CNNModel model.")
         return CNNModel(config)
 
     elif config["architecture"]["type"] == "resnet":
         from model_builder.resnet import ResNetModel
-        print("Buidling ResNetModel model.")
+        print("Building ResNetModel model.")
         return ResNetModel(config)
 
     elif config["architecture"]["type"] == "vit":
         from model_builder.vit import ViTModel
-        print("Buidling ViTModel model.")
+        print("Building ViTModel model.")
         return ViTModel(config)
 
     else:
