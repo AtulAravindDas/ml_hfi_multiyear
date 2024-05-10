@@ -18,7 +18,7 @@
 
         "percentage_sampling": 0.003,
         "val_frac": 0.05,
-
+        "min_binfrac_for_tile": 0.0,
         "oversample_rare_bins": true,
         "oversample_rate": 10.0,
         "kluge_value_for_zero": null

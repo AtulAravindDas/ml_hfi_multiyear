@@ -1,21 +1,18 @@
 """Build the data.
 
+This module provides functions for building the dataset and retrieving training and validation tags based on the provided configuration.
+
 Classes
 ---------
-data_generator
+Tags: A class representing the training and validation tags.
 
 Functions
 ---------
-get_tags(config)
-    Retrieves the training and validation tags based on the provided configuration.
-build_dataset(config, sample_years, sample_lats, sample_lons)
-    Builds the dataset using the provided configuration and sample years, latitudes, and longitudes.
-make_sample_list(config,)
-    Creates a list of samples based on the provided configuration.
-data_generator.get_input_data(self, years, sample_lats, sample_lons)
-    Retrieves the input data for the data generator based on the provided years, latitudes, and longitudes.
-data_generator.get_output_data(self, years, sample_lats, sample_lons)
-    Retrieves the output data for the data generator based on the provided years, latitudes, and longitudes.
+get_tags(config): Retrieves the training and validation tags based on the provided configuration.
+build_dataset(config, sample_years, sample_lats, sample_lons): Builds the dataset using the provided configuration and sample years, latitudes, and longitudes.
+make_sample_list(config): Creates a list of samples based on the provided configuration.
+data_generator.get_input_data(self, years, sample_lats, sample_lons): Retrieves the input data for the data generator based on the provided years, latitudes, and longitudes.
+data_generator.get_output_data(self, years, sample_lats, sample_lons): Retrieves the output data for the data generator based on the provided years, latitudes, and longitudes.
 """
 
 import os
@@ -36,23 +33,48 @@ DEFAULT_MASK_FILEPATH = default_filepaths["mask_filepath"]
 DEFAULT_HII_FILEPATH = default_filepaths["hii_filepath"]
 
 
+class Tags:
+    def __init__(self, tags_list, tags_dict):
+
+        self.years = np.asarray(tags_list[0], dtype="int")
+        self.lats = np.asarray(tags_list[1])
+        self.lons = np.asarray(tags_list[2])
+        self.files = np.asarray(tags_list[3])
+
+        self.dict = tags_dict
+
+
 def get_tags(config):
 
     if config["mode"] == "training":
 
-        tags_train, tags_val = utils.load_training_tags(config)
+        tags_train, tags_train_dict, tags_val, tags_val_dict = utils.load_training_tags(
+            config
+        )
 
         if tags_train is None or tags_val is None:
             tags_train, tags_val = get_training_tags(config)
-            utils.save_training_tags(config, tags_train, tags_val)
+            tags_train_dict, tags_val_dict = make_tagfile_dict(tags_train, tags_val)
+            utils.save_training_tags(
+                config, tags_train, tags_train_dict, tags_val, tags_val_dict
+            )
 
         print(f"# Training Samples:   {len(tags_train[0])}")
         print(f"# Validation Samples: {len(tags_val[0])}")
 
     elif config["mode"] == "inference":
         tags_train, tags_val = get_inference_tags(config)
+        tags_train_dict, tags_val_dict = make_tagfile_dict(tags_train, tags_val)
     else:
         raise NotImplementedError("no such mode.")
+
+    # create Tags objects to carry numpy arrays around
+    tags_train = Tags(tags_train, tags_train_dict)
+
+    if tags_val is not None and tags_val_dict is not None:
+        tags_val = Tags(tags_val, tags_val_dict)
+    else:
+        tags_val = None
 
     return tags_train, tags_val
 
@@ -471,6 +493,9 @@ def make_tagfile_dict(tags_train, tags_val):
         return tags_dict
 
     train_dict = make_dict(tags_train)
-    val_dict = make_dict(tags_val)
+    if tags_val is not None:
+        val_dict = make_dict(tags_val)
+    else:
+        val_dict = None
 
     return train_dict, val_dict

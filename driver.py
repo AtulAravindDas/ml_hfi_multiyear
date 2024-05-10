@@ -4,6 +4,7 @@ import warnings
 import matplotlib.pyplot as plt  # type: ignore
 import torch
 import torchinfo
+import numpy as np
 
 import trainer.losses as loss_module
 import trainer.metrics as metrics_module
@@ -17,7 +18,6 @@ torch.set_warn_always(False)
 
 # TODO: figure out what an assertion error was thrown for not use_case central for exp003 data
 # TODO: add more to tag cleaning for tiles with too few high values, or too few values overall
-# TODO: why is training so much slower for exp003 compared to exp001?
 
 
 def main():
@@ -62,18 +62,19 @@ def main():
     utils.set_random_seeds(config["seed"])
 
     # LOAD THE DATA
-    # torch.multiprocessing.set_sharing_strategy("file_system")
-    print("build_tags.get_tags(config)")
+    print("Building the data.")
     tags_train, tags_val = build_tags.get_tags(config)
 
-    print("build_tags.make_tagfile_dict(tags_train, tags_val)")
-    tags_train_dict, tags_val_dict = build_tags.make_tagfile_dict(tags_train, tags_val)
-
-    print("data_loader.CustomData(.)")
+    # training data
     ds_train = data_loader.CustomData(
-        config, tags_train, tags_train_dict, config["trainer"]["batch_size"]
+        config,
+        tags_train.years,
+        tags_train.lats,
+        tags_train.lons,
+        tags_train.files,
+        tags_train.dict,
+        config["trainer"]["batch_size"],
     )
-    print("torch.utils.data.DataLoader(.)")
     train_loader = torch.utils.data.DataLoader(
         ds_train,
         batch_size=None,
@@ -84,8 +85,15 @@ def main():
         pin_memory=config["trainer"]["pin_memory"],
     )
 
+    # validation data
     ds_val = data_loader.CustomData(
-        config, tags_val, tags_val_dict, config["trainer"]["batch_size"]
+        config,
+        tags_val.years,
+        tags_val.lats,
+        tags_val.lons,
+        tags_val.files,
+        tags_val.dict,
+        config["trainer"]["batch_size"],
     )
     val_loader = torch.utils.data.DataLoader(
         ds_val,

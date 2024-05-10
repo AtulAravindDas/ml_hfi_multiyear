@@ -105,11 +105,7 @@ class Trainer(BaseTrainer):
         self.model.train()
         self.batch_log.reset()
 
-        t0 = time.time()
         for batch_idx, (data, target) in enumerate(self.data_loader):
-
-            if batch_idx == 0:
-                print("enumerate time: ", time.time() - t0)
 
             if batch_idx == self.config["trainer"]["batches_per_epoch"]:
                 break
@@ -132,6 +128,8 @@ class Trainer(BaseTrainer):
 
             # Adjust learning weights
             self.optimizer.step()
+
+            # print(output, target)
 
             # Log the results
             self.batch_log.update("batch", batch_idx)

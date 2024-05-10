@@ -6,7 +6,7 @@
     "device": "gpu",
 
     "data": {
-        "tags_loadname": "exp002_seed33",
+        "tags_loadname": "exp003_seed33",
 
         "training_years": [2015, 2019],
         "training_region": [-60, 60, -180, 180],
@@ -51,9 +51,9 @@
         "pin_memory": true,
 
         "batch_size": 32,
-        "batches_per_epoch": 10000,
+        "batches_per_epoch": 2000,
         "max_epochs": 10000,
-        "max_val_batches": 500,
+        "max_val_batches": 250,
 
         "loss":{
             "type": "WeightedSMSELoss",
@@ -68,7 +68,7 @@
 
         "early_stopping":{
             "args":{
-                "patience": 5,
+                "patience": 25,
                 "min_delta": 0.00
             }
         }

@@ -196,7 +196,7 @@ def get_prediction_dir(expname, model_name, machine="falco"):
     return dir
 
 
-def save_training_tags(config, tags_train, tags_val):
+def save_training_tags(config, tags_train, dict_train, tags_val, dict_val):
     """
     Save the training tags to the specified directory based on the experiment configuration.
 
@@ -216,8 +216,12 @@ def save_training_tags(config, tags_train, tags_val):
 
     with open(dir + model_name + "_tags_train.pkl", "wb") as f:
         pickle.dump(tags_train, f)
+    with open(dir + model_name + "_tags_dict_train.pkl", "wb") as f:
+        pickle.dump(dict_train, f)
     with open(dir + model_name + "_tags_val.pkl", "wb") as f:
         pickle.dump(tags_val, f)
+    with open(dir + model_name + "_tags_dict_val.pkl", "wb") as f:
+        pickle.dump(dict_val, f)
 
     print("saved training tags.")
 
@@ -245,16 +249,24 @@ def load_training_tags(config):
         config_tags_name = get_model_name(config["expname"], config["seed"])
 
     if not os.path.exists(dir + config_tags_name + "_tags_train.pkl"):
-        return None, None
+        return None, None, None, None
+    if not os.path.exists(dir + config_tags_name + "_tags_dict_train.pkl"):
+        return None, None, None, None
     if not os.path.exists(dir + config_tags_name + "_tags_val.pkl"):
-        return None, None
+        return None, None, None, None
+    if not os.path.exists(dir + config_tags_name + "_tags_dict_val.pkl"):
+        return None, None, None, None
 
     with open(dir + config_tags_name + "_tags_train.pkl", "rb") as f:
         tags_train = pickle.load(f)
+    with open(dir + config_tags_name + "_tags_dict_train.pkl", "rb") as f:
+        tags_dict_train = pickle.load(f)
     with open(dir + config_tags_name + "_tags_val.pkl", "rb") as f:
         tags_val = pickle.load(f)
+    with open(dir + config_tags_name + "_tags_dict_val.pkl", "rb") as f:
+        tags_dict_val = pickle.load(f)
 
-    return tags_train, tags_val
+    return tags_train, tags_dict_train, tags_val, tags_dict_val
 
 
 def save_torch_model(model, config):
