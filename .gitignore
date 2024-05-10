@@ -1,3 +1,9 @@
+# Horrible Apple stuff
+# find . -name "Icon?" -print0 | xargs -0 rm -rf
+
+# Fixes for Co-Pilot
+# rm -rf ~/.vscode-server
+
 # Our stuff
 *.pickle
 *.pklz
@@ -30,8 +36,6 @@ mosaics/
 sandbox_scripts/
 *sandbox*
 
-# Horrible Apple stuff
-# find . -name "Icon?" -print0 | xargs -0 rm -rf
 .DS_Store
 .DS_*
 Icon

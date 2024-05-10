@@ -132,7 +132,13 @@ def read_input_data(
     scene_width,
     rng=np.random.default_rng(42),
 ):
+
+    # if the tif file is on the dateline there its longitudes are 0-360
+    # this is a fix for that without prescribing the tile name
     ilat, ilon = tif_dict["central"].index(sample_lon, sample_lat)
+    if ilon < -tif_dict["central_width"]:
+        sample_lon = 360.0 + sample_lon
+        ilat, ilon = tif_dict["central"].index(sample_lon, sample_lat)
 
     scene_width_2 = int((scene_width - 1) / 2)
     ilat_n = int(ilat - config["landsat_to_hfi_ratio"] * scene_width_2)
@@ -177,7 +183,18 @@ def read_input_data(
 
     # the speed of this code assumes that training samples will never be on edges or corners
     if config["mode"] == "training":
-        assert usecase == "usecase_central"
+        assert usecase == "usecase_central", (
+            usecase,
+            sample_year,
+            sample_lat,
+            sample_lon,
+            ilat,
+            ilon,
+            ilat_s,
+            ilat_n,
+            ilon_e,
+            ilon_w,
+        )
 
     # start_time = time.time()
 
@@ -468,7 +485,7 @@ def read_input_data(
                     (0, ilat_s - tif_dict["central_height"] + 1), (ilon_w, ilon_e + 1)
                 ),
             )
-
+            print("")
             sample_input = np.vstack((central_output, south_output))
 
     # USECASE 7 - southwest corner

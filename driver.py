@@ -16,9 +16,6 @@ from visualizer import plots
 warnings.filterwarnings("ignore")
 torch.set_warn_always(False)
 
-# TODO: figure out what an assertion error was thrown for not use_case central for exp003 data
-# TODO: add more to tag cleaning for tiles with too few high values, or too few values overall
-
 
 def main():
     """
