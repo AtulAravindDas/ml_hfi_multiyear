@@ -15,6 +15,10 @@ from visualizer import plots
 warnings.filterwarnings("ignore")
 torch.set_warn_always(False)
 
+# TODO: figure out what an assertion error was thrown for not use_case central for exp003 data
+# TODO: add more to tag cleaning for tiles with too few high values, or too few values overall
+# TODO: why is training so much slower for exp003 compared to exp001?
+
 
 def main():
     """
@@ -58,13 +62,18 @@ def main():
     utils.set_random_seeds(config["seed"])
 
     # LOAD THE DATA
-    torch.multiprocessing.set_sharing_strategy("file_system")
-
+    # torch.multiprocessing.set_sharing_strategy("file_system")
+    print("build_tags.get_tags(config)")
     tags_train, tags_val = build_tags.get_tags(config)
 
+    print("build_tags.make_tagfile_dict(tags_train, tags_val)")
+    tags_train_dict, tags_val_dict = build_tags.make_tagfile_dict(tags_train, tags_val)
+
+    print("data_loader.CustomData(.)")
     ds_train = data_loader.CustomData(
-        config, tags_train, config["trainer"]["batch_size"]
+        config, tags_train, tags_train_dict, config["trainer"]["batch_size"]
     )
+    print("torch.utils.data.DataLoader(.)")
     train_loader = torch.utils.data.DataLoader(
         ds_train,
         batch_size=None,
@@ -73,10 +82,11 @@ def main():
         drop_last=False,
         num_workers=config["trainer"]["num_workers"],
         pin_memory=config["trainer"]["pin_memory"],
-        # worker_init_fn=set_worker_sharing_strategy
     )
 
-    ds_val = data_loader.CustomData(config, tags_val, config["trainer"]["batch_size"])
+    ds_val = data_loader.CustomData(
+        config, tags_val, tags_val_dict, config["trainer"]["batch_size"]
+    )
     val_loader = torch.utils.data.DataLoader(
         ds_val,
         batch_size=None,
@@ -85,7 +95,6 @@ def main():
         drop_last=False,
         num_workers=config["trainer"]["num_workers"],
         pin_memory=config["trainer"]["pin_memory"],
-        # worker_init_fn=set_worker_sharing_strategy
     )
 
     # BUILD THE MODEL

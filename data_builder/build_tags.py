@@ -205,13 +205,13 @@ def get_training_tags(config):
                     # Calculate the total number of samples
                     total_samples = len(array)
 
-                    # Calculate the minimum number of samples per bin based on the minimum percentage
-                    min_samples_threshold = int(total_samples * percentage_sampling)
+                    # Calculate the number of samples per bin based on the percentage_sampling
+                    samples_threshold = int(total_samples * percentage_sampling)
 
-                    # this ensures that the max is 'percentage_sampling'%, if there are not,
+                    # this ensures that the max is 'percentage_sampling'%, if there are not enough,
                     # we just take what is available but no more than 'percentage_sampling'%
                     # equally divided in the number of bins
-                    max_samples_per_bin = int(min_samples_threshold // len(bins))
+                    max_samples_per_bin = int(samples_threshold // len(bins))
 
                     # Initialize list to store indices to keep
                     indices_to_keep = []
@@ -223,6 +223,15 @@ def get_training_tags(config):
                         bin_indices = np.where(
                             (array >= bin_start) & (array < bin_end)
                         )[0]
+
+                        # If the number of samples in the bin is less than the minimum threshold, we skip the entire tile
+                        if (
+                            len(bin_indices)
+                            < config["data"]["min_binfrac_for_tile"]
+                            * max_samples_per_bin
+                        ):
+                            indices_to_keep = []
+                            break
 
                         # Pull samples from each bin to create balanced decile bins
                         if (
@@ -295,7 +304,9 @@ def get_training_tags(config):
                     print(
                         f"frac_land={frac_land.round(3)}, #samples = {len(subsample_years)}"
                     )
-                    print(f"Time to build tags: {time.time() - start_time:.2f} seconds\n")
+                    print(
+                        f"Time to build tags: {time.time() - start_time:.2f} seconds\n"
+                    )
 
     assert (
         len(sample_lats) > 0
@@ -343,7 +354,7 @@ def get_training_tags(config):
 
     # Clean the tags
     tags_train, tags_val = clean_tags(
-        tags_train, tags_val, config["trainer"]["batch_size"]
+        tags_train, tags_val, config["trainer"]["batch_size"] * 25
     )
 
     return tags_train, tags_val
@@ -446,3 +457,20 @@ def get_inference_tags(config):
     # Put into a nice package
     tags = (tagyear_inf, sample_lats, sample_lons, tagfile_inf)
     return tags, None
+
+
+def make_tagfile_dict(tags_train, tags_val):
+
+    def make_dict(tags):
+        tags_dict = {}
+        for filename in np.unique(tags[-1]):
+            isample = [
+                index for (index, item) in enumerate(tags[-1]) if item == filename
+            ]
+            tags_dict[filename] = np.asarray(isample)
+        return tags_dict
+
+    train_dict = make_dict(tags_train)
+    val_dict = make_dict(tags_val)
+
+    return train_dict, val_dict
