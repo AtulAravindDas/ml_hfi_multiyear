@@ -29,7 +29,7 @@ class CustomData(torch.utils.data.Dataset):
     Custom dataset for data loading.
     """
 
-    def __init__(self, config, tags, batch_size=32):
+    def __init__(self, config, tags, tags_dict, batch_size=32):
         """
         Initialize the CustomData dataset.
 
@@ -42,13 +42,6 @@ class CustomData(torch.utils.data.Dataset):
         """
         self.data_dir = utils.get_directories(config["machine"])["data_dir"]
         self.landsat_dir = utils.get_directories(config["machine"])["landsat_dir"]
-
-        tags_dict = {}
-        for filename in np.unique(tags[-1]):
-            isample = [
-                index for (index, item) in enumerate(tags[-1]) if item == filename
-            ]
-            tags_dict[filename] = np.asarray(isample)
 
         self.tags = tags
         self.tags_dict = tags_dict

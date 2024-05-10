@@ -11,6 +11,7 @@ import numpy as np
 import torch
 from base.base_trainer import BaseTrainer
 from utils import utils
+import time
 
 
 class Trainer(BaseTrainer):
@@ -104,7 +105,11 @@ class Trainer(BaseTrainer):
         self.model.train()
         self.batch_log.reset()
 
+        t0 = time.time()
         for batch_idx, (data, target) in enumerate(self.data_loader):
+
+            if batch_idx == 0:
+                print("enumerate time: ", time.time() - t0)
 
             if batch_idx == self.config["trainer"]["batches_per_epoch"]:
                 break
