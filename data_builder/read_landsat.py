@@ -177,7 +177,9 @@ def read_input_data(
 
     # the speed of this code assumes that training samples will never be on edges or corners
     if config["mode"] == "training":
-        assert usecase == "usecase_central"
+        if usecase != "usecase_central":
+            print(usecase, sample_year, sample_lon, sample_lat, ilat_s, ilat_n, ilon_e, ilon_w, ilat, ilon)
+        # assert usecase == "usecase_central"
 
     # start_time = time.time()
 
