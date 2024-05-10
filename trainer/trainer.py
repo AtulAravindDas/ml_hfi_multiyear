@@ -143,7 +143,6 @@ class Trainer(BaseTrainer):
         if self.do_validation:
             # torch.cuda.synchronize()
             tval = time.time()
-            print("  starting on validation")
             self._validation_epoch(epoch)
             # torch.cuda.synchronize()
             print(f"  validation took {time.time() - tval:4.4f}s")

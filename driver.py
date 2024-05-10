@@ -16,8 +16,6 @@ from visualizer import plots
 warnings.filterwarnings("ignore")
 torch.set_warn_always(False)
 
-# TODO: figure out what an assertion error was thrown for not use_case central for exp003 data
-
 
 def main():
     """
