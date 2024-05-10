@@ -1,7 +1,7 @@
 {
-    "expname": "exp301",
+    "expname": "exp302",
     "machine": "falco",
-    "seed": 33,
+    "seed": 11,
     "mode": null,
     "device": "gpu",
 
@@ -47,15 +47,15 @@
     "trainer": {
 
         "resume_training": true,
-        "num_workers": 2,
-        "pin_memory": true,
+        "num_workers": 0,
+        "pin_memory": false,
 
         "batch_size": 32,
-        "batches_per_epoch": 2000,
-        "max_epochs": 10000,
+        "batches_per_epoch": 1000,
+        "max_epochs": 3,
 
         "val_batch_size": 32,
-        "max_val_batches": 250,
+        "max_val_batches": 100,
 
         "loss":{
             "type": "WeightedSMSELoss",

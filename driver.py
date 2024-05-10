@@ -83,6 +83,7 @@ def main():
         drop_last=False,
         num_workers=config["trainer"]["num_workers"],
         pin_memory=config["trainer"]["pin_memory"],
+        persistent_workers=False,
     )
 
     # validation data
@@ -93,7 +94,7 @@ def main():
         tags_val.lons,
         tags_val.files,
         tags_val.dict,
-        config["trainer"]["batch_size"],
+        config["trainer"]["val_batch_size"],
     )
     val_loader = torch.utils.data.DataLoader(
         ds_val,
@@ -103,6 +104,7 @@ def main():
         drop_last=False,
         num_workers=config["trainer"]["num_workers"],
         pin_memory=config["trainer"]["pin_memory"],
+        persistent_workers=False,
     )
 
     # BUILD THE MODEL
