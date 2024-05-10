@@ -109,14 +109,19 @@ def main():
 
                     # GET THE SAMPLE TAGS
                     tags, __ = build_tags.get_tags(config)
-                    if len(tags[0]) == 0:
+                    if len(tags.years) == 0:
                         # all water, so skip
                         continue
 
                     # MAKE PREDICTIONS and SAVE AS TIFF
-                    torch.multiprocessing.set_sharing_strategy("file_system")
                     ds_inf = data_loader.CustomData(
-                        config, tags, config["inference"]["batch_size"]
+                        config,
+                        tags.years,
+                        tags.lats,
+                        tags.lons,
+                        tags.files,
+                        tags.dict,
+                        config["inference"]["batch_size"],
                     )
                     inf_loader = torch.utils.data.DataLoader(
                         ds_inf,

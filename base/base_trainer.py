@@ -12,6 +12,8 @@ import time
 import copy
 from utils.utils import MetricTracker
 
+import torch
+
 
 class BaseTrainer:
     """
@@ -60,6 +62,7 @@ class BaseTrainer:
 
         for epoch in range(self.max_epochs + 1):
 
+            # torch.cuda.synchronize()
             start_time = time.time()
 
             self._train_epoch(epoch)
@@ -84,6 +87,7 @@ class BaseTrainer:
                 break
 
             # Print out progress during training
+            # torch.cuda.synchronize()
             end_time = time.time()
             elapsed_time = end_time - start_time
             print(

@@ -29,7 +29,16 @@ class CustomData(torch.utils.data.Dataset):
     Custom dataset for data loading.
     """
 
-    def __init__(self, config, tags, batch_size=32):
+    def __init__(
+        self,
+        config,
+        tags_years,
+        tags_lats,
+        tags_lons,
+        tags_files,
+        tags_dict,
+        batch_size=32,
+    ):
         """
         Initialize the CustomData dataset.
 
@@ -43,23 +52,15 @@ class CustomData(torch.utils.data.Dataset):
         self.data_dir = utils.get_directories(config["machine"])["data_dir"]
         self.landsat_dir = utils.get_directories(config["machine"])["landsat_dir"]
 
-        tags_dict = {}
-        for filename in np.unique(tags[-1]):
-            isample = [
-                index for (index, item) in enumerate(tags[-1]) if item == filename
-            ]
-            tags_dict[filename] = np.asarray(isample)
-
-        self.tags = tags
-        self.tags_dict = tags_dict
         self.config = config
         self.batch_size = batch_size
         self.rng = np.random.default_rng(config["seed"] + 55)
 
-        self.sample_years = self.tags[0]
-        self.sample_lats = self.tags[1]
-        self.sample_lons = self.tags[2]
-        self.sample_files = np.asarray(self.tags[3])
+        self.tags_dict = tags_dict
+        self.sample_years = tags_years
+        self.sample_lats = tags_lats
+        self.sample_lons = tags_lons
+        self.sample_files = tags_files
 
     def __len__(self):
         """
@@ -68,7 +69,7 @@ class CustomData(torch.utils.data.Dataset):
         Returns:
             int: The length of the dataset.
         """
-        return np.ceil(len(self.tags[0]) / self.batch_size).astype(int)
+        return np.ceil(len(self.sample_years) / self.batch_size).astype(int)
 
     def __getitem__(self, id_batch):
         """
@@ -214,10 +215,10 @@ class CustomData(torch.utils.data.Dataset):
         Get the output data for a batch.
 
         Args:
-            sample_years (list): List of sample years.
-            sample_lats (list): List of sample latitudes.
-            sample_lons (list): List of sample longitudes.
-            sample_files (list): List of sample files.
+            sample_years (np.array): List of sample years.
+            sample_lats (np.array): List of sample latitudes.
+            sample_lons (np.array): List of sample longitudes.
+            sample_files (np.array): List of sample files.
 
         Returns:
             np.ndarray: The output data for the batch.
@@ -228,8 +229,11 @@ class CustomData(torch.utils.data.Dataset):
 
         batch_output = np.zeros((len(sample_years), 1))
 
-        filename = self.data_dir + "hii_" + str(sample_years[0]) + "-01-01_uint8.tif"
+        filename = (
+            self.data_dir + "hii_" + str(int(sample_years[0])) + "-01-01_uint8.tif"
+        )
         if not os.path.isfile(filename):
+            print(f"HII file does not exist: {filename}")
             return batch_output * 0.0
 
         with rasterio.open(filename) as output_tiff:
@@ -267,12 +271,5 @@ def read_output_data(config, tiff, sample_lon, sample_lat):
 
     if len(sample_output) == 0:
         sample_output = 0.0
-
-    # NOTE: moved this code to the loss function where it belongs
-    # Force the network to predict zeros or ones
-    # if config["mode"] == "training":
-    #     if config["data"].get("kluge_value_for_zero", None) is not None:
-    #         if sample_output == 0.0:
-    #             sample_output = config["data"]["kluge_value_for_zero"]
 
     return sample_output

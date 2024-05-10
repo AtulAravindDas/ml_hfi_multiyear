@@ -28,6 +28,7 @@ TorchModel(base.base_model.BaseModel)
 import torch
 from torchvision.transforms import v2
 from vit_pytorch import simple_vit
+from vit_pytorch.cct import cct_8 as cct_module
 
 from base.base_model import BaseModel
 from base.base_model import RescaleLayer
@@ -78,15 +79,28 @@ class ViTModel(BaseModel):
         self.rescale_input = RescaleLayer((1.0 / 255.0), 0.0)
         # self.skip_channels = (2, -1)
 
-        self.vit = simple_vit.SimpleViT(
+        # self.vit = simple_vit.SimpleViT(
+        #     num_classes=1,
+        #     image_size=max(self.input_shape),
+        #     channels=config["architecture"]["channels"],
+        #     patch_size=config["architecture"]["patch_size"],
+        #     dim=config["architecture"]["dim"],
+        #     depth=config["architecture"]["depth"],
+        #     heads=config["architecture"]["heads"],
+        #     mlp_dim=config["architecture"]["mlp_dim"],
+        # )
+
+        self.vit = cct_module(
+            img_size=max(self.input_shape),
+            n_conv_layers=config["architecture"]["n_conv_layers"],
+            kernel_size=config["architecture"]["kernel_size"],
+            stride=2,
+            padding=3,
+            pooling_kernel_size=3,
+            pooling_stride=2,
+            pooling_padding=1,
             num_classes=1,
-            image_size=max(self.input_shape),
-            channels=config["architecture"]["channels"],
-            patch_size=config["architecture"]["patch_size"],
-            dim=config["architecture"]["dim"],
-            depth=config["architecture"]["depth"],
-            heads=config["architecture"]["heads"],
-            mlp_dim=config["architecture"]["mlp_dim"],
+            positional_embedding="learnable",  # ['sine', 'learnable', 'none']
         )
 
         # Output scaling layer
@@ -119,4 +133,3 @@ class ViTModel(BaseModel):
         x = self.rescale_target(x)
 
         return x
-

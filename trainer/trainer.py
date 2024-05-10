@@ -11,6 +11,7 @@ import numpy as np
 import torch
 from base.base_trainer import BaseTrainer
 from utils import utils
+import time
 
 
 class Trainer(BaseTrainer):
@@ -114,8 +115,6 @@ class Trainer(BaseTrainer):
                 data.to(self.device),
                 target.to(self.device),
             )
-            # input = data
-            # target = target.to(self.device)
 
             # Zero your gradients for every batch!
             self.optimizer.zero_grad()
@@ -142,7 +141,12 @@ class Trainer(BaseTrainer):
 
         # Run validation
         if self.do_validation:
+            # torch.cuda.synchronize()
+            tval = time.time()
+            print("  starting on validation")
             self._validation_epoch(epoch)
+            # torch.cuda.synchronize()
+            print(f"  validation took {time.time() - tval:4.4f}s")
 
     def _validation_epoch(self, epoch):
         """
@@ -158,23 +162,22 @@ class Trainer(BaseTrainer):
         None.
         """
         self.model.eval()
-        with torch.no_grad():
 
-            for batch_idx, (data, target) in enumerate(self.validation_data_loader):
+        for batch_idx, (data, target) in enumerate(self.validation_data_loader):
 
-                input, target = (
-                    data.to(self.device),
-                    target.to(self.device),
-                )
+            input, target = (
+                data.to(self.device),
+                target.to(self.device),
+            )
 
-                output = self.model(input)
-                loss = self.criterion(output, target)
+            output = self.model(input)
+            loss = self.criterion(output, target)
 
-                # Log the results
-                self.batch_log.update("val_loss", loss.item())
-                for met in self.metric_funcs:
-                    self.batch_log.update("val_" + met.__name__, met(output, target))
+            # Log the results
+            self.batch_log.update("val_loss", loss.item())
+            for met in self.metric_funcs:
+                self.batch_log.update("val_" + met.__name__, met(output, target))
 
-                # break if have reached the max number of batches for validation
-                if batch_idx >= self.config["trainer"]["max_val_batches"]:
-                    break
+            # break if have reached the max number of batches for validation
+            if batch_idx >= self.config["trainer"]["max_val_batches"]:
+                break

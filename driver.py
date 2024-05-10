@@ -4,6 +4,7 @@ import warnings
 import matplotlib.pyplot as plt  # type: ignore
 import torch
 import torchinfo
+import numpy as np
 
 import trainer.losses as loss_module
 import trainer.metrics as metrics_module
@@ -14,6 +15,9 @@ from visualizer import plots
 
 warnings.filterwarnings("ignore")
 torch.set_warn_always(False)
+
+# TODO: figure out what an assertion error was thrown for not use_case central for exp003 data
+# TODO: add more to tag cleaning for tiles with too few high values, or too few values overall
 
 
 def main():
@@ -58,12 +62,18 @@ def main():
     utils.set_random_seeds(config["seed"])
 
     # LOAD THE DATA
-    torch.multiprocessing.set_sharing_strategy("file_system")
-
+    print("Building the data.")
     tags_train, tags_val = build_tags.get_tags(config)
 
+    # training data
     ds_train = data_loader.CustomData(
-        config, tags_train, config["trainer"]["batch_size"]
+        config,
+        tags_train.years,
+        tags_train.lats,
+        tags_train.lons,
+        tags_train.files,
+        tags_train.dict,
+        config["trainer"]["batch_size"],
     )
     train_loader = torch.utils.data.DataLoader(
         ds_train,
@@ -73,10 +83,19 @@ def main():
         drop_last=False,
         num_workers=config["trainer"]["num_workers"],
         pin_memory=config["trainer"]["pin_memory"],
-        # worker_init_fn=set_worker_sharing_strategy
+        persistent_workers=False,
     )
 
-    ds_val = data_loader.CustomData(config, tags_val, config["trainer"]["batch_size"])
+    # validation data
+    ds_val = data_loader.CustomData(
+        config,
+        tags_val.years,
+        tags_val.lats,
+        tags_val.lons,
+        tags_val.files,
+        tags_val.dict,
+        config["trainer"]["val_batch_size"],
+    )
     val_loader = torch.utils.data.DataLoader(
         ds_val,
         batch_size=None,
@@ -85,7 +104,7 @@ def main():
         drop_last=False,
         num_workers=config["trainer"]["num_workers"],
         pin_memory=config["trainer"]["pin_memory"],
-        # worker_init_fn=set_worker_sharing_strategy
+        persistent_workers=False,
     )
 
     # BUILD THE MODEL
