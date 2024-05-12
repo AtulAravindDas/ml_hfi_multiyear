@@ -1,4 +1,9 @@
 """
+This module contains functions for generating predictions for ml-HFI.
+
+Classes:
+---------
+None
 
 Functions:
 ----------

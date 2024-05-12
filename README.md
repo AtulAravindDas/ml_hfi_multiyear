@@ -1,38 +1,41 @@
 # Multi-year High-Resolution ml-HFI
-***
-Deep-learning estimate of the human footprint index (HFI or HII; also known as the Human Impact Index as trained here) throughout the past decade(s) as estimated from Landsat imagery.
 
-This work relies entirely on the efforts of [0] to create a labeled dataset of 2nd generation human footprint [1]. This puts the resolution of the HFI at ~300m.
+This project provides a deep-learning estimate of the Human Footprint Index (HFI or HII), trained using Landsat imagery. The resolution of the HFI is approximately 300m, based on the labeled dataset of 2nd generation human footprint created by [0].
 
-## Tensorflow Code
-***
-This code was written in python 3.12.0 and pytorch 2.1.2.post3 and can be significantly sped-up using GPUs.
+## Requirements
 
-### Python Environment - Pytorch
-The following python environment was used to implement this code.
-```
+This project is implemented using Python 3.12.0 and PyTorch 2.1.2. The performance can be significantly improved by using GPUs, assuming the Landsat data is quickly readable.
+
+## Setting Up the Python Environment
+
+You can set up the Python environment for this project by running the following commands:
+
+```bash
 conda create --name env-torch-mlhfi python=3.12.0
 conda activate env-torch-mlhfi
-conda install numpy scipy pandas matplotlib palettable flake8 jupyterlab black jupyterlab_code_formatter xarray scikit-learn datashader netCDF4 cartopy pytorch
-torchvision
+conda install numpy scipy pandas matplotlib palettable flake8 jupyterlab black jupyterlab_code_formatter xarray scikit-learn datashader netCDF4 cartopy pytorch torchvision
 conda install -c conda-forge dask
-pip install ipython-autotime cmocean cmasher cmaps torchinfo rasterio rioxarray
-conda install torchvision
-pip install seaborn
-pip install vit-pytorch
+pip install ipython-autotime cmocean cmasher cmaps torchinfo rasterio rioxarray seaborn vit-pytorch
 ```
 
-## Get Started
-* Run ``init.py`` to create necessary directories.
-* Fill required data into directories (e.g. google drive links).
-    * landsat tiles
-    * 2015-2020 HII labels
-    * at minimum you will need ``shapefile_mosaic.tif`` and ``shapefile_dataframe.pkl`` (_you will not need the rest of the shapefiles unless you want to recreate the shapefile masks_)
-* Set ``config_[###].py`` as desired.
-* Order to run major scripts.
-  * driver.py
-  * oracle.py
-  * _assesor.ipynb
+## Getting Started
+
+Follow these steps to get started with the project:
+
+1. Run `init.py` to create the necessary directories.
+2. Download the required data and place it into the appropriate directories. You will need at least the following files:
+    - Landsat tiles
+    - 2015-2020 HII labels
+    - `shapefile_mosaic.tif`
+    - `shapefile_dataframe.pkl` (Note: You won't need the rest of the shapefiles unless you want to recreate the shapefile masks)
+3. Configure `config_[###].py` as per your requirements.
+4. Run the major scripts in the following order:
+    - `driver.py`
+    - `oracle.py`
+    - `assesor.py`
+
+Please refer to the individual script files for more detailed instructions.
+
 
 ## Helpful commands
 * Gets rid of Apple Icons that mess up github: ``find . -name "Icon?" -print0 | xargs -0 rm -rf``

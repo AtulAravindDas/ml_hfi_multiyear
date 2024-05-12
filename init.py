@@ -1,7 +1,8 @@
 import os
 import utils
 
-dirs = utils.get_directories(config["machine"])
+machine = "falco"
+dirs = utils.get_directories(machine)
 
 for key in dirs:
 

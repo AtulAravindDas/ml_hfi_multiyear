@@ -1,18 +1,23 @@
-"""Build the data.
-
+"""
 This module provides functions for building the dataset and retrieving training and validation tags based on the provided configuration.
 
 Classes
 ---------
-Tags: A class representing the training and validation tags.
+Tags:
+    A class representing the training and validation tags.
 
 Functions
 ---------
-get_tags(config): Retrieves the training and validation tags based on the provided configuration.
-build_dataset(config, sample_years, sample_lats, sample_lons): Builds the dataset using the provided configuration and sample years, latitudes, and longitudes.
-make_sample_list(config): Creates a list of samples based on the provided configuration.
-data_generator.get_input_data(self, years, sample_lats, sample_lons): Retrieves the input data for the data generator based on the provided years, latitudes, and longitudes.
-data_generator.get_output_data(self, years, sample_lats, sample_lons): Retrieves the output data for the data generator based on the provided years, latitudes, and longitudes.
+get_tags(config):
+    Retrieves the training and validation tags based on the provided configuration.
+get_training_tags(config):
+    Retrieves the training tags based on the provided configuration.
+get_inference_tags(config):
+    Retrieves the inference tags based on the provided configuration.
+clean_tags(tags_train, tags_val, min_count=0):
+    Cleans the tags based on a threshold value.
+make_tagfile_dict(tags_train, tags_val):
+    Creates a dictionary mapping filenames to tag indices.
 """
 
 import os
@@ -35,7 +40,16 @@ DEFAULT_HII_FILEPATH = default_filepaths["hii_filepath"]
 
 class Tags:
     def __init__(self, tags_list, tags_dict):
+        """
+        Initialize a Tags object.
 
+        Parameters
+        ----------
+        tags_list : list
+            A list containing the years, latitudes, longitudes, and file names.
+        tags_dict : dict
+            A dictionary containing additional tag information.
+        """
         self.years = np.asarray(tags_list[0], dtype="int")
         self.lats = np.asarray(tags_list[1])
         self.lons = np.asarray(tags_list[2])
@@ -45,9 +59,22 @@ class Tags:
 
 
 def get_tags(config):
+    """
+    Retrieves the training and validation tags based on the provided configuration.
 
+    Parameters
+    ----------
+    config : dict
+        The configuration settings.
+
+    Returns
+    -------
+    tags_train : Tags
+        The training tags.
+    tags_val : Tags or None
+        The validation tags, or None if not available.
+    """
     if config["mode"] == "training":
-
         tags_train, tags_train_dict, tags_val, tags_val_dict = utils.load_training_tags(
             config
         )
@@ -80,7 +107,21 @@ def get_tags(config):
 
 
 def get_training_tags(config):
+    """
+    Retrieves the training tags based on the provided configuration.
 
+    Parameters
+    ----------
+    config : dict
+        The configuration settings.
+
+    Returns
+    -------
+    tags_train : list
+        The training tags.
+    tags_val : list
+        The validation tags.
+    """
     directory_paths = utils.get_directories(config["machine"])
     rng = np.random.default_rng(config["seed"] + 33)
 

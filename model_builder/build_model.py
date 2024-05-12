@@ -20,6 +20,9 @@ def ModelBuilder(config):
     Returns:
         torch.nn.Module: A torch model.
 
+    Raises:
+        ValueError: If the model type specified in the configuration is not recognized.
+
     """
     if config["architecture"]["type"] == "cnn":
         from model_builder.cnn import CNNModel
