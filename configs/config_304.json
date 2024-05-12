@@ -1,15 +1,15 @@
 {
     "expname": "exp304",
-    "machine": "blackforest",
+    "machine": "falco",
     "seed": 55,
     "mode": null,
     "device": "gpu",
 
     "data": {
-        "tags_loadname": "exp001_seed55",
+        "tags_loadname": "exp004_seed88",
 
         "training_years": [2015, 2019],
-        "training_region": [0, 20, 0, 20],
+        "training_region": [-60, 60, -180, 180],
 
         "inference_years": [2020],
         "inference_region": [0, 20, 0, 20],
@@ -47,13 +47,13 @@
     "trainer": {
 
         "resume_training": true,
-        "num_workers": 2,
-        "pin_memory": true,
+        "num_workers": 0,
+        "pin_memory": false,
 
-        "batch_size": 32,
-        "batches_per_epoch": 2000,
-        "max_epochs": 10000,
-        "val_batch_size": 128,
+        "batch_size": 64,
+        "batches_per_epoch": 1000,
+        "max_epochs": 15,
+        "val_batch_size": 64,
         "max_val_batches": 50,
 
         "loss":{
@@ -69,7 +69,7 @@
 
         "early_stopping":{
             "args":{
-                "patience": 10,
+                "patience": 10000,
                 "min_delta": 0.00
             }
         }
