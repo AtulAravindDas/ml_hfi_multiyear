@@ -63,6 +63,7 @@ def main():
     tags_train, tags_val = build_tags.get_tags(config)
 
     # training data
+    # create a custom dataset and then a dataloader
     ds_train = data_loader.CustomData(
         config,
         tags_train.years,
@@ -84,6 +85,7 @@ def main():
     )
 
     # validation data
+    # create a custom dataset and then a dataloader
     ds_val = data_loader.CustomData(
         config,
         tags_val.years,

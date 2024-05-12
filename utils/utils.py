@@ -1,29 +1,30 @@
-"""Utility classes and functions.
+"""
+Utility classes and functions.
 
 Functions
 ---------
-get_directories(config["machine"])
+get_directories(machine)
     Get the directory paths from the "utils/directories.json" file.
 
 get_default_filepaths()
     Get the default file paths from the "utils/default_filepaths.json" file.
 
-prepare_device(device="gpu")
+prepare_device(device="gpu", device_id=0)
     Set up the GPU device if available and return the device.
 
 get_model_name(expname, seed)
     Generate the model name based on the experiment name and seed.
 
-get_model_dir(expname, model_name, machine)
+get_model_dir(expname, model_name, machine="falco")
     Get the directory path for saving the model based on the experiment name and model name.
 
 get_predictions_filename(config, landsat_name)
     Get the file name for saving the predictions based on the experiment configuration and Landsat name.
 
-get_prediction_dir(expname, model_name)
+get_prediction_dir(expname, model_name, machine="falco")
     Get the directory path for saving the predictions based on the experiment name and model name.
 
-save_training_tags(config, tags_train, tags_val)
+save_training_tags(config, tags_train, dict_train, tags_val, dict_val)
     Save the training tags to the specified directory based on the experiment configuration.
 
 load_training_tags(config)

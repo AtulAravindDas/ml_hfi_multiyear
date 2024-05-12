@@ -1,14 +1,17 @@
 """
 Data loader modules.
 
-Functions
----------
-read_output_data(config, tiff, sample_lon, sample_lat)
+This module provides functionality for loading custom datasets for machine learning models.
 
 Classes
 ---------
-CustomData(torch.utils.data.Dataset)
-    A class representing a custom data.
+CustomData(torch.utils.data.Dataset):
+    A class representing a custom dataset for data loading.
+
+Functions
+---------
+read_output_data(config, tiff, sample_lon, sample_lat):
+    Read the output data from a TIFF file.
 
 """
 
@@ -27,6 +30,32 @@ from utils import utils
 class CustomData(torch.utils.data.Dataset):
     """
     Custom dataset for data loading.
+
+    This class represents a custom dataset for loading input and output data for machine learning models.
+
+    Attributes
+    ----------
+    data_dir : str
+        The directory path for the data.
+    landsat_dir : str
+        The directory path for the Landsat data.
+    config : dict
+        Configuration parameters for the dataset.
+    batch_size : int
+        The batch size for the dataset.
+    rng : numpy.random.Generator
+        The random number generator.
+
+    Methods
+    -------
+    __len__()
+        Get the length of the dataset.
+    __getitem__(id_batch)
+        Get an item from the dataset.
+    get_input_data(sample_years, sample_lats, sample_lons, sample_files)
+        Get the input data for a batch.
+    get_output_data(sample_years, sample_lats, sample_lons, sample_files)
+        Get the output data for a batch.
     """
 
     def __init__(
@@ -44,7 +73,12 @@ class CustomData(torch.utils.data.Dataset):
 
         Args:
             config (dict): Configuration parameters for the dataset.
-            tags (list): List of tags for the dataset.
+            tags_years (list): List of years for the dataset.
+            tags_lats (list): List of latitudes for the dataset.
+            tags_lons (list): List of longitudes for the dataset.
+            tags_files (list): List of files for the dataset.
+            tags_dict (dict): Dictionary of tags for the dataset.
+            batch_size (int, optional): The batch size for the dataset. Defaults to 32.
 
         Returns:
             None

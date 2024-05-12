@@ -1,5 +1,20 @@
-import numpy as np
+"""
+Module for analyzing the predictions of a model.
 
+Classes
+---------
+None
+
+
+Functions
+---------
+
+process_flatten(config, labels, predictions, remove_edges=False):
+    Process the predictions and labels based on the given configuration.
+
+"""
+
+import numpy as np
 from data_builder import data_methods
 
 

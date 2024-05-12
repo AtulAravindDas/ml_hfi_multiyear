@@ -1,27 +1,13 @@
 """
-Network modules for pytorch models.
+Convolutional Neural Network (CNN) model for regression tasks.
 
 Functions
 ---------
-conv_couplet(in_channels, out_channels, act_fun, *args, **kwargs)
-    Create a sequential module consisting of a convolutional layer, activation function, and max pooling layer.
-
-dense_lazy_couplet(out_features, act_fun, *args, **kwargs)
-    Create a sequential module consisting of a lazy linear layer and activation function.
-
-conv_block(in_channels, out_channels, act_fun, kernel_size)
-    Create a sequential module consisting of multiple conv_couplet modules.
-
-dense_block(out_features, act_fun)
-    Create a sequential module consisting of multiple dense_lazy_couplet modules.
 
 Classes
 ---------
-RescaleLayer
-    A class representing a rescaling layer.
-
-TorchModel(base.base_model.BaseModel)
-    A class representing a torch model.
+CNNModel(base.base_model.BaseModel)
+    A class representing a torch-based model for a specific task.
 
 """
 
@@ -31,9 +17,6 @@ from torchvision.transforms import v2
 from base.base_model import BaseModel
 from base.base_model import RescaleLayer
 from base.base_model import dense_couplet, conv_block, dense_block
-
-
-# https://github.com/FrancescoSaverioZuppichini/Pytorch-how-and-when-to-use-Module-Sequential-ModuleList-and-ModuleDict
 
 
 class CNNModel(BaseModel):
@@ -156,12 +139,12 @@ class CNNModel(BaseModel):
         # flat layer
         x = self.flat(x)
 
-        # skip connection
-        # input_flat_chA = self.flat(input[:, self.skip_channels[0], :, :])
-        # input_flat_chB = self.flat(input[:, self.skip_channels[1], :, :])
-        # x = torch.cat((x, input_flat_chA, input_flat_chB), dim=-1)
+        # skip connections
         input_flat_chA = self.flat(input[:, self.skip_channels[0], :, :])
-        x = torch.cat((x, input_flat_chA), dim=-1)
+        input_flat_chB = self.flat(input[:, self.skip_channels[1], :, :])
+        x = torch.cat((x, input_flat_chA, input_flat_chB), dim=-1)
+        # # input_flat_chA = self.flat(input[:, self.skip_channels[0], :, :])
+        # x = torch.cat((x, input_flat_chA), dim=-1)
 
         # dropout layer
         x = self.dropout(x)
