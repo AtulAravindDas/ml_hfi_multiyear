@@ -98,7 +98,6 @@ class CNNModel(BaseModel):
         self.dropout = torch.nn.Dropout(p=config["architecture"]["dropout"])
 
         # Dense blocks
-        # TODO: make it a choice how many final dense blocks to use
         self.denseblockA = dense_block(
             config["architecture"]["dense_units"],
             config["architecture"]["dense_activations"],
