@@ -37,9 +37,9 @@ class WeightedSMSELoss(torch.nn.Module):
 
         if self.kluge_value_for_zero is not None:
             kluge_addon = torch.where(target == 0, self.kluge_value_for_zero, 0.0)
-            error = output - target + kluge_addon
+            error = torch.abs(output - target) + kluge_addon
         else:
-            error = output - target
+            error = torch.abs(output - target)
 
         if self.zero_weighting is not None and self.one_weighting is None:
             weights = torch.where(
