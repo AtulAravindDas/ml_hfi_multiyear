@@ -6,7 +6,7 @@
     "device": "gpu",
 
     "data": {
-        "tags_loadname": "exp004_seed88",
+        "tags_loadname": "exp001_seed55",
 
         "training_years": [2015, 2019],
         "training_region": [0, 20, 0, 20],
@@ -49,8 +49,8 @@
     "trainer": {
 
         "resume_training": true,
-        "num_workers": 0,
-        "pin_memory": false,
+        "num_workers": 2,
+        "pin_memory": true,
 
         "batch_size": 64,
         "batches_per_epoch": 1000,
