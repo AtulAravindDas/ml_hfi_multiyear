@@ -17,6 +17,9 @@ warnings.filterwarnings("ignore")
 torch.set_warn_always(False)
 
 
+# TODO: could consider loading a large amount of data at a time
+# and then passing it to the dataloader in chunks
+
 def main():
     """
     Main function for training and evaluating a model.
