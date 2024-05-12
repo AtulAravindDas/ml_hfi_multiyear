@@ -91,10 +91,10 @@ def make_predictions(config, model, tags, dataloader):
     filename_mask = default_filepaths["mask_filepath"]
 
     lat_s, lat_n, lon_w, lon_e = (
-        np.min(tags[1]),
-        np.max(tags[1]),
-        np.min(tags[2]),
-        np.max(tags[2]),
+        np.min(tags.lats),
+        np.max(tags.lats),
+        np.min(tags.lons),
+        np.max(tags.lons),
     )
 
     with rasterio.open(filename_mask) as buffer_mask:

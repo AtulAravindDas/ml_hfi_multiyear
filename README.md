@@ -34,6 +34,11 @@ pip install vit-pytorch
   * oracle.py
   * _assesor.ipynb
 
+## Helpful commands
+* Gets rid of Apple Icons that mess up github: ``find . -name "Icon?" -print0 | xargs -0 rm -rf``
+* Restarts VSCode Server: ``rm -rf ~/.vscode-server``
+
+
 ## Credits
 ***
 This work is a collaborative effort between Dr. Bryam Orihuela Pinto, Dr. Patrick Keys, Dr. Frances Davenport, Dr. Randal Barnes and Dr. Elizabeth Barnes.

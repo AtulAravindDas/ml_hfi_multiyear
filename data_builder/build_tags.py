@@ -227,8 +227,13 @@ def get_training_tags(config):
                     # Calculate the total number of samples
                     total_samples = len(array)
 
+                    # TODO: change this so tiles with partials can still sample more
                     # Calculate the number of samples per bin based on the percentage_sampling
                     samples_threshold = int(total_samples * percentage_sampling)
+
+                    if samples_threshold < config["data"]["min_samples_in_tile"]:
+                        print("Skipping tile due to low sample count")
+                        continue
 
                     # this ensures that the max is 'percentage_sampling'%, if there are not enough,
                     # we just take what is available but no more than 'percentage_sampling'%
@@ -248,9 +253,13 @@ def get_training_tags(config):
 
                         # If the number of samples in the bin is less than the minimum threshold, we skip the entire tile
                         if (
-                            len(bin_indices)
-                            < config["data"]["min_binfrac_for_tile"]
-                            * max_samples_per_bin
+                            (
+                                len(bin_indices)
+                                < config["data"]["min_binfrac_for_tile"]
+                                * max_samples_per_bin
+                            )
+                            & (bin_end != 100)
+                            & (bin_end != 90)
                         ):
                             indices_to_keep = []
                             break
