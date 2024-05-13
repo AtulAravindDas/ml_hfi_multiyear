@@ -57,6 +57,23 @@ class Tags:
 
         self.dict = tags_dict
 
+    def delete(self, indices):
+        """
+        Deletes the tags at the specified indices.
+
+        Parameters
+        ----------
+        indices : list
+            The indices to delete.
+        """
+        self.years = np.delete(self.years, indices)
+        self.lats = np.delete(self.lats, indices)
+        self.lons = np.delete(self.lons, indices)
+        self.files = np.delete(self.files, indices)
+
+        tags_tuple = (self.years, self.lats, self.lons, self.files)
+        self.dict, _ = make_tagfile_dict(tags_tuple, None)
+
 
 def get_tags(config):
     """
@@ -103,7 +120,30 @@ def get_tags(config):
     else:
         tags_val = None
 
+    if config["data"].get("resample_validation", False) and config["mode"] == "training":
+        assert (
+            config["data"].get("n_keep_per_tile") is not None
+        ), "n_keep_per_tile must be set if resample_validation is set."
+
+        resample_validation(
+            tags_val, config["data"]["n_keep_per_tile"], rng_seed=config["seed"]
+        )
+        print("Resampled validation set.")
+        print(f"# Validation Samples: {len(tags_val.lats)}")
+
     return tags_train, tags_val
+
+
+def resample_validation(tags, n_keep, rng_seed=98):
+    rng = np.random.default_rng(rng_seed + 98)
+    file_list = np.copy(tags.files)
+
+    for file in np.unique(file_list):
+        i = np.where(tags.files == file)[0]
+        j = rng.choice(i, len(i) - n_keep, replace=False)
+        tags.delete(j)
+
+    assert len(tags.files) == len(tags.lats) == len(tags.lons) == len(tags.years)
 
 
 def get_training_tags(config):
