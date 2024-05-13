@@ -1,13 +1,30 @@
 """
-Data loader modules.
+This module provides functions and classes for loading and processing data.
+
+Classes
+---------
+None
+
 
 Functions
 ---------
 remove_nodata(x, y=None, nodata=255)
+    Remove nodata values from the input arrays.
+
+get_lats_lons_list(region, tile_len_deg)
+    Get a list of latitude and longitude values based on the given region and tile length.
+
+get_region_bounds(region, tile_len_deg)
+    Get the bounding box coordinates of the given region.
+
 get_tile_indices(hfi_tif, tile)
-remove_nodata(x, y=None, nodata=255)
-Classes
----------
+    Get the indices of the tile within the HFI raster.
+
+trim_hfi_region(indices, hfi_tif, region)
+    Trim the HFI region based on the given indices and region boundaries.
+
+mask_shapefile_region(hfi_tif, mask_tif, shp_dict, country_names)
+    Mask the HFI raster based on a shapefile region.
 
 
 """
@@ -104,6 +121,22 @@ def get_lats_lons_list(region, tile_len_deg):
 
 
 def get_region_bounds(region, tile_len_deg):
+    """
+    Get the bounding box coordinates of the given region.
+
+    Parameters:
+        region (list or dict): The region of interest. If it's a list, it should contain the
+            coordinates of the bounding box in the order [lat_s, lat_n, lon_w, lon_e]. If it's
+            a dict, it should contain the keys 'lats' and 'lons' which represent the latitude
+            and longitude values respectively.
+        tile_len_deg (float): The length of each tile in degrees.
+
+    Returns:
+        tuple: A tuple containing the bounding box coordinates (lat_s, lat_n, lon_w, lon_e).
+
+    Raises:
+        NotImplementedError: If the region type is not supported.
+    """
     lats_lons_dict = get_lats_lons_list(region, tile_len_deg)
 
     lat_s = np.min(lats_lons_dict["lats"]) - tile_len_deg

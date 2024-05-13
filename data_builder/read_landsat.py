@@ -1,9 +1,24 @@
 """Read the landsat data.
 
+This module provides functions to read Landsat data and extract specific regions of interest.
+
+Classes
+---------
+None
+
+
 Functions
 ---------
-fill_tif_dict(name, filename, dict)
-read_input_data(self, tif_dict, sample_lon, sample_lat, channels, scene_width)
+fill_tif_dict(name, sample_year, sample_lat, sample_lon, tif_dict, config)
+    Fill the tif_dict with Landsat data based on the given name and coordinates.
+read_tif(tif, channels, window)
+    Read the specified channels from the given tif file within the specified window.
+get_landsat_bounds(region, tile_len_deg)
+    Get the latitude and longitude bounds for the given region based on the tile length.
+get_input_filename(years, lats, lons, config)
+    Get the input filenames based on the years, latitudes, longitudes, and configuration.
+read_input_data(config, tif_dict, sample_year, sample_lon, sample_lat, channels, scene_width, rng=np.random.default_rng(42))
+    Read the input data from the Landsat files based on the given parameters.
 
 """
 
@@ -16,6 +31,20 @@ import time
 
 
 def fill_tif_dict(name, sample_year, sample_lat, sample_lon, tif_dict, config):
+    """
+    Fills a dictionary with information about a TIFF file based on the given parameters.
+
+    Args:
+        name (str): The name of the TIFF file.
+        sample_year (int): The year of the sample.
+        sample_lat (float): The latitude of the sample.
+        sample_lon (float): The longitude of the sample.
+        tif_dict (dict): The dictionary to be filled with TIFF file information.
+        config (dict): Configuration parameters.
+
+    Returns:
+        tuple: A tuple containing the updated tif_dict and a flag indicating if the file exists.
+    """
     if name == "central":
         filename = get_input_filename(
             (sample_year,), (sample_lat,), (sample_lon,), config
@@ -95,10 +124,33 @@ def fill_tif_dict(name, sample_year, sample_lat, sample_lon, tif_dict, config):
 
 
 def read_tif(tif, channels, window):
+    """
+    Read specific channels from a TIFF file and return the data as a NumPy array.
+
+    Parameters:
+    tif (object): The TIFF file object.
+    channels (list): The list of channel indices to read.
+    window (tuple): The window coordinates (x, y, width, height) to read from.
+
+    Returns:
+    numpy.ndarray: The data from the specified channels and window.
+
+    """
     return np.transpose(tif.read(channels, window=window), axes=(1, 2, 0))
 
 
 def get_landsat_bounds(region, tile_len_deg):
+    """
+    Calculate the bounds of a Landsat tile based on a given region and tile length.
+
+    Parameters:
+    region (tuple): A tuple containing the latitude and longitude bounds of the region.
+    tile_len_deg (float): The length of each tile in degrees.
+
+    Returns:
+    tuple: A tuple containing the southern, northern, western, and eastern bounds of the Landsat tile.
+    """
+
     lat_s = np.floor(region[0] / tile_len_deg) * tile_len_deg
     lat_n = np.ceil(region[1] / tile_len_deg) * tile_len_deg
     lon_w = np.floor(region[2] / tile_len_deg) * tile_len_deg
@@ -108,6 +160,19 @@ def get_landsat_bounds(region, tile_len_deg):
 
 
 def get_input_filename(years, lats, lons, config):
+    """
+    Generates a list of input filenames based on the given years, latitudes, longitudes, and configuration.
+
+    Args:
+        years (list): A list of years.
+        lats (list): A list of latitudes.
+        lons (list): A list of longitudes.
+        config (dict): A dictionary containing configuration parameters.
+
+    Returns:
+        list: A list of input filenames.
+
+    """
     filenames = []
     for isample in range(len(years)):
         file_year = int(years[isample])
@@ -132,6 +197,26 @@ def read_input_data(
     scene_width,
     rng=np.random.default_rng(42),
 ):
+    """
+    Reads input data based on the given configuration and parameters.
+
+    Args:
+        config (dict): Configuration parameters.
+        tif_dict (dict): Dictionary containing TIFF files.
+        sample_year (int): Year of the sample.
+        sample_lon (float): Longitude of the sample.
+        sample_lat (float): Latitude of the sample.
+        channels (list): List of channels to read from the TIFF files.
+        scene_width (int): Width of the scene.
+        rng (numpy.random.Generator, optional): Random number generator. Defaults to np.random.default_rng(42).
+
+    Returns:
+        numpy.ndarray: Input data.
+
+    Raises:
+        NotImplementedError: If the use case is not implemented.
+
+    """
 
     # if the tif file is on the dateline there its longitudes are 0-360
     # this is a fix for that without prescribing the tile name

@@ -1,11 +1,13 @@
 """Metrics for training and evaluation.
 
+Classes
+---------
+None
+
 Functions
 ---------
-custom_mae(output, target)
-iqr_capture(output, target)
-sign_test(output, target)
-pit(output, target)
+custom_mae(output, target):
+    Compute the prediction mean absolute error.
 
 """
 

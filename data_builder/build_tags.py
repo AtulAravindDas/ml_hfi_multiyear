@@ -1,18 +1,23 @@
-"""Build the data.
-
+"""
 This module provides functions for building the dataset and retrieving training and validation tags based on the provided configuration.
 
 Classes
 ---------
-Tags: A class representing the training and validation tags.
+Tags:
+    A class representing the training and validation tags.
 
 Functions
 ---------
-get_tags(config): Retrieves the training and validation tags based on the provided configuration.
-build_dataset(config, sample_years, sample_lats, sample_lons): Builds the dataset using the provided configuration and sample years, latitudes, and longitudes.
-make_sample_list(config): Creates a list of samples based on the provided configuration.
-data_generator.get_input_data(self, years, sample_lats, sample_lons): Retrieves the input data for the data generator based on the provided years, latitudes, and longitudes.
-data_generator.get_output_data(self, years, sample_lats, sample_lons): Retrieves the output data for the data generator based on the provided years, latitudes, and longitudes.
+get_tags(config):
+    Retrieves the training and validation tags based on the provided configuration.
+get_training_tags(config):
+    Retrieves the training tags based on the provided configuration.
+get_inference_tags(config):
+    Retrieves the inference tags based on the provided configuration.
+clean_tags(tags_train, tags_val, min_count=0):
+    Cleans the tags based on a threshold value.
+make_tagfile_dict(tags_train, tags_val):
+    Creates a dictionary mapping filenames to tag indices.
 """
 
 import os
@@ -35,7 +40,16 @@ DEFAULT_HII_FILEPATH = default_filepaths["hii_filepath"]
 
 class Tags:
     def __init__(self, tags_list, tags_dict):
+        """
+        Initialize a Tags object.
 
+        Parameters
+        ----------
+        tags_list : list
+            A list containing the years, latitudes, longitudes, and file names.
+        tags_dict : dict
+            A dictionary containing additional tag information.
+        """
         self.years = np.asarray(tags_list[0], dtype="int")
         self.lats = np.asarray(tags_list[1])
         self.lons = np.asarray(tags_list[2])
@@ -43,11 +57,41 @@ class Tags:
 
         self.dict = tags_dict
 
+    def delete(self, indices):
+        """
+        Deletes the tags at the specified indices.
+
+        Parameters
+        ----------
+        indices : list
+            The indices to delete.
+        """
+        self.years = np.delete(self.years, indices)
+        self.lats = np.delete(self.lats, indices)
+        self.lons = np.delete(self.lons, indices)
+        self.files = np.delete(self.files, indices)
+
+        tags_tuple = (self.years, self.lats, self.lons, self.files)
+        self.dict, _ = make_tagfile_dict(tags_tuple, None)
+
 
 def get_tags(config):
+    """
+    Retrieves the training and validation tags based on the provided configuration.
 
+    Parameters
+    ----------
+    config : dict
+        The configuration settings.
+
+    Returns
+    -------
+    tags_train : Tags
+        The training tags.
+    tags_val : Tags or None
+        The validation tags, or None if not available.
+    """
     if config["mode"] == "training":
-
         tags_train, tags_train_dict, tags_val, tags_val_dict = utils.load_training_tags(
             config
         )
@@ -76,11 +120,48 @@ def get_tags(config):
     else:
         tags_val = None
 
+    if config["data"].get("resample_validation", False) and config["mode"] == "training":
+        assert (
+            config["data"].get("n_keep_per_tile") is not None
+        ), "n_keep_per_tile must be set if resample_validation is set."
+
+        resample_validation(
+            tags_val, config["data"]["n_keep_per_tile"], rng_seed=config["seed"]
+        )
+        print("Resampled validation set.")
+        print(f"# Validation Samples: {len(tags_val.lats)}")
+
     return tags_train, tags_val
 
 
-def get_training_tags(config):
+def resample_validation(tags, n_keep, rng_seed=98):
+    rng = np.random.default_rng(rng_seed + 98)
+    file_list = np.copy(tags.files)
 
+    for file in np.unique(file_list):
+        i = np.where(tags.files == file)[0]
+        j = rng.choice(i, len(i) - n_keep, replace=False)
+        tags.delete(j)
+
+    assert len(tags.files) == len(tags.lats) == len(tags.lons) == len(tags.years)
+
+
+def get_training_tags(config):
+    """
+    Retrieves the training tags based on the provided configuration.
+
+    Parameters
+    ----------
+    config : dict
+        The configuration settings.
+
+    Returns
+    -------
+    tags_train : list
+        The training tags.
+    tags_val : list
+        The validation tags.
+    """
     directory_paths = utils.get_directories(config["machine"])
     rng = np.random.default_rng(config["seed"] + 33)
 

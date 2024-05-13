@@ -17,6 +17,9 @@ warnings.filterwarnings("ignore")
 torch.set_warn_always(False)
 
 
+# TODO: could consider loading a large amount of data at a time
+# and then passing it to the dataloader in chunks
+
 def main():
     """
     Main function for training and evaluating a model.
@@ -63,6 +66,7 @@ def main():
     tags_train, tags_val = build_tags.get_tags(config)
 
     # training data
+    # create a custom dataset and then a dataloader
     ds_train = data_loader.CustomData(
         config,
         tags_train.years,
@@ -84,6 +88,7 @@ def main():
     )
 
     # validation data
+    # create a custom dataset and then a dataloader
     ds_val = data_loader.CustomData(
         config,
         tags_val.years,

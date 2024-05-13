@@ -1,12 +1,31 @@
 """
-Network modules for pytorch models.
+Pre-trained ResNet model for regression tasks.
 
 Functions
 ---------
 
 Classes
 ---------
+ResNetModel: TorchModel class represents a torch-based model for a specific task.
 
+    Args:
+        config (dict): Configuration parameters for the model.
+
+    Attributes:
+        config (dict): Configuration parameters for the model.
+        input_shape (tuple): Shape of the input data.
+        augmentation (torch.nn.Sequential): Augmentation layers.
+        conv_block (torch.nn.Module): CNN block.
+        flat (torch.nn.Flatten): Flat layer.
+        dropout (torch.nn.Dropout): Dropout layer.
+        denseblock (torch.nn.Module): Dense blocks.
+        rescale_input (RescaleLayer): Rescaling layer for input data.
+        rescale_target (RescaleLayer): Rescaling layer for target data.
+        output (torch.nn.Module): Output layers.
+
+    Methods:
+        forward(input): Performs forward pass of the model.
+        predict(dataloader, device): Makes predictions using the model.
 """
 
 import torch

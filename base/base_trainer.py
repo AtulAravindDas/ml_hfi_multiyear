@@ -1,9 +1,23 @@
-"""Base trainer modules for pytorch models.
+"""
+Base trainer modules for PyTorch models.
 
 Classes
 ---------
-BaseTrainer()
-EarlyStopping()
+BaseTrainer:
+    Base class for all trainers.
+EarlyStopping:
+    Base class for early stopping.
+
+Methods
+-------
+fit()
+    Full training logic
+_train_epoch()
+    Train an epoch
+_validation_epoch()
+    Validate after training an epoch
+check_early_stop(epoch, validation_loss, model)
+    Checks if early stopping criteria are met.
 
 """
 
@@ -18,18 +32,43 @@ import torch
 class BaseTrainer:
     """
     Base class for all trainers.
+
+    This class provides the base functionality for training PyTorch models. It includes methods for
+    initializing the trainer, fitting the model, and training and validation epochs.
+
+    Methods
+    -------
+    fit()
+        Full training logic
+
+    _train_epoch()
+        Train an epoch
+
+    _validation_epoch()
+        Validate after training an epoch
+
     """
 
-    def __init__(
-        self,
-        model,
-        criterion,
-        metric_funcs,
-        optimizer,
-        max_epochs,
-        config
-    ):
+    def __init__(self, model, criterion, metric_funcs, optimizer, max_epochs, config):
+        """
+        Initializes the BaseTrainer.
 
+        Parameters
+        ----------
+        model : torch.nn.Module
+            The PyTorch model to be trained.
+        criterion : torch.nn.Module
+            The loss function used for training.
+        metric_funcs : list of callable
+            List of metric functions to evaluate during training.
+        optimizer : torch.optim.Optimizer
+            The optimizer used for training.
+        max_epochs : int
+            The maximum number of epochs to train the model.
+        config : dict
+            Configuration parameters for the trainer.
+
+        """
         self.config = config
 
         self.model = model
@@ -37,7 +76,9 @@ class BaseTrainer:
         self.optimizer = optimizer
 
         self.max_epochs = max_epochs
-        self.early_stopper = EarlyStopping(**config["trainer"]["early_stopping"]["args"])
+        self.early_stopper = EarlyStopping(
+            **config["trainer"]["early_stopping"]["args"]
+        )
 
         self.metric_funcs = metric_funcs
         self.batch_log = MetricTracker(
@@ -58,8 +99,10 @@ class BaseTrainer:
     def fit(self):
         """
         Full training logic
-        """
 
+        This method performs the full training logic, including training and validation epochs, logging the results, and early stopping.
+
+        """
         for epoch in range(self.max_epochs + 1):
 
             # torch.cuda.synchronize()
@@ -74,7 +117,9 @@ class BaseTrainer:
                 self.log.update(key, self.batch_log.history[key])
 
             # early stopping
-            if self.early_stopper.check_early_stop(epoch, self.log.history["val_loss"][epoch], self.model):
+            if self.early_stopper.check_early_stop(
+                epoch, self.log.history["val_loss"][epoch], self.model
+            ):
                 print(
                     f"Restoring model weights from the end of the best epoch {self.early_stopper.best_epoch}: "
                     f"val_loss = {self.early_stopper.min_validation_loss:.5f}"
@@ -107,6 +152,8 @@ class BaseTrainer:
         """
         Train an epoch
 
+        This method is called to train a single epoch of the model.
+
         """
         raise NotImplementedError
 
@@ -115,6 +162,8 @@ class BaseTrainer:
         """
         Validate after training an epoch
 
+        This method is called to perform validation after training a single epoch of the model.
+
         """
         raise NotImplementedError
 
@@ -122,9 +171,28 @@ class BaseTrainer:
 class EarlyStopping:
     """
     Base class for early stopping.
+
+    This class provides the functionality for early stopping during training.
+
+    Methods
+    -------
+    check_early_stop(epoch, validation_loss, model)
+        Checks if early stopping criteria are met.
+
     """
 
     def __init__(self, patience=1, min_delta=0):
+        """
+        Initializes the EarlyStopping.
+
+        Parameters
+        ----------
+        patience : int, optional
+            The number of epochs to wait for improvement before stopping the training. Default is 1.
+        min_delta : float, optional
+            The minimum change in the validation loss required to be considered as an improvement. Default is 0.
+
+        """
         self.patience = patience
         self.min_delta = min_delta
         self.counter = 0
@@ -133,6 +201,24 @@ class EarlyStopping:
         self.best_epoch = None
 
     def check_early_stop(self, epoch, validation_loss, model):
+        """
+        Checks if early stopping criteria are met.
+
+        Parameters
+        ----------
+        epoch : int
+            The current epoch number.
+        validation_loss : float
+            The validation loss at the current epoch.
+        model : torch.nn.Module
+            The PyTorch model.
+
+        Returns
+        -------
+        bool
+            True if early stopping criteria are met, False otherwise.
+
+        """
         if validation_loss < (self.min_validation_loss - self.min_delta):
             self.min_validation_loss = validation_loss
             self.counter = 0

@@ -1,27 +1,14 @@
 """
-Network modules for pytorch models.
+Vision Transformer (ViT) model for regression tasks.
 
 Functions
 ---------
-conv_couplet(in_channels, out_channels, act_fun, *args, **kwargs)
-    Create a sequential module consisting of a convolutional layer, activation function, and max pooling layer.
-
-dense_lazy_couplet(out_features, act_fun, *args, **kwargs)
-    Create a sequential module consisting of a lazy linear layer and activation function.
-
-conv_block(in_channels, out_channels, act_fun, kernel_size)
-    Create a sequential module consisting of multiple conv_couplet modules.
-
-dense_block(out_features, act_fun)
-    Create a sequential module consisting of multiple dense_lazy_couplet modules.
+None
 
 Classes
 ---------
-RescaleLayer
-    A class representing a rescaling layer.
-
-TorchModel(base.base_model.BaseModel)
-    A class representing a torch model.
+ViTModel(BaseModel)
+    TorchModel class represents a torch-based model for a specific task.
 
 """
 
@@ -34,7 +21,6 @@ from base.base_model import BaseModel
 from base.base_model import RescaleLayer
 
 
-# https://github.com/lucidrains/vit-pytorch?tab=readme-ov-file
 class ViTModel(BaseModel):
     """
     TorchModel class represents a torch-based model for a specific task.
