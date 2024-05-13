@@ -18,9 +18,6 @@
                              "tilelons": [[-100], [110], [0], [-80], [0], [140]]
                             },
 
-        "resample_validation": true,
-        "n_keep_per_tile": 100,
-
         "channels": [1, 3, 6],
         "scene_width": 11
     },

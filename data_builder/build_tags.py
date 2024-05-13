@@ -120,28 +120,34 @@ def get_tags(config):
     else:
         tags_val = None
 
-    if config["data"].get("resample_validation", False) and config["mode"] == "training":
+    if config["data"].get("rebalance_validation", False) and config["mode"] == "training":
         assert (
             config["data"].get("n_keep_per_tile") is not None
-        ), "n_keep_per_tile must be set if resample_validation is set."
+        ), "n_keep_per_tile must be set if rebalance_validation is set."
 
-        resample_validation(
+        rebalance_validation(
             tags_val, config["data"]["n_keep_per_tile"], rng_seed=config["seed"]
         )
-        print("Resampled validation set.")
+        print("Rebalanced validation set.")
         print(f"# Validation Samples: {len(tags_val.lats)}")
 
     return tags_train, tags_val
 
 
-def resample_validation(tags, n_keep, rng_seed=98):
+def rebalance_validation(tags, n_keep, rng_seed=98):
     rng = np.random.default_rng(rng_seed + 98)
-    file_list = np.copy(tags.files)
 
-    for file in np.unique(file_list):
-        i = np.where(tags.files == file)[0]
+    file_list = np.unique(np.asarray([f[:-5] for f in np.copy(tags.files)]))
+    print(f"{np.unique(file_list).shape=}")
+
+    for file in file_list:
+        print(file)
+        truncated_files = np.asarray([f[:-5] for f in tags.files])
+        i = np.where(truncated_files == file)[0]
         j = rng.choice(i, len(i) - n_keep, replace=False)
         tags.delete(j)
+
+        print(len(tags.files))
 
     assert len(tags.files) == len(tags.lats) == len(tags.lons) == len(tags.years)
 
