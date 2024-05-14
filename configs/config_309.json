@@ -1,5 +1,5 @@
 {
-    "expname": "exp308",
+    "expname": "exp309",
     "machine": "falco",
     "seed": 21,
     "device": "gpu",
@@ -66,8 +66,8 @@
             "args": {
                 "zero_weighting": 5,
                 "zero_threshold": 3,
-                "one_weighting": 5,
-                "one_threshold": 0.9,
+                "one_weighting": null,
+                "one_threshold": null,
                 "kluge_value_for_zero": 0.25
             }
         },

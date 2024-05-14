@@ -282,11 +282,11 @@ def save_torch_model(model, config, epoch=None):
         The experiment configuration.
     """
     model_name = get_model_name(config["expname"], config["seed"])
-    if epoch is not None:
-        model_name = model_name + "_epoch" + str(epoch).zfill(3)
     dir = get_model_dir(config["expname"], model_name, machine=config["machine"])
-
-    torch.save(model.state_dict(), dir + model_name + ".pt")
+    if epoch is not None:
+        torch.save(model.state_dict(), dir + model_name + "_epoch" + str(epoch).zfill(3) + ".pt")
+    else:
+        torch.save(model.state_dict(), dir + model_name + ".pt")
 
 
 def load_torch_model(model, filename):
