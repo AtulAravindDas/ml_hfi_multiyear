@@ -144,8 +144,7 @@ class Trainer(BaseTrainer):
                 break
 
         # Save the model at the end of the epoch
-        # Early stopping will over-write this model if it is better (as it should)
-        utils.save_torch_model(self.model, self.config)
+        utils.save_torch_model(self.model, self.config, epoch=epoch)
 
         # Run validation
         if self.do_validation:

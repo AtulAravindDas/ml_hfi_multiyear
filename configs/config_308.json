@@ -59,7 +59,7 @@
 
         "val_batch_size": 32,
         "val_n_repeat_tile": 1,
-        "val_max_batches": 1000000,
+        "val_max_batches": 100000,
 
         "loss":{
             "type": "WeightedSMSELoss",
@@ -90,16 +90,11 @@
     },
 
     "lr_scheduler": {
-        "type": "ReduceLROnPlateau",
+        "type": "MultiStepLR",
         "args": {
-            "mode": "min",
-            "factor": 0.5,
-            "patience": 3,
-            "threshold": 0.01,
-            "threshold_mode": "rel",
-            "cooldown": 0,
-            "min_lr": 1e-07,
-            "eps": 1e-08
+            "milestones": [4, 8, 12, 16, 20, 24],
+            "gamma": 0.5,
+            "last_epoch": -1
         }
     },
 

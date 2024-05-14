@@ -116,7 +116,8 @@ class BaseTrainer:
                 self.log.update(key, self.batch_log.history[key])
 
             # update the learning rate
-            self.scheduler.step(self.log.history["val_loss"][epoch])
+            # self.scheduler.step(self.log.history["val_loss"][epoch])
+            self.scheduler.step()
 
             # early stopping
             if self.early_stopper.check_early_stop(
@@ -139,7 +140,7 @@ class BaseTrainer:
             print(
                 f"Epoch {epoch:3d}/{self.max_epochs:2d}\n"
                 f"  {elapsed_time:.1f}s"
-                f" - lr: {self.optimizer.param_groups[0]['lr']:.5f}"
+                f" - lr: {self.scheduler.get_last_lr()[0]:.5f}"
                 f" - train_loss: {self.log.history['loss'][epoch]:.5f}"
                 f" - val_loss: {self.log.history['val_loss'][epoch]:.5f}"
                 f" - train_mae: {self.log.history['custom_mae'][epoch]:.5f}"
