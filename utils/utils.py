@@ -338,14 +338,14 @@ def load_model(config, clean=True):
             )
 
             model = load_torch_model(model, dir + model_name + ".pt")
-            print("\nLoading model from: ", dir + model_name + ".pt")
+            print("Loading model from: ", dir + model_name + ".pt\n")
             return model
         except:
             print("Saved model not found.")
             if config["mode"] == "inference":
                 raise FileNotFoundError
             else:
-                print("Using a clean model.")
+                print("Using a clean model.\n")
                 return model
 
 
@@ -372,6 +372,9 @@ def get_config(expname):
     assert (
         config["expname"] == basename + expname[len(basename) :]
     ), "Exp_Name must be equal to config[expname]"
+
+    # SET CONFIG MODE
+    config["mode"] = None
 
     # GET CONSTANTS
     with open("utils/constants.json") as f:

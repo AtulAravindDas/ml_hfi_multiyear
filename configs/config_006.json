@@ -1,0 +1,66 @@
+{
+    "expname": "exp006",
+    "machine": "falco",
+    "seed": 76,
+    "mode": null,
+    "device": "gpu",
+
+    "data": {
+        "tags_loadname": null,
+
+        "training_years": [2015, 2016, 2017, 2018, 2019],
+        "training_region": [-60, 60, -180, 180],
+
+        "inference_years": [2020],
+        "inference_region": [0, 20, 0, 20],
+
+        "channels": [1, 2, 3, 4, 5, 6],
+        "scene_width": 11,
+
+        "percentage_sampling": 0.01,
+        "val_frac": 0.05,
+        "min_binfrac_for_tile": 0.1,
+        "min_samples_in_tile": 5000,
+        "oversample_rare_bins": true,
+        "oversample_rate": 100.0,
+        "kluge_value_for_zero": null
+    },
+
+    "trainer": {
+
+        "resume_training": true,
+        "num_workers": 2,
+        "pin_memory": true,
+
+        "batch_size": 32,
+        "batches_per_epoch": 2000,
+        "max_epochs": 10000,
+        "max_val_batches": 250,
+
+        "loss":{
+            "type": "WeightedSMSELoss",
+            "args": {
+                "zero_weighting": 10.0,
+                "zero_threshold": 10,
+                "one_weighting": null,
+                "one_threshold": null,
+                "kluge_value_for_zero": 0.2
+            }
+        },
+
+        "early_stopping":{
+            "args":{
+                "patience": 10,
+                "min_delta": 0.00
+            }
+        }
+    },
+
+    "inference": {
+        "num_workers": 2,
+        "pin_memory": true,
+        "batch_size": 1024,
+        "quicklook": false,
+        "quicklook_skiplen": 5
+    }
+}

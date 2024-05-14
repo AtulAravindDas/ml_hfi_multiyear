@@ -49,7 +49,7 @@ class BaseTrainer:
 
     """
 
-    def __init__(self, model, criterion, metric_funcs, optimizer, max_epochs, config):
+    def __init__(self, model, criterion, metric_funcs, optimizer, scheduler, max_epochs, config):
         """
         Initializes the BaseTrainer.
 
@@ -74,6 +74,7 @@ class BaseTrainer:
         self.model = model
         self.criterion = criterion
         self.optimizer = optimizer
+        self.scheduler = scheduler
 
         self.max_epochs = max_epochs
         self.early_stopper = EarlyStopping(
@@ -104,8 +105,6 @@ class BaseTrainer:
 
         """
         for epoch in range(self.max_epochs + 1):
-
-            # torch.cuda.synchronize()
             start_time = time.time()
 
             self._train_epoch(epoch)
@@ -115,6 +114,9 @@ class BaseTrainer:
             self.log.update("epoch", epoch)
             for key in self.batch_log.history:
                 self.log.update(key, self.batch_log.history[key])
+
+            # update the learning rate
+            self.scheduler.step(self.log.history["val_loss"][epoch])
 
             # early stopping
             if self.early_stopper.check_early_stop(
@@ -132,20 +134,20 @@ class BaseTrainer:
                 break
 
             # Print out progress during training
-            # torch.cuda.synchronize()
             end_time = time.time()
             elapsed_time = end_time - start_time
             print(
                 f"Epoch {epoch:3d}/{self.max_epochs:2d}\n"
                 f"  {elapsed_time:.1f}s"
+                f" - lr: {self.optimizer.param_groups[0]['lr']:.5f}"
                 f" - train_loss: {self.log.history['loss'][epoch]:.5f}"
                 f" - val_loss: {self.log.history['val_loss'][epoch]:.5f}"
                 f" - train_mae: {self.log.history['custom_mae'][epoch]:.5f}"
                 f" - val_mae: {self.log.history['val_custom_mae'][epoch]:.5f}"
             )
 
-        # reset the batch_log
-        self.batch_log.reset()
+            # reset the batch_log
+            self.batch_log.reset()
 
     @abstractmethod
     def _train_epoch(self):
