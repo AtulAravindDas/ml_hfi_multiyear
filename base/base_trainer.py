@@ -133,8 +133,9 @@ class BaseTrainer:
             # Print out progress during training
             end_time = time.time()
             elapsed_time = end_time - start_time
+            current_time = time.strftime("%H:%M:%S", time.localtime())
             print(
-                f"Epoch {epoch:3d}/{self.max_epochs:2d}\n"
+                f"{current_time}: Epoch {epoch:3d}/{self.max_epochs:2d}\n"
                 f"  {elapsed_time:.1f}s"
                 f" - lr: {self.scheduler.get_last_lr()[0]:.5f}"
                 f" - train_loss: {self.log.history['loss'][epoch]:.5f}"
