@@ -66,6 +66,7 @@ class Trainer(BaseTrainer):
         criterion,
         metric_funcs,
         optimizer,
+        scheduler,
         max_epochs,
         data_loader,
         validation_data_loader,
@@ -77,6 +78,7 @@ class Trainer(BaseTrainer):
             criterion,
             metric_funcs,
             optimizer,
+            scheduler,
             max_epochs,
             config,
         )
@@ -105,9 +107,12 @@ class Trainer(BaseTrainer):
         self.model.train()
         self.batch_log.reset()
 
+        self.data_loader.dataset.fill_filecache(self.config["trainer"]["n_repeat_tile"])
+        self.data_loader.dataset.rng.shuffle(self.data_loader.dataset.filecache)
+
         for batch_idx, (data, target) in enumerate(self.data_loader):
 
-            if batch_idx == self.config["trainer"]["batches_per_epoch"]:
+            if batch_idx == self.config["trainer"]["max_batches"]:
                 break
 
             # Move data to device
@@ -135,17 +140,17 @@ class Trainer(BaseTrainer):
             for met in self.metric_funcs:
                 self.batch_log.update(met.__name__, met(output, target))
 
+            if len(self.data_loader.dataset.filecache) == 0:
+                break
+
         # Save the model at the end of the epoch
-        # Early stopping will over-write this model if it is better (as it should)
-        utils.save_torch_model(self.model, self.config)
+        utils.save_torch_model(self.model, self.config, epoch=epoch)
 
         # Run validation
         if self.do_validation:
-            # torch.cuda.synchronize()
-            tval = time.time()
+            # tval = time.time()
             self._validation_epoch(epoch)
-            # torch.cuda.synchronize()
-            print(f"  validation took {time.time() - tval:4.4f}s")
+            # print(f"  validation took {time.time() - tval:4.4f}s")
 
     def _validation_epoch(self, epoch):
         """
@@ -161,6 +166,9 @@ class Trainer(BaseTrainer):
         None.
         """
         self.model.eval()
+        self.validation_data_loader.dataset.fill_filecache(
+            self.config["trainer"]["val_n_repeat_tile"]
+        )
 
         for batch_idx, (data, target) in enumerate(self.validation_data_loader):
 
@@ -178,5 +186,8 @@ class Trainer(BaseTrainer):
                 self.batch_log.update("val_" + met.__name__, met(output, target))
 
             # break if have reached the max number of batches for validation
-            if batch_idx >= self.config["trainer"]["max_val_batches"]:
+            if (
+                batch_idx >= self.config["trainer"]["val_max_batches"]
+                or len(self.validation_data_loader.dataset.filecache) == 0
+            ):
                 break

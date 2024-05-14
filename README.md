@@ -36,6 +36,36 @@ Follow these steps to get started with the project:
 
 Please refer to the individual script files for more detailed instructions.
 
+## Configuration File
+The configuration file (config_###.json) documentation. It is still a work in progress...
+
+- `expname` (str): The name of the experiment.
+- `machine` (str: "falco", "riviera", "blackforest"): The name or identifier of the machine where the experiment is run.
+- `seed` (int): The seed used for random number generation.
+- `device` (str: "cpu", "gpu"): The device on which the computations are performed. This could be 'cpu', 'gpu'.
+
+- `data`: This section contains all the configuration related to building the data.
+    - `tags_loadname` (str: default="null"): The name of the experiment from which to load the tags if it already exists.
+    - `training_years` (list): The years used for training. Must have associated HII labels.
+    - `training_region` (list or dict): The geographical region to grab training tiles. There are two options:
+        - (list) Coordinates of the bounding box in the order [lat_s, lat_n, lon_w, lon_e].
+        - (dict) Keys 'lats' and 'lons' which represent the latitude and longitude values respectively.
+        {"tilelats": [[0], [10], [30], [40], [50]],
+        "tilelons": [[0, 10], [0, 10, -30], [0, 50, 20], [0, 10], [0]]
+        }
+    - `inference_years` (list): The years used for inference.
+    - `inference_region` (list or dict): The geographical region to grab inference tiles. There are two options:
+        - (list) Coordinates of the bounding box in the order [lat_s, lat_n, lon_w, lon_e].
+        - (dict) Keys 'lats' and 'lons' which represent the latitude and longitude values respectively.
+        {"tilelats": [[0], [10], [30], [40], [50]],
+        "tilelons": [[0, 10], [0, 10, -30], [0, 50, 20], [0, 10], [0]]
+        }
+    - `channels` (list): Landsat channels to use in training. Indexing starts at 1, not zero.
+    - `scene_width` (int): Width and height in HII pixels of each multi-channel input image. Image is assumed to be square.
+
+    <!---
+    -->
+
 
 ## Helpful commands
 * Gets rid of Apple Icons that mess up github: ``find . -name "Icon?" -print0 | xargs -0 rm -rf``

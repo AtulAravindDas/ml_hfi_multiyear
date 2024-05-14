@@ -17,9 +17,6 @@ warnings.filterwarnings("ignore")
 torch.set_warn_always(False)
 
 
-# TODO: could consider loading a large amount of data at a time
-# and then passing it to the dataloader in chunks
-
 def main():
     """
     Main function for training and evaluating a model.
@@ -62,8 +59,10 @@ def main():
     utils.set_random_seeds(config["seed"])
 
     # LOAD THE DATA
-    print("Building the data.")
+    print("\nBuilding the data.")
     tags_train, tags_val = build_tags.get_tags(config)
+    print(f"# Training Tiles:   {len(np.unique(tags_train.files))}")
+    print(f"# Validation Tiles: {len(np.unique(tags_val.files))}\n")
 
     # training data
     # create a custom dataset and then a dataloader
@@ -134,6 +133,7 @@ def main():
     optimizer = getattr(torch.optim, config["optimizer"]["type"])(
         model.parameters(), **config["optimizer"]["args"]
     )
+    scheduler = getattr(torch.optim.lr_scheduler, config["lr_scheduler"]["type"])(optimizer, **config["lr_scheduler"]["args"])
 
     loss = getattr(loss_module, config["trainer"]["loss"]["type"])(
         **config["trainer"]["loss"]["args"]
@@ -148,6 +148,7 @@ def main():
         loss,
         metric_funcs,
         optimizer,
+        scheduler=scheduler,
         max_epochs=config["trainer"]["max_epochs"],
         data_loader=train_loader,
         validation_data_loader=val_loader,
@@ -182,7 +183,7 @@ def main():
         )
         plt.title(m)
         plt.legend()
-        plt.ylim(0, 15.0)
+        plt.ylim(0, 20.0)
     plt.tight_layout()
 
     plots.savefig(config, "training_loss_curves")

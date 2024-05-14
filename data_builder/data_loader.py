@@ -16,6 +16,7 @@ read_output_data(config, tiff, sample_lon, sample_lat):
 """
 
 import os
+import copy
 from torch.utils.data import Dataset
 import torch
 import numpy as np
@@ -86,7 +87,7 @@ class CustomData(torch.utils.data.Dataset):
         self.data_dir = utils.get_directories(config["machine"])["data_dir"]
         self.landsat_dir = utils.get_directories(config["machine"])["landsat_dir"]
 
-        self.config = config
+        self.config = copy.deepcopy(config)
         self.batch_size = batch_size
         self.rng = np.random.default_rng(config["seed"] + 55)
 
@@ -96,6 +97,10 @@ class CustomData(torch.utils.data.Dataset):
         self.sample_lons = tags_lons
         self.sample_files = tags_files
 
+        self.filecache = None
+        if self.config["mode"] == "training":
+            self.fill_filecache()
+
     def __len__(self):
         """
         Get the length of the dataset.
@@ -104,6 +109,19 @@ class CustomData(torch.utils.data.Dataset):
             int: The length of the dataset.
         """
         return np.ceil(len(self.sample_years) / self.batch_size).astype(int)
+
+    def fill_filecache(self, n=1):
+        self.filecache = np.repeat(np.unique(self.sample_files), n)
+
+    def __get_tile_key__(self, idx):
+
+        try:
+            tile_key = self.sample_files[self.rng.choice(idx, 1, replace=False)[0]]
+        except:
+            idx = np.where(idx < len(self.sample_files))[0]
+            tile_key = self.sample_files[self.rng.choice(idx, 1, replace=False)[0]]
+
+        return tile_key, idx
 
     def __getitem__(self, id_batch):
         """
@@ -115,17 +133,10 @@ class CustomData(torch.utils.data.Dataset):
         Returns:
             tuple: A tuple containing the input data and the output data.
         """
-        idx = np.arange(
-            id_batch * self.batch_size,
-            (id_batch + 1) * self.batch_size,
-        )
 
         if self.config["mode"] == "training":
-            try:
-                tile_key = self.sample_files[self.rng.choice(idx, 1, replace=False)[0]]
-            except:
-                idx = np.where(idx < len(self.sample_files))[0]
-                tile_key = self.sample_files[self.rng.choice(idx, 1, replace=False)[0]]
+            tile_key = self.filecache[0]
+            self.filecache = np.delete(self.filecache, 0)
 
             i = self.rng.choice(
                 self.tags_dict[tile_key],
