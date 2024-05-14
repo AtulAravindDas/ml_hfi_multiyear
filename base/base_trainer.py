@@ -115,10 +115,6 @@ class BaseTrainer:
             for key in self.batch_log.history:
                 self.log.update(key, self.batch_log.history[key])
 
-            # update the learning rate
-            # self.scheduler.step(self.log.history["val_loss"][epoch])
-            self.scheduler.step()
-
             # early stopping
             if self.early_stopper.check_early_stop(
                 epoch, self.log.history["val_loss"][epoch], self.model
@@ -146,6 +142,10 @@ class BaseTrainer:
                 f" - train_mae: {self.log.history['custom_mae'][epoch]:.5f}"
                 f" - val_mae: {self.log.history['val_custom_mae'][epoch]:.5f}"
             )
+
+            # update the learning rate
+            # self.scheduler.step(self.log.history["val_loss"][epoch])
+            self.scheduler.step()
 
             # reset the batch_log
             self.batch_log.reset()
