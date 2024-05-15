@@ -36,6 +36,14 @@ Follow these steps to get started with the project:
 
 Please refer to the individual script files for more detailed instructions.
 
+## General Training Approach
+A list of tile filenames defines the dataset that is iterated over. For each epoch, a batch of pixels is selected from each tile in the list of tile filenames. Increasing the number of batches to sample from each tile just involves repeating filenames in the tile filenames list. This is set by the parameter `n_repeat_tile`. The list of filenames is shuffled at the end of each epoch.
+
+This same approach is used for the validation data. That is, a list of tile filenames are iterated over, grabbing a batch from each tile. By default, the validation tiles are only sampled over one time.
+
+## General Inference Approach
+Predictions are made, in a consecutive fashion, for every pixel in the tile. Since this can take a long time there is an additional option to take a `quicklook` at the data. This means only make predictions at equal intervals of pixels.
+
 ## Configuration File
 The configuration file (config_###.json) documentation. It is still a work in progress...
 
@@ -62,6 +70,20 @@ The configuration file (config_###.json) documentation. It is still a work in pr
         }
     - `channels` (list): Landsat channels to use in training. Indexing starts at 1, not zero.
     - `scene_width` (int): Width and height in HII pixels of each multi-channel input image. Image is assumed to be square.
+
+    - `percentage_sampling` (float: (0, 1.0]): percentage of each tile to sample when creating the training set
+    - `val_frac` (float: (0, 1.0)): fraction of the sampled training set to be set aside for validation
+    - `min_binfrac_for_tile` (float: (0, 1.0)): minimum fraction of the requested samples per bin to keep the bin; if a bin does not have at least this fraction of the requested samples the entire tile is thrown out of the training set (unless in the upper two bins, in which case this is ignored)
+    - `min_samples_in_tile` (int): minimum number of samples in a tile, otherwise the tile is thrown out
+    - `oversample_rare_bins` (boolean): whether to oversample bins without the requested number of samples
+    - `oversample_rate` (float): rate at which to oversample the rare bins; a value of 1.0 means no oversampling, a value of 10 means oversample ten times the number of samples.
+
+- `architecture`: Configuration for building the model architecture.
+    - `type` (str: "cnn", "resnet", "vit"): each type has different config keys to set.
+        - "cnn": *under construction*
+        - "resnet": *under construction*
+        - "vit": *under construction*
+    - `input_noise` (int): Maximum amount of noise to add to each landsat image during training. Noise is added according to a uniform distribution from [-input_noise, input_noise]
 
 - `trainer`: Configuration for training the model.
     - `resume training` (boolean): whether to load the saved model and continue training, or start with a clean model
@@ -90,13 +112,6 @@ The configuration file (config_###.json) documentation. It is still a work in pr
         - `args`:
             - `patience` (int): how long to wait for loss to drop until training is stopped
             - `min_delta` (float): minimum delta loss must reduce
-
-- `architecture`: Configuration for building the model architecture.
-    - `type` (str: "cnn", "resnet", "vit"): each type has different config keys to set.
-        - "cnn": *under construction*
-        - "resnet": *under construction*
-        - "vit": *under construction*
-    - `input_noise` (int): Maximum amount of noise to add to each landsat image during training. Noise is added according to a uniform distribution from [-input_noise, input_noise]
 
 - `optimizer`: Refer to the [PyTorch optimizer docs](https://pytorch.org/docs/stable/optim.html) for more details.
     - `type`: type of optimizer to use
