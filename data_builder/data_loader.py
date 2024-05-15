@@ -68,6 +68,7 @@ class CustomData(torch.utils.data.Dataset):
         tags_files,
         tags_dict,
         batch_size=32,
+        n_repeat_tile=1,
     ):
         """
         Initialize the CustomData dataset.
@@ -80,6 +81,7 @@ class CustomData(torch.utils.data.Dataset):
             tags_files (list): List of files for the dataset.
             tags_dict (dict): Dictionary of tags for the dataset.
             batch_size (int, optional): The batch size for the dataset. Defaults to 32.
+            n_repeat_tile (int, optional): The number of times to repeat the tile. Defaults to 1.
 
         Returns:
             None
@@ -99,7 +101,7 @@ class CustomData(torch.utils.data.Dataset):
 
         self.filecache = None
         if self.config["mode"] == "training":
-            self.fill_filecache()
+            self.fill_filecache(n_repeat_tile)
 
     def __len__(self):
         """
@@ -108,20 +110,10 @@ class CustomData(torch.utils.data.Dataset):
         Returns:
             int: The length of the dataset.
         """
-        return np.ceil(len(self.sample_years) / self.batch_size).astype(int)
+        return len(self.filecache)
 
     def fill_filecache(self, n=1):
         self.filecache = np.repeat(np.unique(self.sample_files), n)
-
-    def __get_tile_key__(self, idx):
-
-        try:
-            tile_key = self.sample_files[self.rng.choice(idx, 1, replace=False)[0]]
-        except:
-            idx = np.where(idx < len(self.sample_files))[0]
-            tile_key = self.sample_files[self.rng.choice(idx, 1, replace=False)[0]]
-
-        return tile_key, idx
 
     def __getitem__(self, id_batch):
         """
@@ -135,28 +127,41 @@ class CustomData(torch.utils.data.Dataset):
         """
 
         if self.config["mode"] == "training":
-            tile_key = self.filecache[0]
-            self.filecache = np.delete(self.filecache, 0)
+            tile_key = self.filecache[id_batch]
 
-            i = self.rng.choice(
-                self.tags_dict[tile_key],
-                self.batch_size,
-                replace=True,
-            )
+            # try to sample without replacement, but if it fails, sample with replacement
+            # EAFP: "It’s easier to ask for forgiveness than permission", assuming it happens rarely
+            try:
+                idx = self.rng.choice(
+                    self.tags_dict[tile_key],
+                    self.batch_size,
+                    replace=False,
+                )
+            except:
+                idx = self.rng.choice(
+                    self.tags_dict[tile_key],
+                    self.batch_size,
+                    replace=True,
+                )
 
-            sample_years = self.sample_years[i]
-            sample_lats = self.sample_lats[i]
-            sample_lons = self.sample_lons[i]
-            sample_files = self.sample_files[i]
+            sample_years = self.sample_years[idx]
+            sample_lats = self.sample_lats[idx]
+            sample_lons = self.sample_lons[idx]
+            sample_files = self.sample_files[idx]
 
         elif self.config["mode"] == "inference":
-
             # quicklook option to only grab every "quicklook_skiplen" index for inference
             if self.config["inference"]["quicklook"]:
                 idx = np.arange(
                     id_batch * self.batch_size,
                     (id_batch + 1) * self.batch_size,
                     self.config["inference"]["quicklook_skiplen"],
+                )
+            else:
+                # grab all indices for inference
+                idx = np.arange(
+                    id_batch * self.batch_size,
+                    (id_batch + 1) * self.batch_size,
                 )
 
             try:
