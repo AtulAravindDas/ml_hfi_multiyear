@@ -150,13 +150,18 @@ class CustomData(torch.utils.data.Dataset):
             sample_files = self.sample_files[i]
 
         elif self.config["mode"] == "inference":
-
             # quicklook option to only grab every "quicklook_skiplen" index for inference
             if self.config["inference"]["quicklook"]:
                 idx = np.arange(
                     id_batch * self.batch_size,
                     (id_batch + 1) * self.batch_size,
                     self.config["inference"]["quicklook_skiplen"],
+                )
+            else:
+                # grab all indices for inference
+                idx = np.arange(
+                    id_batch * self.batch_size,
+                    (id_batch + 1) * self.batch_size,
                 )
 
             try:
