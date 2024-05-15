@@ -49,7 +49,9 @@ class BaseTrainer:
 
     """
 
-    def __init__(self, model, criterion, metric_funcs, optimizer, scheduler, max_epochs, config):
+    def __init__(
+        self, model, criterion, metric_funcs, optimizer, scheduler, max_epochs, config
+    ):
         """
         Initializes the BaseTrainer.
 
@@ -134,15 +136,16 @@ class BaseTrainer:
             end_time = time.time()
             elapsed_time = end_time - start_time
             current_time = time.strftime("%H:%M:%S", time.localtime())
-            print(
+            progtext = (
                 f"{current_time}  Epoch {epoch}/{self.max_epochs:2d}\n"
-                f"  {elapsed_time:.1f}s"
-                f" - lr: {self.scheduler.get_last_lr()[0]:.2e}"
-                f" - train_loss: {self.log.history['loss'][epoch]:.5f}"
-                f" - val_loss: {self.log.history['val_loss'][epoch]:.5f}"
-                f" - train_mae: {self.log.history['custom_mae'][epoch]:.5f}"
-                f" - val_mae: {self.log.history['val_custom_mae'][epoch]:.5f}"
+                + f"  {elapsed_time:.1f}s"
+                + f" - lr: {self.scheduler.get_last_lr()[0]:.2e}"
             )
+            for key in self.log.history:
+                if key == "epoch":
+                    continue
+                progtext += f" - {key}: {self.log.history[key][epoch]:.5f}"
+            print(progtext)
 
             # update the learning rate
             # self.scheduler.step(self.log.history["val_loss"][epoch])

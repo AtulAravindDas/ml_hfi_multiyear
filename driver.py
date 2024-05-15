@@ -185,7 +185,7 @@ def main():
         )
         plt.title(m)
         plt.legend()
-        plt.ylim(0, 20.0)
+        plt.ylim(0, None)
     plt.tight_layout()
 
     plots.savefig(config, "training_loss_curves")
