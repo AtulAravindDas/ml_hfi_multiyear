@@ -68,6 +68,7 @@ class CustomData(torch.utils.data.Dataset):
         tags_files,
         tags_dict,
         batch_size=32,
+        n_repeat_tile=1,
     ):
         """
         Initialize the CustomData dataset.
@@ -99,7 +100,7 @@ class CustomData(torch.utils.data.Dataset):
 
         self.filecache = None
         if self.config["mode"] == "training":
-            self.fill_filecache()
+            self.fill_filecache(n_repeat_tile)
 
     def __len__(self):
         """
@@ -108,7 +109,7 @@ class CustomData(torch.utils.data.Dataset):
         Returns:
             int: The length of the dataset.
         """
-        return np.ceil(len(self.sample_years) / self.batch_size).astype(int)
+        return len(self.filecache)
 
     def fill_filecache(self, n=1):
         self.filecache = np.repeat(np.unique(self.sample_files), n)
@@ -135,8 +136,7 @@ class CustomData(torch.utils.data.Dataset):
         """
 
         if self.config["mode"] == "training":
-            tile_key = self.filecache[0]
-            self.filecache = np.delete(self.filecache, 0)
+            tile_key = self.filecache[id_batch]
 
             i = self.rng.choice(
                 self.tags_dict[tile_key],
