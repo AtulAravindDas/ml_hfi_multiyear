@@ -129,7 +129,7 @@ def read_tif(tif, channels, window):
 
     Parameters:
     tif (object): The TIFF file object.
-    channels (list): The list of channel indices to read.
+    channels (list): The list of channel indices to read. Indexed from 1.
     window (tuple): The window coordinates (x, y, width, height) to read from.
 
     Returns:

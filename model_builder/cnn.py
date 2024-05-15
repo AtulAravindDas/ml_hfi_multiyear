@@ -81,7 +81,7 @@ class CNNModel(BaseModel):
         # DEFINE CNN BLOCKS and RESCALE LAYERS
         # Build custom CNN block
         self.rescale_input = RescaleLayer((1.0 / 255.0), 0.0)
-        self.skip_channels = (2,)
+        self.skip_channels = (2, -1)
 
         # CNN block
         self.base_cnn_block = conv_block(
