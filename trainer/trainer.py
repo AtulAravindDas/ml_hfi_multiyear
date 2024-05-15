@@ -90,6 +90,32 @@ class Trainer(BaseTrainer):
 
         self.do_validation = True
 
+    def _load_gracefully(self, data_loader):
+        """
+        Load data from the data loader, and gracefully handle the case
+        where the data loader runs out of data due to multiple workers
+        being out of sync.
+
+        Parameters
+        ----------
+        data_loader : torch.utils.data.DataLoader
+            The data loader to load data from.
+
+        Yields
+        ------
+        data : tuple
+            The data and target from the data loader.
+
+        """
+
+        while True:
+            try:
+                d = enumerate(data_loader)
+                yield from d
+                return
+            except IndexError:
+                break
+
     def _train_epoch(self, epoch):
         """
         Training logic for an epoch
@@ -110,7 +136,7 @@ class Trainer(BaseTrainer):
         self.data_loader.dataset.fill_filecache(self.config["trainer"]["n_repeat_tile"])
         self.data_loader.dataset.rng.shuffle(self.data_loader.dataset.filecache)
 
-        for batch_idx, (data, target) in enumerate(self.data_loader):
+        for batch_idx, (data, target) in self._load_gracefully(self.data_loader):
 
             if batch_idx == self.config["trainer"]["max_batches"]:
                 break
@@ -148,9 +174,7 @@ class Trainer(BaseTrainer):
 
         # Run validation
         if self.do_validation:
-            # tval = time.time()
             self._validation_epoch(epoch)
-            # print(f"  validation took {time.time() - tval:4.4f}s")
 
     def _validation_epoch(self, epoch):
         """
@@ -170,7 +194,7 @@ class Trainer(BaseTrainer):
             self.config["trainer"]["val_n_repeat_tile"]
         )
 
-        for batch_idx, (data, target) in enumerate(self.validation_data_loader):
+        for batch_idx, (data, target) in self._load_gracefully(self.validation_data_loader):
 
             input, target = (
                 data.to(self.device),
