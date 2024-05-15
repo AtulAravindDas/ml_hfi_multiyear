@@ -107,9 +107,6 @@ class Trainer(BaseTrainer):
         self.model.train()
         self.batch_log.reset()
 
-        self.data_loader.dataset.fill_filecache(self.config["trainer"]["n_repeat_tile"])
-        self.data_loader.dataset.rng.shuffle(self.data_loader.dataset.filecache)
-
         for batch_idx, (data, target) in enumerate(self.data_loader):
 
             if batch_idx == self.config["trainer"]["max_batches"]:
@@ -140,17 +137,12 @@ class Trainer(BaseTrainer):
             for met in self.metric_funcs:
                 self.batch_log.update(met.__name__, met(output, target))
 
-            if len(self.data_loader.dataset.filecache) == 0:
-                break
-
         # Save the model at the end of the epoch
         utils.save_torch_model(self.model, self.config, epoch=epoch)
 
         # Run validation
         if self.do_validation:
-            # tval = time.time()
             self._validation_epoch(epoch)
-            # print(f"  validation took {time.time() - tval:4.4f}s")
 
     def _validation_epoch(self, epoch):
         """
@@ -166,11 +158,12 @@ class Trainer(BaseTrainer):
         None.
         """
         self.model.eval()
-        self.validation_data_loader.dataset.fill_filecache(
-            self.config["trainer"]["val_n_repeat_tile"]
-        )
 
         for batch_idx, (data, target) in enumerate(self.validation_data_loader):
+
+            # break if have reached the max number of batches for validation
+            if batch_idx == self.config["trainer"]["val_max_batches"]:
+                break
 
             input, target = (
                 data.to(self.device),
@@ -184,10 +177,3 @@ class Trainer(BaseTrainer):
             self.batch_log.update("val_loss", loss.item())
             for met in self.metric_funcs:
                 self.batch_log.update("val_" + met.__name__, met(output, target))
-
-            # break if have reached the max number of batches for validation
-            if (
-                batch_idx >= self.config["trainer"]["val_max_batches"]
-                or len(self.validation_data_loader.dataset.filecache) == 0
-            ):
-                break
