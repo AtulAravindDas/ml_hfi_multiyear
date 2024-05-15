@@ -161,6 +161,10 @@ class Trainer(BaseTrainer):
 
         for batch_idx, (data, target) in enumerate(self.validation_data_loader):
 
+            # break if have reached the max number of batches for validation
+            if batch_idx == self.config["trainer"]["val_max_batches"]:
+                break
+
             input, target = (
                 data.to(self.device),
                 target.to(self.device),
@@ -173,9 +177,3 @@ class Trainer(BaseTrainer):
             self.batch_log.update("val_loss", loss.item())
             for met in self.metric_funcs:
                 self.batch_log.update("val_" + met.__name__, met(output, target))
-
-            # break if have reached the max number of batches for validation
-            if (
-                batch_idx >= self.config["trainer"]["val_max_batches"]
-            ):
-                break
