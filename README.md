@@ -83,8 +83,8 @@ The configuration file (config_[###].json) documentation. It is still a work in 
 
 - `architecture`: Configuration for building the model architecture.
   - `type` (str: "cnn", "resnet", "vit"): each type has different config keys to set.
-    - "cnn": `filters`, `cnn_activation`, `kernel_size`, `dense_in`, `dense_units`, `dense_activations`, `dropout`, `final_in`, `final_activation`
-    - "resnet": `resnet_pretrained`, `resnet_trainable`, `resnet_drop_layer`, `dense_in`, `dense_units`, `dense_activations`, `dropout`, `final_in`, `final_activation`
+    - "cnn": `filters`, `cnn_activation`, `kernel_size`, `skip_channels`, `dense_in`, `dense_units`, `dense_activations`, `dropout`, `final_in`, `final_activation`
+    - "resnet": `resnet_pretrained`, `resnet_trainable`, `resnet_drop_layer`, `skip_channels`, `dense_in`, `dense_units`, `dense_activations`, `dropout`, `final_in`, `final_activation`
     - "vit": `n_conv_layers`, `kernel_size`
   - `input_noise` (int): Maximum amount of noise to add to each landsat image during training. Noise is added according to a uniform distribution from [-input_noise, input_noise]
 

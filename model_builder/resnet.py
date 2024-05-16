@@ -3,29 +3,12 @@ Pre-trained ResNet model for regression tasks.
 
 Functions
 ---------
+None
 
 Classes
 ---------
 ResNetModel: TorchModel class represents a torch-based model for a specific task.
 
-    Args:
-        config (dict): Configuration parameters for the model.
-
-    Attributes:
-        config (dict): Configuration parameters for the model.
-        input_shape (tuple): Shape of the input data.
-        augmentation (torch.nn.Sequential): Augmentation layers.
-        conv_block (torch.nn.Module): CNN block.
-        flat (torch.nn.Flatten): Flat layer.
-        dropout (torch.nn.Dropout): Dropout layer.
-        denseblock (torch.nn.Module): Dense blocks.
-        rescale_input (RescaleLayer): Rescaling layer for input data.
-        rescale_target (RescaleLayer): Rescaling layer for target data.
-        output (torch.nn.Module): Output layers.
-
-    Methods:
-        forward(input): Performs forward pass of the model.
-        predict(dataloader, device): Makes predictions using the model.
 """
 
 import torch
@@ -54,6 +37,7 @@ class ResNetModel(BaseModel):
         augmentation (torch.nn.Sequential): Augmentation layers.
         conv_block (torch.nn.Module): CNN block.
         flat (torch.nn.Flatten): Flat layer.
+        skip_channels (list): List of skip channels.
         dropout (torch.nn.Dropout): Dropout layer.
         denseblock (torch.nn.Module): Dense blocks.
         rescale_input (RescaleLayer): Rescaling layer for input data.
@@ -99,7 +83,9 @@ class ResNetModel(BaseModel):
         # Build ResNet18 block
         # scaling specific to resnet and torchvision
         self.rescale_input = RescaleLayer((1.0 / (255.0 * 0.22)), -0.44)
-        self.skip_channels = (1, -1)
+
+        # TODO: remove if not useful
+        self.skip_channels = config["architecture"]["skip_channels"]  # (1, -1)
 
         if config["architecture"].get("resnet_pretrained", True):
             layers = list(
@@ -124,7 +110,7 @@ class ResNetModel(BaseModel):
         self.dropout = torch.nn.Dropout(p=config["architecture"]["dropout"])
 
         # Dense blocks
-        self.denseblockA = dense_block(
+        self.denseblock = dense_block(
             config["architecture"]["dense_units"],
             config["architecture"]["dense_activations"],
             in_features=config["architecture"]["dense_in"],
@@ -165,15 +151,15 @@ class ResNetModel(BaseModel):
         x = self.flat(x)
 
         # skip connection
-        input_flat_chA = self.flat(input[:, self.skip_channels[0], :, :])
-        input_flat_chB = self.flat(input[:, self.skip_channels[1], :, :])
-        x = torch.cat((x, input_flat_chA, input_flat_chB), dim=-1)
+        # input_flat_chA = self.flat(input[:, self.skip_channels[0], :, :])
+        # input_flat_chB = self.flat(input[:, self.skip_channels[1], :, :])
+        # x = torch.cat((x, input_flat_chA, input_flat_chB), dim=-1)
 
         # dropout layer
         x = self.dropout(x)
 
         # dense blocks
-        x = self.denseblockA(x)
+        x = self.denseblock(x)
 
         # output layer
         x = self.output(x)

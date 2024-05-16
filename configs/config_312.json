@@ -1,5 +1,5 @@
 {
-    "expname": "exp311",
+    "expname": "exp312",
     "machine": "falco",
     "seed": 21,
     "device": "gpu",
@@ -15,37 +15,29 @@
                              "tilelons": [[-100], [110], [0], [-80], [0], [140]]
                             },
 
-        "channels": [1, 2, 4, 5, 6],
+        "channels": [2, 4, 6],
         "scene_width": 11
 
     },
 
     "architecture": {
-        "type": "cnn",
-        "input_noise": 5,
-
-        "filters": [128, 128, 128, 128, 128, 128],
-        "cnn_activation": ["ReLU","ReLU","ReLU","ReLU","ReLU","ReLU"],
-        "kernel_size": [3, 3, 3, 3, 3, 3],
+        "type": "resnet",
+        "resnet_pretrained": true,
+        "resnet_trainable": true,
+        "resnet_drop_layer": -3,
 
         "skip_channels": [1, -1],
 
-        "dense_in": [24712],
-        "dense_units": [128],
-        "dense_activations": ["ReLU"],
+        "dense_in": [12544, 128],
+        "dense_units": [128, 128],
+        "dense_activations": ["ReLU","ReLU"],
 
-        "dropout": 0.05,
+        "dropout": 0.00,
 
         "final_in": 128,
-        "final_activation": "Sigmoid"
-    },
+        "final_activation": "Sigmoid",
 
-    "inference": {
-        "num_workers": 2,
-        "pin_memory": true,
-        "batch_size": 1024,
-        "quicklook": false,
-        "quicklook_skiplen": 5
+        "input_noise": 0
     },
 
     "trainer": {
@@ -83,11 +75,10 @@
     },
 
     "optimizer": {
-        "type": "Adam",
+        "type": "SGD",
         "args":{
-            "lr": 0.00005,
-            "weight_decay": 0,
-            "amsgrad": false
+            "lr": 0.0001,
+            "momentum": 0.9
         }
     },
 
@@ -102,5 +93,13 @@
 
     "metrics": [
         "custom_mae"
-    ]
+    ],
+
+    "inference": {
+        "num_workers": 2,
+        "pin_memory": true,
+        "batch_size": 1024,
+        "quicklook": false,
+        "quicklook_skiplen": 5
+    }
 }

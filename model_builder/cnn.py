@@ -34,6 +34,7 @@ class CNNModel(BaseModel):
         flat (torch.nn.Flatten): Flat layer.
         dropout (torch.nn.Dropout): Dropout layer.
         denseblock (torch.nn.Module): Dense blocks.
+        skip_channels (list): List of skip channels.
         rescale_input (RescaleLayer): Rescaling layer for input data.
         rescale_target (RescaleLayer): Rescaling layer for target data.
         output (torch.nn.Module): Output layers.
@@ -142,8 +143,6 @@ class CNNModel(BaseModel):
         input_flat_chA = self.flat(input[:, self.skip_channels[0], :, :])
         input_flat_chB = self.flat(input[:, self.skip_channels[1], :, :])
         x = torch.cat((x, input_flat_chA, input_flat_chB), dim=-1)
-        # # input_flat_chA = self.flat(input[:, self.skip_channels[0], :, :])
-        # x = torch.cat((x, input_flat_chA), dim=-1)
 
         # dropout layer
         x = self.dropout(x)
