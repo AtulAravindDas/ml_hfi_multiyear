@@ -105,12 +105,18 @@ class CustomData(torch.utils.data.Dataset):
 
     def __len__(self):
         """
-        Get the length of the dataset.
+        Get the length of the dataset. If the mode is training, the length is the length of the filecache.
+        If the mode is inference, the length is the length of the sample years divided by the batch size.
 
         Returns:
             int: The length of the dataset.
         """
-        return len(self.filecache)
+        if self.config["mode"] == "training":
+            return len(self.filecache)
+        elif self.config["mode"] == "inference":
+            return np.ceil(len(self.sample_years) / self.batch_size).astype(int)
+        else:
+            NotImplementedError("no such mode.")
 
     def fill_filecache(self, n=1):
         self.filecache = np.repeat(np.unique(self.sample_files), n)
