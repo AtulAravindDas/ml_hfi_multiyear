@@ -684,6 +684,11 @@ def read_input_data(
                 config["architecture"]["input_noise"] + 1,
                 size=sample_input.shape[-1],
             )
+
+            # if (random_noise + sample_input).min() < 0:
+            #     # print(f"negative input values: [{sample_input.min()}, {sample_input.max()}]")
+            #     sample_input = sample_input - sample_input.min()
+
             sample_input = sample_input + random_noise
 
         return sample_input, tif_dict, usecase
