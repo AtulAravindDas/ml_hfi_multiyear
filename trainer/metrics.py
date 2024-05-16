@@ -21,7 +21,21 @@ def custom_mae(output, target):
 
     """
     with torch.no_grad():
-
-        assert len(output[:, 0]) == len(target)
-
         return torch.mean(torch.abs(output - target)).item()
+
+
+def count_zeros(output, target):
+    """Count the number of zeros in the output.
+
+    """
+    return torch.count_nonzero(output < 0.01).item()
+
+
+def missed_zeros(output, target):
+    """Count the number of zeros in the target that were missed.
+
+    """
+    return (
+        torch.sum((output >= 0.01) & (target < 0.01))
+        / (torch.count_nonzero(target < 0.01))
+    ).item()

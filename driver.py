@@ -74,6 +74,7 @@ def main():
         tags_train.files,
         tags_train.dict,
         config["trainer"]["batch_size"],
+        config["trainer"]["n_repeat_tile"],
     )
     train_loader = torch.utils.data.DataLoader(
         ds_train,
@@ -96,6 +97,7 @@ def main():
         tags_val.files,
         tags_val.dict,
         config["trainer"]["val_batch_size"],
+        config["trainer"]["val_n_repeat_tile"]
     )
     val_loader = torch.utils.data.DataLoader(
         ds_val,
@@ -183,7 +185,7 @@ def main():
         )
         plt.title(m)
         plt.legend()
-        plt.ylim(0, 20.0)
+        plt.ylim(0, None)
     plt.tight_layout()
 
     plots.savefig(config, "training_loss_curves")
