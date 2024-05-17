@@ -28,7 +28,7 @@ class WeightedSMSELoss(torch.nn.Module):
         zero_weighting=None,
         zero_threshold=0.0,
         one_weighting=None,
-        one_threshold=0.90,
+        one_threshold=90,
         kluge_value_for_zero=None,
     ):
         super().__init__()

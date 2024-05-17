@@ -17,9 +17,6 @@ warnings.filterwarnings("ignore")
 torch.set_warn_always(False)
 
 
-# TODO: flag for where 2020 disagree a lot
-# TODO: prognostic
-
 def main():
     """
     Main function for training and evaluating a model.

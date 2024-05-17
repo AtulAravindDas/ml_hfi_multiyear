@@ -108,7 +108,7 @@ The configuration file (config_[###].json) documentation. It is still a work in 
       - `zero_weighting` (float: default="null"): how much extra to weight the loss for values near zero
       - `zero_threshold` (float: default=0.0): threshold to define what a value near zero is. All values below this threshold will be weighted.
       - `one_weighting` (float: default="null"): how much extra to weight the loss for values near one
-      - `one_threshold` (float: default=0.9): threshold to define what a value near one is. All values above this threshold will be weighted.
+      - `one_threshold` (float: default=90): threshold to define what a value near one is. All values above this threshold will be weighted.
       - `kluge_value_for_zero` (float: default=0.0): extra error to add to values that are exactly zero as in Keys et al. (2020) to pull values to zero. This does not use zero_threshold above, but only applies to pixels with labels that are exactly zero.
 
   - `early_stopping`: configuration for early stopping class
