@@ -1,5 +1,5 @@
 {
-    "expname": "exp312",
+    "expname": "exp314",
     "machine": "falco",
     "seed": 21,
     "device": "gpu",
@@ -58,8 +58,8 @@
         "loss":{
             "type": "WeightedSMSELoss",
             "args": {
-                "zero_weighting": 5,
-                "zero_threshold": 3,
+                "zero_weighting": null,
+                "zero_threshold": null,
                 "one_weighting": null,
                 "one_threshold": null,
                 "kluge_value_for_zero": 0.2
@@ -77,7 +77,7 @@
     "optimizer": {
         "type": "SGD",
         "args":{
-            "lr": 0.0001,
+            "lr": 0.00001,
             "momentum": 0.9
         }
     },
@@ -85,7 +85,7 @@
     "lr_scheduler": {
         "type": "MultiStepLR",
         "args": {
-            "milestones": [10, 20],
+            "milestones": [10000],
             "gamma": 0.1,
             "last_epoch": -1
         }
