@@ -32,8 +32,7 @@ def process_flatten(config, labels, predictions, remove_edges=False):
         ndarray: The processed labels.
         ndarray: The processed predictions.
     """
-
-    assert labels.shape == predictions.shape
+    assert labels.shape == predictions.shape, print(f"Shapes do not match: {labels.shape}, {predictions.shape}")
 
     # REMOVE EDGES FOR NOW
     if remove_edges:
