@@ -1,6 +1,6 @@
 {
     "expname": "exp312",
-    "machine": "falco",
+    "machine": "blackforest",
     "seed": 21,
     "device": "gpu",
 
@@ -11,8 +11,8 @@
         "training_region": [-60, 60, -180, 180],
 
         "inference_years": [2020],
-        "inference_region": {"tilelats": [[40], [30], [50], [0], [10], [-30]],
-                             "tilelons": [[-100], [110], [0], [-80], [0], [140]]
+        "inference_region": {"tilelats": [[30], [50], [0], [10], [-30], [40]],
+                             "tilelons": [[110], [0], [-80], [0], [140], [-100]]
                             },
 
         "channels": [2, 4, 6],
