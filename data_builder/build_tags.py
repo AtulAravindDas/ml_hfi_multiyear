@@ -277,6 +277,8 @@ def get_training_tags(config):
                             [*zip(subsample_lons, subsample_lats)], indexes=1
                         )
                         array = np.ndarray.flatten(np.asarray(list(array)))
+                        array[array == 255] = 0.0
+
                     percentage_sampling = config["data"]["percentage_sampling"]
 
                     # Calculate the histogram of the array to determine the distribution
