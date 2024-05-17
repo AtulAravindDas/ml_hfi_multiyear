@@ -41,7 +41,6 @@ class CNNModel(BaseModel):
 
     Methods:
         forward(input): Performs forward pass of the model.
-        predict(dataloader, device): Makes predictions using the model.
 
     """
 
