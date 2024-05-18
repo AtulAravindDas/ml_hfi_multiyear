@@ -264,6 +264,10 @@ class CustomData(torch.utils.data.Dataset):
             if isinstance(tif_dict[key], rasterio.io.DatasetReader):
                 tif_dict[key].close()
 
+        # from matplotlib import pyplot as plt
+        # plt.pcolor(batch_input[0, :, :, 0])
+        # plt.show()
+
         return batch_input
 
     def get_output_data(self, sample_years, sample_lats, sample_lons, sample_files):
@@ -289,7 +293,6 @@ class CustomData(torch.utils.data.Dataset):
             self.data_dir + "hii_" + str(int(sample_years[0])) + "-01-01_uint8.tif"
         )
         if not os.path.isfile(filename):
-            print(f"HII file does not exist: {filename}")
             return batch_output * 0.0
 
         with rasterio.open(filename) as output_tiff:
@@ -300,6 +303,31 @@ class CustomData(torch.utils.data.Dataset):
                     sample_lons[isample],
                     sample_lats[isample],
                 )
+
+        # NOTE: for this to work the predictions need way more context...
+        # not a good implementation right now.
+        if self.config.get("task", None) == "prognostic":
+            filename = (
+                self.data_dir
+                + "hii_"
+                + str(int(sample_years[0] + self.config["data"]["prognostic_leadtime"]))
+                + "-01-01_uint8.tif"
+            )
+            if not os.path.isfile(filename):
+                if self.config["mode"] == "training":
+                    raise ValueError("No such output file: " + filename)
+                return batch_output * 0.0
+
+            batch_output_prog = np.zeros((len(sample_years), 1))
+            with rasterio.open(filename) as output_tiff:
+                for isample in np.arange(0, len(sample_years)):
+                    batch_output_prog[isample] = read_output_data(
+                        self.config,
+                        output_tiff,
+                        sample_lons[isample],
+                        sample_lats[isample],
+                    )
+            batch_output = batch_output_prog - batch_output
 
         return batch_output
 

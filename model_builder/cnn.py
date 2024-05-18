@@ -98,7 +98,7 @@ class CNNModel(BaseModel):
         self.dropout = torch.nn.Dropout(p=config["architecture"]["dropout"])
 
         # Dense blocks
-        self.denseblockA = dense_block(
+        self.denseblock = dense_block(
             config["architecture"]["dense_units"],
             config["architecture"]["dense_activations"],
             in_features=config["architecture"]["dense_in"],
@@ -147,7 +147,7 @@ class CNNModel(BaseModel):
         x = self.dropout(x)
 
         # dense blocks
-        x = self.denseblockA(x)
+        x = self.denseblock(x)
 
         # output layer
         x = self.output(x)

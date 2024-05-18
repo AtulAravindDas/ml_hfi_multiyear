@@ -81,15 +81,15 @@ def make_predictions(config, model, tags, dataloader):
 
     device = utils.prepare_device(config["device"], config["device_id"])
     with torch.inference_mode():
-        hfi_predict = model.predict(
-            dataloader=dataloader,
-            device=device
-        )
+        hfi_predict = model.predict(dataloader=dataloader, device=device)
 
     # GET TIFF META DATA
     DATA_DIR = utils.get_directories(config["machine"])["data_dir"]
     labels_filename = (
-        DATA_DIR + "hii_" + str(config["data"]["inference_years"][0]) + "-01-01_uint8.tif"
+        DATA_DIR
+        + "hii_"
+        + str(config["data"]["inference_years"][0])
+        + "-01-01_uint8.tif"
     )
 
     default_filepaths = utils.get_default_filepaths()
@@ -124,7 +124,9 @@ def make_predictions(config, model, tags, dataloader):
 
     # RESHAPE FROM VECTOR TO GRID
     hfi_predict = np.reshape(hfi_predict, (height, width), order="C")
-    hfi_predict = np.asarray(np.round(hfi_predict), dtype="uint8")
+    hfi_predict = np.asarray(
+        np.round(hfi_predict), dtype=config["inference"].get("dtype", "uint8")
+    )
     hfi_predict = np.where(
         hfi_mask == 1, hfi_predict, 255
     )  # remove ocean and turn to nan
