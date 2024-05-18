@@ -684,11 +684,12 @@ def read_input_data(
                 config["architecture"]["input_noise"] + 1,
                 size=sample_input.shape[-1],
             )
-
-            # if (random_noise + sample_input).min() < 0:
-            #     # print(f"negative input values: [{sample_input.min()}, {sample_input.max()}]")
-            #     sample_input = sample_input - sample_input.min()
-
             sample_input = sample_input + random_noise
+
+            # Make negative values zero
+            # On the one hand, this makes sense because in reality there will not be negative values.
+            # On the other hand, this might be a problem for the model to learn the relative relationships.
+            # Will comment it out for now.
+            # sample_input[sample_input < 0] = 0
 
         return sample_input, tif_dict, usecase

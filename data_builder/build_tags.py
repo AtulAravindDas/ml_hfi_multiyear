@@ -282,7 +282,9 @@ def get_training_tags(config):
                     percentage_sampling = config["data"]["percentage_sampling"]
 
                     # Calculate the histogram of the array to determine the distribution
+                    # Add one to the last to the final bin to include the last value
                     hist, bins = np.histogram(array, bins=np.arange(11) * 10)
+                    bins[-1] = bins[-1] + 1
 
                     # Calculate the total number of samples
                     total_samples = len(array)
@@ -303,12 +305,20 @@ def get_training_tags(config):
                     indices_to_keep = []
 
                     # Iterate over each bin
+                    if config["data"].get("zero_bin", False):
+                        bins = np.concatenate(([-10], bins))
                     for i in range(len(bins) - 1):
                         bin_start = bins[i]
                         bin_end = bins[i + 1]
-                        bin_indices = np.where(
-                            (array >= bin_start) & (array < bin_end)
-                        )[0]
+
+                        if config["data"].get("zero_bin", False):
+                            bin_indices = np.where(
+                                (array > bin_start) & (array <= bin_end)
+                            )[0]
+                        else:
+                            bin_indices = np.where(
+                                (array >= bin_start) & (array < bin_end)
+                            )[0]
 
                         # If the number of samples in the bin is less than the minimum threshold, we skip the entire tile
                         if (
@@ -319,6 +329,7 @@ def get_training_tags(config):
                             )
                             & (bin_end != 100)
                             & (bin_end != 90)
+                            & (bin_start != -10)
                         ):
                             indices_to_keep = []
                             break
