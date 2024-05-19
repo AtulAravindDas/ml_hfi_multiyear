@@ -19,7 +19,7 @@
 
         "prognostic_leadtime": 5,
 
-        "percentage_sampling": 0.05,
+        "percentage_sampling": 0.025,
         "val_frac": 0.05,
         "min_binfrac_for_tile": 0.0,
         "min_samples_in_tile": 0,
@@ -55,12 +55,12 @@
         "pin_memory": true,
 
         "batch_size": 32,
-        "n_repeat_tile": 2000,
+        "n_repeat_tile": 300,
         "max_batches": 100000,
         "max_epochs": 1000,
 
         "val_batch_size": 32,
-        "val_n_repeat_tile": 250,
+        "val_n_repeat_tile": 20,
         "val_max_batches": 100000,
 
         "loss":{

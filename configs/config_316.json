@@ -1,6 +1,6 @@
 {
     "expname": "exp316",
-    "machine": "falco",
+    "machine": "blackforest",
     "seed": 33,
     "device": "gpu",
 
