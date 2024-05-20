@@ -83,8 +83,12 @@ class ResNetModel(BaseModel):
         # scaling specific to resnet and torchvision
         self.rescale_input = RescaleLayer((1.0 / (255.0 * 0.22)), -0.44)
 
-        # TODO: remove if not useful
-        self.skip_channels = config["architecture"]["skip_channels"]  # (1, -1)
+        # Add skip connections
+        if config["architecture"]["skip_channels"] is not None:
+            self.skip_connection = True
+            self.skip_channels = config["architecture"]["skip_channels"]
+        else:
+            self.skip_connection = False
 
         if config["architecture"].get("resnet_pretrained", True):
             layers = list(
@@ -150,9 +154,10 @@ class ResNetModel(BaseModel):
         x = self.flat(x)
 
         # skip connection
-        # input_flat_chA = self.flat(input[:, self.skip_channels[0], :, :])
-        # input_flat_chB = self.flat(input[:, self.skip_channels[1], :, :])
-        # x = torch.cat((x, input_flat_chA, input_flat_chB), dim=-1)
+        if self.skip_connection:
+            input_flat_chA = self.flat(input[:, self.skip_channels[0], :, :])
+            input_flat_chB = self.flat(input[:, self.skip_channels[1], :, :])
+            x = torch.cat((x, input_flat_chA, input_flat_chB), dim=-1)
 
         # dropout layer
         x = self.dropout(x)
