@@ -672,10 +672,10 @@ def read_input_data(
     else:
         assert (
             sample_input.shape[0] == config["scene_width_landsat"]
-        ), f"{sample_input.shape[0] = }, {usecase = }"
+        ), f"{sample_input.shape[0]=}, {usecase=}"
         assert (
             sample_input.shape[1] == config["scene_width_landsat"]
-        ), f"{sample_input.shape[1] = }, {usecase = }"
+        ), f"{sample_input.shape[1]=}, {usecase=}"
 
         # add noise to de-noise
         if config["mode"] == "training":
