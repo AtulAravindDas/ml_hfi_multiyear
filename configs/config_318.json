@@ -26,7 +26,7 @@
         "resnet_trainable": true,
         "resnet_drop_layer": -3,
 
-        "skip_channels": [1, -1],
+        "skip_channels": null,
 
         "dense_in": [12544, 128],
         "dense_units": [128, 128],
