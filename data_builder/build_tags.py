@@ -327,6 +327,7 @@ def get_training_tags(config):
                                 < config["data"]["min_binfrac_for_tile"]
                                 * max_samples_per_bin
                             )
+                            & (bin_end != 101)
                             & (bin_end != 100)
                             & (bin_end != 90)
                             & (bin_start != -10)
