@@ -96,9 +96,9 @@
     ],
 
     "inference": {
-        "num_workers": 2,
-        "pin_memory": true,
-        "batch_size": 1024,
+        "num_workers": 0,
+        "pin_memory": false,
+        "batch_size": 2048,
         "quicklook": false,
         "quicklook_skiplen": 5
     }
