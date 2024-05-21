@@ -148,7 +148,7 @@ def main():
                     for key in ds_inf.tif_dict.keys():
                         if isinstance(ds_inf.tif_dict[key], rasterio.io.DatasetReader):
                             ds_inf.tif_dict[key].close()
-                            ds_inf.tif_dict = {}
+                    ds_inf.tif_dict = {}
 
                     filenames_list.append(predictions_filename)
 
