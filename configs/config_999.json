@@ -1,7 +1,6 @@
 {
     "expname": "exp999",
     "machine": "blackforest",
-    "task": "inference",
     "seed": 76,
     "device": "gpu",
 
@@ -99,7 +98,7 @@
     "inference": {
         "num_workers": 0,
         "pin_memory": false,
-        "batch_size": 1024,
+        "batch_size": 2048,
         "quicklook": false,
         "quicklook_skiplen": 5
     }

@@ -2,6 +2,7 @@ import os
 import numpy as np
 import argparse
 import torch
+import rasterio
 
 from utils import utils
 from data_builder import build_tags
@@ -132,15 +133,22 @@ def main():
                         pin_memory=config["inference"]["pin_memory"],
                         num_workers=config["inference"]["num_workers"],
                     )
-                    hfi_predict, hfi_labels, latlon_bounds = inference.make_predictions(
+                    hfi_predict, _, latlon_bounds = inference.make_predictions(
                         config, model, tags, inf_loader
                     )
 
+                    # save the predictions
                     _ = inference.save_predictions_tif(
                         hfi_predict,
                         predictions_filename,
                         latlon_bounds=latlon_bounds,
                     )
+
+                    # close tif files
+                    for key in ds_inf.tif_dict.keys():
+                        if isinstance(ds_inf.tif_dict[key], rasterio.io.DatasetReader):
+                            ds_inf.tif_dict[key].close()
+                            ds_inf.tif_dict = {}
 
                     filenames_list.append(predictions_filename)
 
