@@ -281,8 +281,6 @@ def read_input_data(
             ilon_w,
         )
 
-    # start_time = time.time()
-
     # USECASE 0 - central only
     if usecase == "usecase_central":
         central_output = read_tif(

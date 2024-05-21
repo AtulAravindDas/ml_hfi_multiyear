@@ -99,9 +99,35 @@ class CustomData(torch.utils.data.Dataset):
         self.sample_lons = tags_lons
         self.sample_files = tags_files
 
+        # Initialize filecache for training mode
         self.filecache = None
         if self.config["mode"] == "training":
             self.fill_filecache(n_repeat_tile)
+
+        # Initialize dictionary of tif landsat files
+
+        # if training, initialize tif_dict with empty dict
+        # since it will be replaced every batch over and over
+        if self.config["mode"] == "training":
+            self.tif_dict = {}
+
+        # if inference, initialize tif_dict with the main central file
+        # since it will be used for all samples;
+        # i.e. it will not be closed and replaced
+        elif self.config["mode"] == "inference":
+            filename = self.landsat_dir + self.sample_files[0] + ".tif"
+            if not os.path.isfile(filename):
+                raise ValueError("No such input Landsat file: " + filename)
+
+            self.tif_dict = {}
+            self.tif_dict, flag = read_landsat.fill_tif_dict(
+                "central",
+                self.sample_years[0],
+                self.sample_lats[0],
+                self.sample_lons[0],
+                self.tif_dict,
+                self.config,
+            )
 
     def __len__(self):
         """
@@ -224,32 +250,27 @@ class CustomData(torch.utils.data.Dataset):
                 len(self.config["data"]["channels"]),
             )
         )
+        if self.config["mode"] == "training":
+            filename = self.landsat_dir + sample_files[0] + ".tif"
 
-        filename = self.landsat_dir + sample_files[0] + ".tif"
-
-        if not os.path.isfile(filename):
-            if self.config["mode"] == "training":
+            if not os.path.isfile(filename):
                 raise ValueError("No such input Landsat file: " + filename)
-            elif self.config["mode"] == "inference":
-                return batch_input
-            else:
-                raise NotImplementedError("no such mode.")
 
-        tif_dict = {}
-        tif_dict, flag = read_landsat.fill_tif_dict(
-            "central",
-            sample_years[0],
-            sample_lats[0],
-            sample_lons[0],
-            tif_dict,
-            self.config,
-        )
+            self.tif_dict = {}
+            self.tif_dict, flag = read_landsat.fill_tif_dict(
+                "central",
+                sample_years[0],
+                sample_lats[0],
+                sample_lons[0],
+                self.tif_dict,
+                self.config,
+            )
 
         for isample in np.arange(0, len(sample_years)):
 
-            sample_input, tif_dict, usecase = read_landsat.read_input_data(
+            sample_input, self.tif_dict, usecase = read_landsat.read_input_data(
                 self.config,
-                tif_dict,
+                self.tif_dict,
                 sample_years[isample],
                 sample_lons[isample],
                 sample_lats[isample],
@@ -260,9 +281,10 @@ class CustomData(torch.utils.data.Dataset):
 
             batch_input[isample, :, :, :] = sample_input
 
-        for key in tif_dict.keys():
-            if isinstance(tif_dict[key], rasterio.io.DatasetReader):
-                tif_dict[key].close()
+        if self.config["mode"] == "training":
+            for key in self.tif_dict.keys():
+                if isinstance(self.tif_dict[key], rasterio.io.DatasetReader):
+                    self.tif_dict[key].close()
 
         # from matplotlib import pyplot as plt
         # plt.pcolor(batch_input[0, :, :, 0])
@@ -289,20 +311,27 @@ class CustomData(torch.utils.data.Dataset):
 
         batch_output = np.zeros((len(sample_years), 1))
 
-        filename = (
-            self.data_dir + "hii_" + str(int(sample_years[0])) + "-01-01_uint8.tif"
-        )
-        if not os.path.isfile(filename):
+        # get output data if in training mode
+        if self.config["mode"] == "inference":
             return batch_output * 0.0
 
-        with rasterio.open(filename) as output_tiff:
-            for isample in np.arange(0, len(sample_years)):
-                batch_output[isample] = read_output_data(
-                    self.config,
-                    output_tiff,
-                    sample_lons[isample],
-                    sample_lats[isample],
-                )
+        elif self.config["mode"] == "training":
+            filename = (
+                self.data_dir + "hii_" + str(int(sample_years[0])) + "-01-01_uint8.tif"
+            )
+            if not os.path.isfile(filename):
+                return batch_output * 0.0
+
+            with rasterio.open(filename) as output_tiff:
+                for isample in np.arange(0, len(sample_years)):
+                    batch_output[isample] = read_output_data(
+                        self.config,
+                        output_tiff,
+                        sample_lons[isample],
+                        sample_lats[isample],
+                    )
+        else:
+            raise NotImplementedError("no such mode.")
 
         # NOTE: for this to work the predictions need way more context...
         # not a good implementation right now.
