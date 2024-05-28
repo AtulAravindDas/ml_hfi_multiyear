@@ -3,6 +3,7 @@ import numpy as np
 import argparse
 import torch
 import rasterio
+import ast
 
 from utils import utils
 from data_builder import build_tags
@@ -25,9 +26,11 @@ def main():
     Arguments:
         expname (str): Experiment name to specify the config file, e.g. exp101
         gpu_id (int; OPTIONAL): GPU device ID (number)
+        inference_region ("list or dict";OPTIONAL): if provided, override inference region from config file
+        inference_years ("list" ;OPTIONAL): if provided, override inference year(s) from config file
 
     Example:
-        python oracle.py exp101 0
+        python oracle.py exp101 0 "[10,20,30,50]" "[2019,2010]"
     """
 
     # print(f"python version = {sys.version}")
@@ -44,12 +47,38 @@ def main():
         nargs="?",
         default="0",
     )
+    
+    # Add optional arguments
+    parser.add_argument('inference_region', type=str, nargs='?', default=None, help='Region for inference (list or dict - in "quotes")')
+    parser.add_argument('inference_years', type=str, nargs='?', default=None, help='Years for inference (list) - in "quotes"')
+    
+    
     args = parser.parse_args()
+
 
     # SET config
     config = utils.get_config(args.expname)
     config["mode"] = "inference"
     config["device_id"] = args.gpu_id
+
+
+    # Convert string arguments to appropriate types using ast.literal_eval, if provided
+    if args.inference_region is not None:
+    try:
+    config["data"]["inference_region"] = ast.literal_eval(args.inference_region)
+    except (ValueError, SyntaxError) as e:
+    raise ValueError(f"Invalid input for inference_region: {e}")
+    
+    
+    if args.inference_years is not None:
+    try:
+    config["data"]["inference_years"] = ast.literal_eval(args.inference_years)
+    except (ValueError, SyntaxError) as e:
+    raise ValueError(f"Invalid input for inference_years: {e}")
+    
+    
+    print(args.expname)
+
 
     # GET THE DATA
     lats_lons_dict = data_methods.get_lats_lons_list(
