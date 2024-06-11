@@ -47,38 +47,44 @@ def main():
         nargs="?",
         default="0",
     )
-    
-    # Add optional arguments
-    parser.add_argument('inference_region', type=str, nargs='?', default=None, help='Region for inference (list or dict - in "quotes")')
-    parser.add_argument('inference_years', type=str, nargs='?', default=None, help='Years for inference (list) - in "quotes"')
-    
-    
-    args = parser.parse_args()
 
+    # Add optional arguments
+    parser.add_argument(
+        "inference_region",
+        type=str,
+        nargs="?",
+        default=None,
+        help='Region for inference (list or dict - in "quotes")',
+    )
+    parser.add_argument(
+        "inference_years",
+        type=str,
+        nargs="?",
+        default=None,
+        help='Years for inference (list) - in "quotes"',
+    )
+
+    args = parser.parse_args()
 
     # SET config
     config = utils.get_config(args.expname)
     config["mode"] = "inference"
     config["device_id"] = args.gpu_id
 
-
     # Convert string arguments to appropriate types using ast.literal_eval, if provided
     if args.inference_region is not None:
-    try:
-    config["data"]["inference_region"] = ast.literal_eval(args.inference_region)
-    except (ValueError, SyntaxError) as e:
-    raise ValueError(f"Invalid input for inference_region: {e}")
-    
-    
-    if args.inference_years is not None:
-    try:
-    config["data"]["inference_years"] = ast.literal_eval(args.inference_years)
-    except (ValueError, SyntaxError) as e:
-    raise ValueError(f"Invalid input for inference_years: {e}")
-    
-    
-    print(args.expname)
+        try:
+            config["data"]["inference_region"] = ast.literal_eval(args.inference_region)
+        except (ValueError, SyntaxError) as e:
+            raise ValueError(f"Invalid input for inference_region: {e}")
 
+    if args.inference_years is not None:
+        try:
+            config["data"]["inference_years"] = ast.literal_eval(args.inference_years)
+        except (ValueError, SyntaxError) as e:
+            raise ValueError(f"Invalid input for inference_years: {e}")
+
+    print(args.expname)
 
     # GET THE DATA
     lats_lons_dict = data_methods.get_lats_lons_list(
