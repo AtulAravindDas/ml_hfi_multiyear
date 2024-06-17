@@ -26,8 +26,8 @@ def main():
     Arguments:
         expname (str): Experiment name to specify the config file, e.g. exp101
         gpu_id (int; OPTIONAL): GPU device ID (number)
-        inference_region ("list or dict";OPTIONAL): if provided, override inference region from config file
-        inference_years ("list" ;OPTIONAL): if provided, override inference year(s) from config file
+        inference_region ("list or dict"; OPTIONAL): if provided, override inference region from config file
+        inference_years ("list" ; OPTIONAL): if provided, override inference year(s) from config file
 
     Example:
         python oracle.py exp101 0 "[10,20,30,50]" "[2019,2010]"
