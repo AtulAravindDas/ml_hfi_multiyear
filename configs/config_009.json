@@ -4,6 +4,7 @@
     "seed": 76,
     "mode": null,
     "device": "gpu",
+    "metadata": "new dataset of rocky areas to try and finetune training",
 
     "data": {
         "tags_loadname": null,
@@ -22,8 +23,8 @@
 
         "percentage_sampling": 0.01,
         "val_frac": 0.05,
-        "min_binfrac_for_tile": 0.1,
-        "min_samples_in_tile": 5000,
+        "min_binfrac_for_tile": 0.0,
+        "min_samples_in_tile": 0,
         "oversample_rare_bins": true,
         "oversample_rate": 100.0,
         "zero_bin": true
