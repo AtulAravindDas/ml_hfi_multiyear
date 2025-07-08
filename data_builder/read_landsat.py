@@ -751,9 +751,6 @@ def read_input_data(
             sample_input = 0.0
         else:
             
-            # print(tif_dict["central"]) ######test
-            # print(tif_dict["west"]) ######test
-            
             central_output = read_tif_checking_fixed( 
                 tif_dict["central"],
                 channels,
