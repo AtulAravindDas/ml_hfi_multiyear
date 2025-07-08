@@ -193,16 +193,10 @@ class CustomData(torch.utils.data.Dataset):
                 # grab all indices for inference
                 idx = np.arange(
                     id_batch * self.batch_size,
-                    (id_batch + 1) * self.batch_size,
+                    min((id_batch + 1) * self.batch_size, len(self.sample_years)),
                 )
 
-            try:
-                sample_years = self.sample_years[idx]
-                sample_lats = self.sample_lats[idx]
-                sample_lons = self.sample_lons[idx]
-                sample_files = self.sample_files[idx]
-            except:
-                idx = np.where(idx < len(self.sample_years))[0]
+
                 sample_years = self.sample_years[idx]
                 sample_lats = self.sample_lats[idx]
                 sample_lons = self.sample_lons[idx]
