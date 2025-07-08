@@ -21,13 +21,13 @@ read_input_data(config, tif_dict, sample_year, sample_lon, sample_lat, channels,
     Read the input data from the Landsat files based on the given parameters.
 
 """
-
+import re
 import os
 import numpy as np
 import rasterio
-from rasterio.windows import Window
+from rasterio.windows import from_bounds, Window
+from rasterio.transform import from_bounds as make_transform
 from utils import utils
-import time
 
 
 def fill_tif_dict(name, sample_year, sample_lat, sample_lon, tif_dict, config):
@@ -139,6 +139,82 @@ def read_tif(tif, channels, window):
     return np.transpose(tif.read(channels, window=window), axes=(1, 2, 0))
 
 
+def extract_lat_lon_from_filename(tif_path):
+    """
+    Extract the latitude and longitude from a filename like 'landsat_-20lat_-70lon_2024.tif'.
+
+    Returns:
+        (lat, lon): Tuple of floats.
+    """
+    filename = os.path.basename(tif_path)
+    match = re.search(r'(-?\d+)[lL]at_(-?\d+)[lL]on', filename)
+    if match:
+        lat = int(match.group(1))
+        lon = int(match.group(2))
+        return lat, lon
+    else:
+        raise ValueError(f"Could not extract lat/lon from: {filename}")
+
+
+def read_tif_checking_fixed(tif, channels, window, tile_len):
+    lat_max, lon_min = extract_lat_lon_from_filename(tif.name)
+    lat_min = lat_max - tile_len
+    lon_max = lon_min + tile_len
+    
+
+    transform=tif.transform
+    if transform.e > 0:
+        # Bad transform: bottom-up (latitude increases down the image)
+        left, bottom, right, top = tif.bounds
+        fixed_transform = make_transform(left, top, right, bottom, tif.width, tif.height)  
+        fixed_transform
+    else:
+        fixed_transform=transform
+
+
+    # Build the full tile window from lat/lon bounds
+    full_window = from_bounds(lon_min, lat_min, lon_max, lat_max, transform=fixed_transform)
+
+    # Check for 0–360 wraparound
+    if abs(full_window.col_off) > tif.width:
+        lon_min = (lon_min + 360) % 360
+        lon_max = lon_min + tile_len
+        full_window = from_bounds(lon_min, lat_min, lon_max, lat_max, transform=fixed_transform)
+
+
+    # Clip window to be within full_window
+    clipped_col_off = max(window.col_off, full_window.col_off)
+    clipped_row_off = max(window.row_off, full_window.row_off)
+
+    # Compute how many pixels to get without going over the full_window bounds
+    col_end = min(window.col_off + window.width, full_window.col_off + full_window.width)
+    row_end = min(window.row_off + window.height, full_window.row_off + full_window.height)
+
+    # Adjust width/height if too small — shift origin backward if needed to preserve size
+    adjusted_width = window.width
+    adjusted_height = window.height
+
+    # Check if we're short on width
+    if (col_end - clipped_col_off) < window.width:
+        clipped_col_off = col_end - window.width
+        clipped_col_off = max(clipped_col_off, full_window.col_off)
+
+    # Check if we're short on height
+    if (row_end - clipped_row_off) < window.height:
+        clipped_row_off = row_end - window.height
+        clipped_row_off = max(clipped_row_off, full_window.row_off)
+
+    # Final window — guaranteed to have the right size
+    final_window = Window(
+        col_off=clipped_col_off,
+        row_off=clipped_row_off,
+        width=window.width,
+        height=window.height
+    )
+
+    return np.transpose(tif.read(channels, window=final_window), axes=(1, 2, 0))
+
+
 def get_landsat_bounds(region, tile_len_deg):
     """
     Calculate the bounds of a Landsat tile based on a given region and tile length.
@@ -221,6 +297,7 @@ def read_input_data(
     # if the tif file is on the dateline there its longitudes are 0-360
     # this is a fix for that without prescribing the tile name
     ilat, ilon = tif_dict["central"].index(sample_lon, sample_lat)
+    
     if ilon < -tif_dict["central_width"]:
         sample_lon = 360.0 + sample_lon
         ilat, ilon = tif_dict["central"].index(sample_lon, sample_lat)
@@ -283,10 +360,11 @@ def read_input_data(
 
     # USECASE 0 - central only
     if usecase == "usecase_central":
-        central_output = read_tif(
+        central_output = read_tif_checking_fixed( 
             tif_dict["central"],
             channels,
             window=Window.from_slices((ilat_n, ilat_s + 1), (ilon_w, ilon_e + 1)),
+            tile_len=config["tile_len_deg"], 
         )
         sample_input = central_output
 
@@ -316,28 +394,31 @@ def read_input_data(
         if any([flag_north, flag_northwest, flag_west]):
             sample_input = 0.0
         else:
-            central_output = read_tif(
+            central_output = read_tif_checking_fixed( 
                 tif_dict["central"],
                 channels,
                 window=Window.from_slices((0, ilat_s + 1), (0, ilon_e + 1)),
+                tile_len=config["tile_len_deg"], 
             )
-            west_output = read_tif(
+            west_output = read_tif_checking_fixed( 
                 tif_dict["west"],
                 channels,
                 window=Window.from_slices(
                     (0, ilat_s + 1),
                     (tif_dict["west_width"] + ilon_w, tif_dict["west_width"]),
                 ),
+                tile_len=config["tile_len_deg"], 
             )
-            north_output = read_tif(
+            north_output = read_tif_checking_fixed( 
                 tif_dict["north"],
                 channels,
                 window=Window.from_slices(
                     (tif_dict["north_height"] + ilat_n, tif_dict["north_height"]),
                     (0, ilon_e + 1),
                 ),
+                tile_len=config["tile_len_deg"], 
             )
-            northwest_output = read_tif(
+            northwest_output = read_tif_checking_fixed( 
                 tif_dict["northwest"],
                 channels,
                 window=Window.from_slices(
@@ -347,6 +428,7 @@ def read_input_data(
                     ),
                     (tif_dict["northwest_width"] + ilon_w, tif_dict["northwest_width"]),
                 ),
+                tile_len=config["tile_len_deg"], 
             )
             sample_input = np.vstack(
                 (
@@ -354,6 +436,7 @@ def read_input_data(
                     np.hstack((west_output, central_output)),
                 )
             )
+            
 
     # USECASE 2 - north edge
     elif usecase == "usecase_north":
@@ -367,21 +450,25 @@ def read_input_data(
         if flag_north:
             sample_input = 0.0
         else:
-            central_output = read_tif(
+
+            central_output = read_tif_checking_fixed( 
                 tif_dict["central"],
                 channels,
                 window=Window.from_slices((0, ilat_s + 1), (ilon_w, ilon_e + 1)),
+                tile_len=config["tile_len_deg"],
             )
-            north_output = read_tif(
+            north_output = read_tif_checking_fixed( 
                 tif_dict["north"],
                 channels,
                 window=Window.from_slices(
                     (tif_dict["north_height"] + ilat_n, tif_dict["north_height"]),
                     (ilon_w, ilon_e + 1),
                 ),
+                tile_len=config["tile_len_deg"],
             )
-
-            sample_input = np.vstack((north_output, central_output))
+            
+            sample_input = np.vstack((north_output, central_output)) 
+        
 
     # USECASE 3 - northeast corner
     elif usecase == "usecase_northeast":
@@ -409,35 +496,39 @@ def read_input_data(
         if any([flag_north, flag_northeast, flag_east]):
             sample_input = 0.0
         else:
-            central_output = read_tif(
+            central_output = read_tif_checking_fixed( 
                 tif_dict["central"],
                 channels,
                 window=Window.from_slices(
                     (0, ilat_s + 1), (ilon_w, tif_dict["central_width"])
                 ),
+                tile_len=config["tile_len_deg"], 
             )
-            east_output = read_tif(
+            east_output = read_tif_checking_fixed( 
                 tif_dict["east"],
                 channels,
                 window=Window.from_slices(
                     (0, ilat_s + 1), (0, ilon_e - tif_dict["central_width"] + 1)
                 ),
+                tile_len=config["tile_len_deg"], 
             )
-            north_output = read_tif(
+            north_output = read_tif_checking_fixed( 
                 tif_dict["north"],
                 channels,
                 window=Window.from_slices(
                     (tif_dict["north_height"] + ilat_n, tif_dict["north_height"]),
                     (ilon_w, tif_dict["north_width"]),
                 ),
+                tile_len=config["tile_len_deg"], 
             )
-            northeast_output = read_tif(
+            northeast_output = read_tif_checking_fixed( 
                 tif_dict["northeast"],
                 channels,
                 window=Window.from_slices(
                     (tif_dict["north_height"] + ilat_n, tif_dict["north_height"]),
                     (0, ilon_e - tif_dict["central_width"] + 1),
                 ),
+                tile_len=config["tile_len_deg"], 
             )
 
             sample_input = np.vstack(
@@ -459,19 +550,21 @@ def read_input_data(
         if flag_east:
             sample_input = 0.0
         else:
-            central_output = read_tif(
+            central_output = read_tif_checking_fixed( 
                 tif_dict["central"],
                 channels,
                 window=Window.from_slices(
                     (ilat_n, ilat_s + 1), (ilon_w, tif_dict["central_width"])
                 ),
+                tile_len=config["tile_len_deg"], 
             )
-            east_output = read_tif(
+            east_output = read_tif_checking_fixed( 
                 tif_dict["east"],
                 channels,
                 window=Window.from_slices(
                     (ilat_n, ilat_s + 1), (0, ilon_e - tif_dict["central_width"] + 1)
                 ),
+                tile_len=config["tile_len_deg"], 
             )
 
             sample_input = np.hstack((central_output, east_output))
@@ -502,37 +595,41 @@ def read_input_data(
         if any([flag_south, flag_southeast, flag_east]):
             sample_input = 0.0
         else:
-            central_output = read_tif(
+            central_output = read_tif_checking_fixed( 
                 tif_dict["central"],
                 channels,
                 window=Window.from_slices(
                     (ilat_n, tif_dict["central_height"]),
                     (ilon_w, tif_dict["central_width"]),
                 ),
+                tile_len=config["tile_len_deg"], 
             )
-            east_output = read_tif(
+            east_output = read_tif_checking_fixed( 
                 tif_dict["east"],
                 channels,
                 window=Window.from_slices(
                     (ilat_n, tif_dict["central_height"]),
                     (0, ilon_e - tif_dict["central_width"] + 1),
                 ),
+                tile_len=config["tile_len_deg"], 
             )
-            south_output = read_tif(
+            south_output = read_tif_checking_fixed( 
                 tif_dict["south"],
                 channels,
                 window=Window.from_slices(
                     (0, ilat_s - tif_dict["central_height"] + 1),
                     (ilon_w, tif_dict["south_width"]),
                 ),
+                tile_len=config["tile_len_deg"], 
             )
-            southeast_output = read_tif(
+            southeast_output = read_tif_checking_fixed( 
                 tif_dict["southeast"],
                 channels,
                 window=Window.from_slices(
                     (0, ilat_s - tif_dict["central_height"] + 1),
                     (0, ilon_e - tif_dict["central_width"] + 1),
                 ),
+                tile_len=config["tile_len_deg"], 
             )
 
             sample_input = np.vstack(
@@ -554,19 +651,21 @@ def read_input_data(
         if flag_south:
             sample_input = 0.0
         else:
-            central_output = read_tif(
+            central_output = read_tif_checking_fixed( 
                 tif_dict["central"],
                 channels,
                 window=Window.from_slices(
                     (ilat_n, tif_dict["central_height"]), (ilon_w, ilon_e + 1)
                 ),
+                tile_len=config["tile_len_deg"], 
             )
-            south_output = read_tif(
+            south_output = read_tif_checking_fixed( 
                 tif_dict["south"],
                 channels,
                 window=Window.from_slices(
                     (0, ilat_s - tif_dict["central_height"] + 1), (ilon_w, ilon_e + 1)
                 ),
+                tile_len=config["tile_len_deg"], 
             )
             print("")
             sample_input = np.vstack((central_output, south_output))
@@ -597,35 +696,39 @@ def read_input_data(
         if any([flag_south, flag_southwest, flag_west]):
             sample_input = 0.0
         else:
-            central_output = read_tif(
+            central_output = read_tif_checking_fixed( 
                 tif_dict["central"],
                 channels,
                 window=Window.from_slices(
                     (ilat_n, tif_dict["central_height"]), (0, ilon_e + 1)
                 ),
+                tile_len=config["tile_len_deg"], 
             )
-            west_output = read_tif(
+            west_output = read_tif_checking_fixed( 
                 tif_dict["west"],
                 channels,
                 window=Window.from_slices(
                     (ilat_n, tif_dict["west_height"]),
                     (tif_dict["west_width"] + ilon_w, tif_dict["west_width"]),
                 ),
+                tile_len=config["tile_len_deg"], 
             )
-            south_output = read_tif(
+            south_output = read_tif_checking_fixed( 
                 tif_dict["south"],
                 channels,
                 window=Window.from_slices(
                     (0, ilat_s - tif_dict["central_height"] + 1), (0, ilon_e + 1)
                 ),
+                tile_len=config["tile_len_deg"], 
             )
-            southwest_output = read_tif(
+            southwest_output = read_tif_checking_fixed( 
                 tif_dict["southwest"],
                 channels,
                 window=Window.from_slices(
                     (0, ilat_s - tif_dict["central_height"] + 1),
                     (tif_dict["west_width"] + ilon_w, tif_dict["west_width"]),
                 ),
+                tile_len=config["tile_len_deg"], 
             )
 
             sample_input = np.vstack(
@@ -647,21 +750,29 @@ def read_input_data(
         if flag_west:
             sample_input = 0.0
         else:
-            central_output = read_tif(
+            
+            # print(tif_dict["central"]) ######test
+            # print(tif_dict["west"]) ######test
+            
+            central_output = read_tif_checking_fixed( 
                 tif_dict["central"],
                 channels,
                 window=Window.from_slices((ilat_n, ilat_s + 1), (0, ilon_e + 1)),
+                tile_len=config["tile_len_deg"], 
             )
-            west_output = read_tif(
+            west_output = read_tif_checking_fixed( 
                 tif_dict["west"],
                 channels,
                 window=Window.from_slices(
                     (ilat_n, ilat_s + 1),
                     (tif_dict["west_width"] + ilon_w, tif_dict["west_width"]),
                 ),
+                tile_len=config["tile_len_deg"], 
             )
-
+ 
             sample_input = np.hstack((west_output, central_output))
+            
+
     else:
         raise NotImplementedError("such a case does not exist. something is wrong.")
 
