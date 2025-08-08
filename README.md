@@ -138,6 +138,10 @@ The configuration file (config_[###].json) documentation. It is still a work in 
 - Gets rid of Apple Icons that mess up github: ``find . -name "Icon?" -print0 | xargs -0 rm -rf``
 - Restarts VSCode Server: ``rm -rf ~/.vscode-server``
 
+## Here is a Figure of the 2024 predictions 
+
+<img width="1337" height="617" alt="Image" src="https://github.com/user-attachments/assets/4e066587-1945-4017-97dc-3f955d421117" />
+
 ## Credits
 
 ***
