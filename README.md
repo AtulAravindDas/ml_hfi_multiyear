@@ -138,12 +138,14 @@ The configuration file (config_[###].json) documentation. It is still a work in 
 - Gets rid of Apple Icons that mess up github: ``find . -name "Icon?" -print0 | xargs -0 rm -rf``
 - Restarts VSCode Server: ``rm -rf ~/.vscode-server``
 
-## Model Outputs
+
+## Model Output
 
 ml-HFIv2.0 outputs yearly predictions of human pressure on land at 300-meter resolution. Predictions can be used for tracking land-use changes, infrastructure expansion, and environmental monitoring.
 
 Below is an example of the 2024  Human Footprint prediction output where higher values indicate greater human pressure:
 <img width="1337" height="617" alt="Image" src="https://github.com/user-attachments/assets/4e066587-1945-4017-97dc-3f955d421117" />
+
  
 ## Credits
 
