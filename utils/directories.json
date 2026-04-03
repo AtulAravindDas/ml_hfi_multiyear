@@ -1,29 +1,7 @@
 {
     "falco": {
         "data_dir": "data/",
-        "landsat_dir": "/keys-scratch/bryamop/landsat_export_10x10/years_consolidated/",
-        "predictions_dir": "saved/predictions/",
-        "figures_dir": "saved/figures/",
-        "save_model_dir": "saved/models/",
-        "mosaics_dir": "saved/mosaics/",
-        "shapefiles_dir": "data/shapefiles/",
-        "tags_dir": "saved/tags/"
-    },
-
-    "blackforest": {
-        "data_dir": "data/",
-        "landsat_dir": "/Users/eabarnes/big_data/landsat/",
-        "predictions_dir": "saved/predictions/",
-        "figures_dir": "saved/figures/",
-        "save_model_dir": "saved/models/",
-        "mosaics_dir": "saved/mosaics/",
-        "shapefiles_dir": "data/shapefiles/",
-        "tags_dir": "saved/tags/"
-    },
-
-    "riviera": {
-        "data_dir": "data/",
-        "landsat_dir": "/nfs/home/borihu/landsat10x10/",
+        "landsat_dir": "/usr3/graduate/atuladas/ml_hfi_multiyear/landsat",
         "predictions_dir": "saved/predictions/",
         "figures_dir": "saved/figures/",
         "save_model_dir": "saved/models/",
@@ -31,5 +9,4 @@
         "shapefiles_dir": "data/shapefiles/",
         "tags_dir": "saved/tags/"
     }
-
 }

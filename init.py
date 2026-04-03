@@ -1,5 +1,5 @@
 import os
-import utils
+from utils import utils
 
 machine = "falco"
 dirs = utils.get_directories(machine)

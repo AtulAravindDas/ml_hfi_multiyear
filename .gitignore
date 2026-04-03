@@ -60,3 +60,15 @@ __pycache__/
 # Google docs
 *.gslides
 *.gdoc
+
+#Directories JSON 
+directories.json
+
+#Virtual environments
+venv/
+.venv/
+
+#Data files
+data/
+landsat/
+saved/
