@@ -10,6 +10,7 @@ import trainer.losses as loss_module
 import trainer.metrics as metrics_module
 from data_builder import build_tags, data_loader
 from trainer.trainer import Trainer
+from utils.utils import * 
 from utils import utils
 from visualizer import plots
 
@@ -35,7 +36,7 @@ def main():
     # print(f"python version = {sys.version}")
     # print(f"numpy version = {np.__version__}")
     # print(f"pytorch version = {torch.__version__}")
-
+    print("Entering main")
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "expname", help="experiment name to specify the config file, e.g. exp101"
@@ -47,6 +48,7 @@ def main():
         default="0",
     )
     args = parser.parse_args()
+    print("Added arguments")
 
     # GET config
     config = utils.get_config(args.expname)
