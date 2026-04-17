@@ -34,6 +34,7 @@ from data_builder import data_methods
 
 
 default_filepaths = utils.get_default_filepaths()
+print(default_filepaths)
 DEFAULT_MASK_FILEPATH = default_filepaths["mask_filepath"]
 DEFAULT_HII_FILEPATH = default_filepaths["hii_filepath"]
 

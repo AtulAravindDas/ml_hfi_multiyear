@@ -5,19 +5,22 @@
     "device": "gpu",
 
     "data": {
-        "tags_loadname": "exp008_seed76",
-
-        "training_years": [2015, 2019],
-        "training_region": [-60, 60, -180, 180],
-
-        "inference_years": [2020],
-        "inference_region": {"tilelats": [[30], [50], [0], [10], [-30], [40]],
-                             "tilelons": [[110], [0], [-80], [0], [140], [-100]]
-                            },
-
-        "channels": [2, 4, 6],
-        "scene_width": 11
-
+    "tags_loadname": "exp008_seed76",
+    "training_years": [2015, 2019],
+    "training_region": [-60, 60, -180, 180],
+    "inference_years": [2020],
+    "inference_region": {"tilelats": [[30], [50], [0], [10], [-30], [40]],
+                         "tilelons": [[110], [0], [-80], [0], [140], [-100]]
+                        },
+    "channels": [2, 4, 6],
+    "scene_width": 11,
+    "percentage_sampling": 0.1,
+    "min_samples_in_tile": 100,
+    "zero_bin": false,
+    "min_binfrac_for_tile": 0.01,
+    "oversample_rare_bins": false,
+    "oversample_rate": 1,
+    "val_frac": 0.2
     },
 
     "architecture": {

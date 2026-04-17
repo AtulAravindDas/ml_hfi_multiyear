@@ -54,18 +54,39 @@ import json
 import torch
 import numpy as np
 import pickle
+from import_images import LANDSAT_DIR
+
+def create_directories_json_file(machine):
+    _HERE = os.path.dirname(os.path.abspath(__file__))
+    directories_json = {
+        machine: {
+            "data_dir": "data/",
+            "landsat_dir": LANDSAT_DIR,
+            "predictions_dir": "saved/predictions/",
+            "figures_dir": "saved/figures/",
+            "save_model_dir": "saved/models/",
+            "mosaics_dir": "saved/mosaics/",
+            "shapefiles_dir": "data/shapefiles/",
+            "tags_dir": "saved/tags/"
+        }
+    }
+    with open(os.path.join(_HERE, "directories.json"), "w") as f:
+        json.dump(directories_json, f, indent=4)
 
 
 def get_directories(machine):
     """Get the directory paths from the "utils/directories.json" file."""
-    with open("utils/directories.json") as f:
+    _HERE = os.path.dirname(os.path.abspath(__file__))
+    create_directories_json_file(machine)
+    with open(os.path.join(_HERE, "directories.json")) as f:
         directories = json.load(f)
     return directories[machine]
 
 
 def get_default_filepaths():
     """Get the default file paths from the "utils/default_filepaths.json" file."""
-    with open("utils/default_filepaths.json") as f:
+    _HERE = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(_HERE, "default_filepaths.json")) as f:
         filepaths = json.load(f)
     return filepaths
 
@@ -368,7 +389,8 @@ def get_config(expname):
     basename = "exp"
 
     # GET CONFIG
-    with open("configs/config_" + expname[len(basename) :] + ".json") as f:
+    _HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with open(os.path.join(_HERE, "configs", "config_" + expname[len(basename):] + ".json")) as f:
         config = json.load(f)
 
     assert (
@@ -379,7 +401,8 @@ def get_config(expname):
     config["mode"] = None
 
     # GET CONSTANTS
-    with open("utils/constants.json") as f:
+    _HERE = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(_HERE, "constants.json")) as f:
         constants = json.load(f)
 
     config["tile_len_deg"] = constants["TILE_LEN_DEG"]

@@ -6,7 +6,6 @@ import torch
 import torchinfo
 import numpy as np
 
-from import_images import LANDSAT_DIR, PREDICTIONS_DIR, LABELS_DIR
 import rasterio
 import os
 import trainer.losses as loss_module
