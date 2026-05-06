@@ -55,6 +55,7 @@ import torch
 import numpy as np
 import pickle
 from import_images import LANDSAT_DIR
+import utils
 
 def create_directories_json_file(machine):
     _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -231,9 +232,9 @@ def save_training_tags(config, tags_train, dict_train, tags_val, dict_val):
     tags_val : list
         The validation tags.
     """
-    import utils
 
-    dir = utils.utils.get_directories(config["machine"])["tags_dir"]
+    _PROJECT_ROOT = "/projectnb/eb-mlhfi/workspaces/atuladas/ml_hfi_multiyear"
+    dir = os.path.join(_PROJECT_ROOT, get_directories(config["machine"])["tags_dir"])
     model_name = get_model_name(config["expname"], config["seed"])
 
     with open(dir + model_name + "_tags_train.pkl", "wb") as f:
@@ -262,9 +263,10 @@ def load_training_tags(config):
     tuple
         A tuple containing the loaded training tags and validation tags.
     """
-    import utils
+    
 
-    dir = utils.utils.get_directories(config["machine"])["tags_dir"]
+    _PROJECT_ROOT = "/projectnb/eb-mlhfi/workspaces/atuladas/ml_hfi_multiyear"
+    dir = os.path.join(_PROJECT_ROOT, get_directories(config["machine"])["tags_dir"])
 
     config_tags_name = config["data"].get("tags_loadname", None)
     if config_tags_name is None:

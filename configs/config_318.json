@@ -5,7 +5,7 @@
     "device": "gpu",
 
     "data": {
-    "tags_loadname": "exp008_seed76",
+    "tags_loadname": "exp318_seed76",
     "training_years": [2015, 2019],
     "training_region": [-60, 60, -180, 180],
     "inference_years": [2020],
