@@ -1,4 +1,4 @@
 {
-    "mask_filepath": "data/hii_coastal_buffer_mask.tif",
-    "hii_filepath": "data/hii_2015-01-01_uint8.tif"
+    "mask_filepath": "/projectnb/eb-general/shared_data/data/processed/mlhfi/mlhfi2.0/labels/hii_coastal_buffer_mask.tif",
+    "hii_filepath": "/projectnb/eb-general/shared_data/data/processed/mlhfi/mlhfi2.0/labels/hii_2015-01-01_uint8.tif"
 }

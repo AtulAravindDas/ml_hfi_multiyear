@@ -6,9 +6,12 @@ import torch
 import torchinfo
 import numpy as np
 
+import rasterio
+import os
 import trainer.losses as loss_module
 import trainer.metrics as metrics_module
 from data_builder import build_tags, data_loader
+from data_builder.build_tags import Tags
 from trainer.trainer import Trainer
 from utils import utils
 from visualizer import plots
@@ -60,7 +63,9 @@ def main():
 
     # LOAD THE DATA
     print("\nBuilding the data.")
-    tags_train, tags_val = build_tags.get_tags(config)
+    tags_train_list, tags_train_dict, tags_val_list, tags_val_dict = utils.load_training_tags(config)
+    tags_train = Tags(tags_train_list, tags_train_dict)
+    tags_val = Tags(tags_val_list, tags_val_dict)
     print(f"# Training Tiles:   {len(np.unique(tags_train.files))}")
     print(f"# Validation Tiles: {len(np.unique(tags_val.files))}\n")
 
@@ -113,6 +118,7 @@ def main():
     # BUILD THE MODEL
     verbose = True
     model = utils.load_model(config, clean=not config["trainer"]["resume_training"])
+    print(model)
 
     if verbose:
 
